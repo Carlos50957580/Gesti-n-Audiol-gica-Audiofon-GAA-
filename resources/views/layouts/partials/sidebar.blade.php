@@ -53,37 +53,31 @@
                         </a>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('admin.universidades.*') ? 'active' : '' }}" 
-                           href="{{ route('admin.universidades.index') }}">
-                            <i class="ri-building-line"></i> 
-                            <span data-key="t-universidades">Universidades</span>
-                        </a>
-                    </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('admin.planes.*') ? 'active' : '' }}" 
-                           href="{{ route('admin.planes.index') }}">
-                            <i class="ri-book-line"></i> 
-                            <span data-key="t-planes">Planes de Estudio</span>
-                        </a>
-                    </li>
+                   @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" 
+           href="{{ route('patients.index') }}">
+            <i class="ri-stethoscope-line"></i>
+            <span>Pacientes</span>
+        </a>
+    </li>
+@endif
 
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('admin.revision.*') ? 'active' : '' }}" 
-                           href="{{ route('admin.revision.index') }}">
-                            <i class="ri-search-line"></i> 
-                            <span data-key="t-revision">Revisión</span>
-                        </a>
-                    </li>
+                
+                
+                    @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" 
+           href="{{ route('appointments.index') }}">
+            <i class="ri-calendar-check-line"></i>
+            <span>Citas</span>
+        </a>
+    </li>
+@endif
 
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('admin.reportes.*') ? 'active' : '' }}" 
-                           href="{{ route('admin.reportes.index') }}">
-                            <i class="ri-bar-chart-line"></i> 
-                            <span data-key="t-reportes">Reportes</span>
-                        </a>
-                    </li>
+                  
+                    
                 @endif
 
                 {{-- UNIVERSIDAD --}}
@@ -132,27 +126,7 @@
                     </li>
                 @endif
 
-                {{-- MESCYT --}}
-                @if(auth()->user()->role->name === 'mescyt')
-                    <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-menu">MESCyT</span></li>
-
-
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('evaluaciones.index.*') ? 'active' : '' }}" 
-                           href="{{ route('mescyt.evaluaciones.index') }}">
-                            <i class="ri-file-text-line"></i> 
-                            <span data-key="t-evaluacion">Evaluación</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('mescyt.reportes.*') ? 'active' : '' }}" 
-                           href="{{ route('mescyt.reportes.index') }}">
-                            <i class="ri-bar-chart-line"></i> 
-                            <span data-key="t-reportes">Reportes</span>
-                        </a>
-                    </li>
-                @endif
+               
 
             </ul>
         </div>

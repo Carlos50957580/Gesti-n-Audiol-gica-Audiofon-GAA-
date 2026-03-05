@@ -33,7 +33,11 @@
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
                                                 <a href="/" class="d-block">
-                                                   <img src="{{ asset('velzon/assets/images/logo-light.png') }}" alt="UASD Logo" height="18">
+                                                   <img src="{{ asset('velzon/assets/images/logo-darkh.png') }}" 
+     alt="audiofon Logo" 
+     height="60" 
+     width="120">
+
                                                 </a>
                                             </div>
                                             <div class="mt-auto">

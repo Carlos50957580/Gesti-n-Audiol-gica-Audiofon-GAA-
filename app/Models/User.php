@@ -60,9 +60,9 @@ public function isRole($roleName)
     return $this->role && $this->role->name === $roleName;
 }
 
-public function university()
+public function appointments()
 {
-    return $this->belongsTo(University::class);
+    return $this->hasMany(Appointment::class,'audiologist_id');
 }
 
 
