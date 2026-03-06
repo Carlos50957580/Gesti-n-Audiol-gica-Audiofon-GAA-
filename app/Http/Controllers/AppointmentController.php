@@ -12,11 +12,15 @@ class AppointmentController extends Controller
     /**
      * Display a listing of the resource.
      */
-   public function index()
+public function index()
 {
-    $appointments = Appointment::with(['patient','audiologist'])
-        ->latest()
-        ->paginate(10);
+    $query = Appointment::with(['patient','audiologist','branch']);
+
+    if(auth()->user()->role->name != 'admin'){
+        $query->where('branch_id', auth()->user()->branch_id);
+    }
+
+    $appointments = $query->latest()->paginate(10);
 
     return view('appointments.index',compact('appointments'));
 }
@@ -24,20 +28,34 @@ class AppointmentController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+public function create()
 {
-    $patients = Patient::orderBy('first_name')->get();
+    $user = auth()->user();
 
-    $audiologists = User::whereHas('role',function($q){
-        $q->where('name','audiologo');
-    })->get();
+    // Pacientes
+    if ($user->role->name === 'admin') {
+        // Admin ve todos los pacientes
+        $patients = Patient::orderBy('first_name')->get();
+    } else {
+        // Otros roles solo ven los de su sucursal
+        $patients = Patient::where('branch_id', $user->branch_id)
+            ->orderBy('first_name')
+            ->get();
+    }
 
-    return view('appointments.create',compact('patients','audiologists'));
+    // Audiologos (siempre filtrados por sucursal)
+    $audiologists = User::where('branch_id', $user->branch_id)
+        ->whereHas('role', function ($q) {
+            $q->where('name', 'audiologo');
+        })->get();
+
+    return view('appointments.create', compact('patients', 'audiologists'));
 }
+
     /**
      * Store a newly created resource in storage.
      */
-   public function store(Request $request)
+public function store(Request $request)
 {
     $request->validate([
         'patient_id'=>'required',
@@ -57,7 +75,14 @@ class AppointmentController extends Controller
         ]);
     }
 
-    Appointment::create($request->all());
+    Appointment::create([
+        'patient_id'=>$request->patient_id,
+        'audiologist_id'=>$request->audiologist_id,
+        'branch_id'=>auth()->user()->branch_id,
+        'appointment_date'=>$request->appointment_date,
+        'appointment_time'=>$request->appointment_time,
+        'status'=>'programada'
+    ]);
 
     return redirect()->route('appointments.index')
         ->with('success','Cita creada correctamente');
@@ -75,24 +100,55 @@ class AppointmentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-   public function edit(Appointment $appointment)
+public function edit(Appointment $appointment)
 {
-    $patients = Patient::all();
+    $user = auth()->user();
 
-    $audiologists = User::whereHas('role',function($q){
-        $q->where('name','audiologo');
-    })->get();
+    // Pacientes
+    if ($user->role->name === 'admin') {
+        $patients = Patient::orderBy('first_name')->get();
+    } else {
+        $patients = Patient::where('branch_id', $user->branch_id)
+            ->orderBy('first_name')
+            ->get();
+    }
 
-    return view('appointments.edit',
-        compact('appointment','patients','audiologists'));
+    // Audiologos
+    if ($user->role->name === 'admin') {
+        $audiologists = User::whereHas('role', function ($q) {
+            $q->where('name', 'audiologo');
+        })->get();
+    } else {
+        $audiologists = User::where('branch_id', $user->branch_id)
+            ->whereHas('role', function ($q) {
+                $q->where('name', 'audiologo');
+            })->get();
+    }
+
+    return view('appointments.edit', compact('appointment', 'patients', 'audiologists'));
 }
+
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Appointment $appointment)
+   public function update(Request $request, Appointment $appointment)
 {
-    $appointment->update($request->all());
+    $request->validate([
+        'patient_id'=>'required',
+        'audiologist_id'=>'required',
+        'appointment_date'=>'required|date',
+        'appointment_time'=>'required'
+    ]);
+
+    $appointment->update([
+        'patient_id'=>$request->patient_id,
+        'audiologist_id'=>$request->audiologist_id,
+        'appointment_date'=>$request->appointment_date,
+        'appointment_time'=>$request->appointment_time,
+        'status'=>$request->status,
+
+    ]);
 
     return redirect()->route('appointments.index')
         ->with('success','Cita actualizada');

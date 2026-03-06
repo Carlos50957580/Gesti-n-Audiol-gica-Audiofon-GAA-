@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\Patient;
 use Illuminate\Http\Request;
 
@@ -10,9 +11,9 @@ class PatientController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+ public function index()
 {
-    $patients = Patient::latest()->paginate(10);
+    $patients = Patient::with('branch')->latest()->paginate(10);
 
     return view('patients.index', compact('patients'));
 }
@@ -20,15 +21,17 @@ class PatientController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-   public function create()
+public function create()
 {
-    return view('patients.create');
+    $branches = Branch::all();
+
+    return view('patients.create', compact('branches'));
 }
 
     /**
      * Store a newly created resource in storage.
      */
-   public function store(Request $request)
+  public function store(Request $request)
 {
     $request->validate([
         'first_name' => 'required',
@@ -36,7 +39,13 @@ class PatientController extends Controller
         'cedula' => 'required|unique:patients',
     ]);
 
-    Patient::create($request->all());
+    $data = $request->all();
+
+    if(auth()->user()->role->name != 'admin'){
+        $data['branch_id'] = auth()->user()->branch_id;
+    }
+
+    Patient::create($data);
 
     return redirect()->route('patients.index')
         ->with('success','Paciente registrado correctamente');
@@ -54,7 +63,9 @@ class PatientController extends Controller
      */
    public function edit(Patient $patient)
 {
-    return view('patients.edit', compact('patient'));
+    $branches = Branch::all();
+
+    return view('patients.edit', compact('patient','branches'));
 }
 
     /**
@@ -62,7 +73,13 @@ class PatientController extends Controller
      */
 public function update(Request $request, Patient $patient)
 {
-    $patient->update($request->all());
+    $data = $request->all();
+
+    if(auth()->user()->role->name != 'admin'){
+        $data['branch_id'] = auth()->user()->branch_id;
+    }
+
+    $patient->update($data);
 
     return redirect()->route('patients.index')
         ->with('success','Paciente actualizado');

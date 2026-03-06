@@ -54,6 +54,28 @@
                     </li>
 
 
+           @if(in_array(auth()->user()->role->name,['admin']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('branches.*') ? 'active' : '' }}" 
+        href="{{ route('branches.index') }}">
+            <i class="ri-community-line"></i>
+            <span>Sucursales</span>
+        </a>
+    </li>
+@endif
+
+
+             @if(in_array(auth()->user()->role->name,['admin']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('services.*') ? 'active' : '' }}" 
+        href="{{ route('services.index') }}">
+            <i class="ri-tools-line"></i>
+            <span>Servicios</span>
+        </a>
+    </li>
+@endif
+
+
                    @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
     <li class="nav-item">
         <a class="nav-link menu-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" 
@@ -75,6 +97,7 @@
         </a>
     </li>
 @endif
+
 
                   
                     

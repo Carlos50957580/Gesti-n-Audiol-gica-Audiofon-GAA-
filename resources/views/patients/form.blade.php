@@ -30,6 +30,32 @@ value="{{ old('phone',$patient->phone ?? '') }}">
 value="{{ old('email',$patient->email ?? '') }}">
 </div>
 
+@if(auth()->user()->role->name == 'admin')
+
+<div class="col-md-6 mb-3">
+<label class="form-label">Sucursal</label>
+
+<select name="branch_id" class="form-select">
+
+<option value="">Seleccione</option>
+
+@foreach($branches as $branch)
+
+<option value="{{ $branch->id }}"
+{{ old('branch_id',$patient->branch_id ?? '') == $branch->id ? 'selected':'' }}>
+
+{{ $branch->name }}
+
+</option>
+
+@endforeach
+
+</select>
+
+</div>
+
+@endif
+
 <div class="col-md-6 mb-3">
 <label class="form-label">Fecha de nacimiento</label>
 <input type="date" name="birth_date" class="form-control"

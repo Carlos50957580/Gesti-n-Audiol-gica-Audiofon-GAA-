@@ -46,6 +46,7 @@
                                             <th scope="col">Nombre</th>
                                             <th scope="col">Email</th>
                                             <th scope="col">Rol</th>
+                                            <th scope="col">Sucursal</th>
                                             <th scope="col" class="text-center" style="width: 200px;">Acciones</th>
                                         </tr>
                                     </thead>
@@ -60,6 +61,17 @@
                                                     {{ $user->role->name }}
                                                 </span>
                                             </td>
+                                            <td>
+                                                @if($user->branch)
+                                                <span class="badge bg-info-subtle text-info">
+                                                {{ $user->branch->name }}
+                                                </span>
+                                                @else
+                                                <span class="badge bg-secondary-subtle text-secondary">
+                                                Sin sucursal
+                                                </span>
+                                                @endif
+                                                </td>
                                             <td class="text-center">
                                                 <div class="hstack gap-2 justify-content-center">
                                                     {{-- Botón Editar --}}

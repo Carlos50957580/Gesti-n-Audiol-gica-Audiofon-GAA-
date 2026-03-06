@@ -18,6 +18,8 @@ use App\Http\Controllers\University\DocumentoPlanController;
 use App\Http\Controllers\University\ReporteUniversidadController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\BranchController;
+use App\Http\Controllers\ServiceController;
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -66,7 +68,16 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
+Route::middleware(['auth','role:admin'])->group(function () {
+
+    Route::resource('branches', BranchController::class);
+
+});
+
 Route::middleware(['auth','role:admin,recepcionista,audiologo'])
     ->resource('appointments', AppointmentController::class);
+
+    Route::resource('services', ServiceController::class)
+    ->middleware(['auth','role:admin']);
 
 require __DIR__.'/auth.php';

@@ -134,7 +134,35 @@
                                         @enderror
                                     </div>
 
-                                   
+                                   <!-- Sucursal -->
+    <div class="col-md-6 mb-3">
+        <label for="branch_id" class="form-label">
+            Sucursal
+        </label>
+
+        <select class="form-select @error('branch_id') is-invalid @enderror"
+                id="branch_id"
+                name="branch_id">
+
+            <option value="">-- Sin sucursal --</option>
+
+            @foreach ($branches as $branch)
+
+                <option value="{{ $branch->id }}"
+                    {{ old('branch_id', $usuario->branch_id) == $branch->id ? 'selected' : '' }}>
+
+                    {{ $branch->name }}
+
+                </option>
+
+            @endforeach
+
+        </select>
+
+        @error('branch_id')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
 
                                 <!-- Información adicional -->
                                 <div class="alert alert-info border-0 mb-4" role="alert">
@@ -168,45 +196,5 @@
     </div>
     <!-- End Page-content -->
 
-    @push('scripts')
-    <script>
-        // Toggle de visibilidad de contraseña
-        document.querySelectorAll('.password-addon').forEach(function(button) {
-            button.addEventListener('click', function() {
-                const input = this.parentElement.querySelector('.password-input');
-                const icon = this.querySelector('i');
-                
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.remove('ri-eye-fill');
-                    icon.classList.add('ri-eye-off-fill');
-                } else {
-                    input.type = 'password';
-                    icon.classList.remove('ri-eye-off-fill');
-                    icon.classList.add('ri-eye-fill');
-                }
-            });
-        });
-
-        // Mostrar/ocultar campo de universidad según el rol seleccionado
-        const roleSelect = document.getElementById('role_id');
-        const universityField = document.getElementById('university_id').closest('.col-md-6');
-
-        function toggleUniversityField() {
-            const selectedRole = roleSelect.options[roleSelect.selectedIndex].text.toLowerCase();
-            
-            if (selectedRole.includes('universidad')) {
-                universityField.style.display = 'block';
-            } else {
-                universityField.style.display = 'none';
-                document.getElementById('university_id').value = '';
-            }
-        }
-
-        roleSelect.addEventListener('change', toggleUniversityField);
-
-        // Ejecutar al cargar la página
-        toggleUniversityField();
-    </script>
-    @endpush
+    
 </x-app-layout>

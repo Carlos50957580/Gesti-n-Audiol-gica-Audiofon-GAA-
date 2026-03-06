@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'university_id',
+        'branch_id',
 
 
     ];
@@ -65,5 +66,9 @@ public function appointments()
     return $this->hasMany(Appointment::class,'audiologist_id');
 }
 
+public function branch()
+{
+    return $this->belongsTo(Branch::class);
+}
 
 }

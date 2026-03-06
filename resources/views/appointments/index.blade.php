@@ -52,6 +52,7 @@
 <th>ID</th>
 <th>Paciente</th>
 <th>Audiólogo</th>
+<th>Sucursal</th>
 <th>Fecha</th>
 <th>Hora</th>
 <th>Estado</th>
@@ -74,6 +75,8 @@
 </td>
 
 <td>{{ $appointment->audiologist->name }}</td>
+
+<td>{{ $appointment->branch->name }}</td>
 
 <td>{{ $appointment->appointment_date }}</td>
 

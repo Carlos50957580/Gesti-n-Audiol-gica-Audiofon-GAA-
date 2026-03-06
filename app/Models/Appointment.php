@@ -15,7 +15,8 @@ class Appointment extends Model
         'appointment_date',
         'appointment_time',
         'status',
-        'notes'
+        'notes',
+        'branch_id'
     ];
 
     public function patient()
@@ -27,4 +28,9 @@ class Appointment extends Model
     {
         return $this->belongsTo(User::class,'audiologist_id');
     }
+
+    public function branch()
+{
+    return $this->belongsTo(Branch::class);
+}
 }

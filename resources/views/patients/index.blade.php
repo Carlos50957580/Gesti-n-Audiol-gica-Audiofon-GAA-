@@ -51,6 +51,7 @@
 <th>Nombre</th>
 <th>Cédula</th>
 <th>Teléfono</th>
+<th>Sucursal</th>
 <th>Email</th>
 <th class="text-center" style="width:200px">Acciones</th>
 </tr>
@@ -71,6 +72,8 @@
 <td>{{ $patient->cedula }}</td>
 
 <td>{{ $patient->phone }}</td>
+
+<td>{{ $patient->branch->name ?? '-' }}</td>
 
 <td>{{ $patient->email }}</td>
 

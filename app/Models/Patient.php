@@ -17,13 +17,19 @@ class Patient extends Model
         'email',
         'birth_date',
         'gender',
-        'address'
+        'address',
+        'branch_id'
     ];
 
 
     public function appointments()
 {
     return $this->hasMany(Appointment::class);
+}
+
+public function branch()
+{
+    return $this->belongsTo(Branch::class);
 }
 
 }
