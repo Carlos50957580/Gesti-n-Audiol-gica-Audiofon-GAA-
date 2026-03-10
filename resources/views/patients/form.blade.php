@@ -25,6 +25,34 @@ value="{{ old('phone',$patient->phone ?? '') }}">
 </div>
 
 <div class="col-md-6 mb-3">
+<label class="form-label">Aseguradora</label>
+
+<select name="insurance_id" class="form-select">
+
+<option value="">Sin seguro</option>
+
+@foreach($insurances as $insurance)
+
+<option value="{{ $insurance->id }}"
+{{ old('insurance_id',$patient->insurance_id ?? '') == $insurance->id ? 'selected':'' }}>
+
+{{ $insurance->name }}
+
+</option>
+
+@endforeach
+
+</select>
+</div>
+
+<div class="col-md-6 mb-3">
+<label class="form-label">Poliza</label>
+
+<input type="text" name="insurance_number" class="form-control"
+value="{{ old('insurance_number',$patient->insurance_number ?? '') }}">
+</div>
+
+<div class="col-md-6 mb-3">
 <label class="form-label">Email</label>
 <input type="email" name="email" class="form-control"
 value="{{ old('email',$patient->email ?? '') }}">

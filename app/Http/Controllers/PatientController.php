@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Branch;
 use App\Models\Patient;
 use Illuminate\Http\Request;
+use App\Models\Insurance;
 
 class PatientController extends Controller
 {
@@ -13,7 +14,9 @@ class PatientController extends Controller
      */
  public function index()
 {
-    $patients = Patient::with('branch')->latest()->paginate(10);
+    $patients = Patient::with(['branch','insurance'])
+    ->latest()
+    ->paginate(10);
 
     return view('patients.index', compact('patients'));
 }
@@ -24,8 +27,9 @@ class PatientController extends Controller
 public function create()
 {
     $branches = Branch::all();
+    $insurances = Insurance::where('active',1)->get();
 
-    return view('patients.create', compact('branches'));
+    return view('patients.create', compact('branches','insurances'));
 }
 
     /**
@@ -33,10 +37,12 @@ public function create()
      */
   public function store(Request $request)
 {
-    $request->validate([
+        $request->validate([
         'first_name' => 'required',
         'last_name' => 'required',
         'cedula' => 'required|unique:patients',
+        'insurance_id' => 'nullable|exists:insurances,id',
+        'insurance_number' => 'nullable|string|max:100'
     ]);
 
     $data = $request->all();
@@ -61,11 +67,12 @@ public function create()
     /**
      * Show the form for editing the specified resource.
      */
-   public function edit(Patient $patient)
+public function edit(Patient $patient)
 {
     $branches = Branch::all();
+    $insurances = Insurance::where('active',1)->get();
 
-    return view('patients.edit', compact('patient','branches'));
+    return view('patients.edit', compact('patient','branches','insurances'));
 }
 
     /**
@@ -95,4 +102,6 @@ public function update(Request $request, Patient $patient)
     return redirect()->route('patients.index')
         ->with('success','Paciente eliminado');
 }
+
+
 }

@@ -71,4 +71,9 @@ public function branch()
     return $this->belongsTo(Branch::class);
 }
 
+public function invoices()
+{
+    return $this->hasMany(Invoice::class);
+}
+
 }

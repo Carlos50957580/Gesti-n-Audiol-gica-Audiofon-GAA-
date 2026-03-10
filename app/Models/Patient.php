@@ -18,20 +18,28 @@ class Patient extends Model
         'birth_date',
         'gender',
         'address',
-        'branch_id'
+        'branch_id',
+        'insurance_id', 
+        'insurance_number'  
     ];
 
-
     public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function insurance()
+    {
+        return $this->belongsTo(Insurance::class);
+    }
+
+    public function invoices()
 {
-    return $this->hasMany(Appointment::class);
+    return $this->hasMany(Invoice::class);
 }
-
-public function branch()
-{
-    return $this->belongsTo(Branch::class);
 }
-
-}
-
-

@@ -1,25 +1,14 @@
 <?php
 
-use App\Http\Controllers\Admin\AsignacionController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\PlanEstudioAdminController;
-use App\Http\Controllers\Admin\ReporteAdminController;
-use App\Http\Controllers\Admin\RevisionPlanController;
-//use App\Http\Controllers\Admin\PlanEstudioController;
-use App\Http\Controllers\Admin\UniversityController;
-use App\Http\Controllers\University\PlanEstudioController;
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AppointmentController;
-use App\Http\Controllers\Evaluador\ReporteEvaluadorController;
-use App\Http\Controllers\Evaluador\RevisionEvaluadorController;
-use App\Http\Controllers\MESCYT\EvaluacionesMESCYTController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\University\DocumentoPlanController;
-use App\Http\Controllers\University\ReporteUniversidadController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\InsuranceController;
+use App\Http\Controllers\InvoiceController;
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -79,5 +68,10 @@ Route::middleware(['auth','role:admin,recepcionista,audiologo'])
 
     Route::resource('services', ServiceController::class)
     ->middleware(['auth','role:admin']);
+
+
+    Route::resource('insurances', InsuranceController::class)
+    ->middleware(['auth','role:admin']);
+
 
 require __DIR__.'/auth.php';

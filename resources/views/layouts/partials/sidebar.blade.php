@@ -64,6 +64,16 @@
     </li>
 @endif
 
+        @if(in_array(auth()->user()->role->name,['admin']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('insurances.*') ? 'active' : '' }}" 
+        href="{{ route('insurances.index') }}">
+        <i class="ri-shield-cross-line"></i>
+        <span>Seguros Médicos</span>
+        </a>
+    </li>
+@endif
+
 
              @if(in_array(auth()->user()->role->name,['admin']))
     <li class="nav-item">

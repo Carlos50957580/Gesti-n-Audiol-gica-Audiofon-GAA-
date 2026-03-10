@@ -12,4 +12,12 @@ class Service extends Model
         'price',
         'active'
     ];
+
+
+    public function invoiceItems()
+{
+    return $this->hasMany(InvoiceItem::class);
+}
+
+
 }
