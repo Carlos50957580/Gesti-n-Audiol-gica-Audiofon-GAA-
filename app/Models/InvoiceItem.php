@@ -10,25 +10,23 @@ class InvoiceItem extends Model
     use HasFactory;
 
     protected $fillable = [
-
         'invoice_id',
         'service_id',
-
         'price',
         'quantity',
         'subtotal',
-
         'coverage_percentage',
         'insurance_amount',
-        'patient_amount'
-
+        'patient_amount',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relaciones
-    |--------------------------------------------------------------------------
-    */
+    protected $casts = [
+        'price'               => 'decimal:2',
+        'subtotal'            => 'decimal:2',
+        'coverage_percentage' => 'decimal:2',
+        'insurance_amount'    => 'decimal:2',
+        'patient_amount'      => 'decimal:2',
+    ];
 
     public function invoice()
     {
@@ -39,5 +37,4 @@ class InvoiceItem extends Model
     {
         return $this->belongsTo(Service::class);
     }
-
 }

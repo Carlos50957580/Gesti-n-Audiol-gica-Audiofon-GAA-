@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -42,36 +43,111 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
     });
     
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-Route::resource('usuarios', \App\Http\Controllers\Admin\UserController::class);
-        
-    });
+    Route::resource('usuarios', UserController::class)
+    ->middleware(['auth', 'role:admin'])
+    ->names([
+        'index'   => 'admin.usuarios.index',
+        'create'  => 'admin.usuarios.create',
+        'store'   => 'admin.usuarios.store',
+        'edit'    => 'admin.usuarios.edit',
+        'update'  => 'admin.usuarios.update',
+        'destroy' => 'admin.usuarios.destroy',
+    ]);
+    
+Route::get('usuarios/{usuario}/edit-data', [UserController::class, 'editData'])
+    ->name('admin.usuarios.edit-data')
+    ->middleware(['auth', 'role:admin']);
 
 
     
 
-Route::middleware(['auth'])->group(function () {
+// Modal de detalle
+Route::get('patients/{patient}/show-data', [PatientController::class, 'showData'])
+    ->name('patients.show-data')
+    ->middleware(['auth', 'role:admin,recepcionista,audiologo']);
 
-    Route::middleware('role:admin,recepcionista,audiologo')
-        ->resource('patients', PatientController::class);
+// Modal de edición
+Route::get('patients/{patient}/edit-data', [PatientController::class, 'editData'])
+    ->name('patients.edit-data')
+    ->middleware(['auth', 'role:admin,recepcionista']);
 
-});
+// AJAX store desde facturación
+Route::post('api/patients', [PatientController::class, 'storeAjax'])
+    ->name('api.patients.store')
+    ->middleware(['auth', 'role:admin,recepcionista']);
 
-Route::middleware(['auth','role:admin'])->group(function () {
+// ── Resource existente ──────────────────────────────────────────
+Route::resource('patients', PatientController::class)
+    ->middleware(['auth', 'role:admin,recepcionista']);
 
-    Route::resource('branches', BranchController::class);
 
-});
+
+Route::get('branches/{branch}/show-data', [BranchController::class, 'showData'])
+    ->name('branches.show-data')
+    ->middleware(['auth', 'role:admin']);
+
+Route::get('branches/{branch}/edit-data', [BranchController::class, 'editData'])
+    ->name('branches.edit-data')
+    ->middleware(['auth', 'role:admin']);
+
+// Tu resource existente (ya lo tienes):
+Route::resource('branches', BranchController::class)
+    ->middleware(['auth', 'role:admin']);
+
+
+
 
 Route::middleware(['auth','role:admin,recepcionista,audiologo'])
     ->resource('appointments', AppointmentController::class);
 
-    Route::resource('services', ServiceController::class)
-    ->middleware(['auth','role:admin']);
+    Route::get('services/{service}/show-data', [ServiceController::class, 'showData'])
+    ->name('services.show-data')
+    ->middleware(['auth', 'role:admin']);
+
+Route::get('services/{service}/edit-data', [ServiceController::class, 'editData'])
+    ->name('services.edit-data')
+    ->middleware(['auth', 'role:admin']);
+
+// Tu resource existente (ya lo tienes):
+Route::resource('services', ServiceController::class)
+    ->middleware(['auth', 'role:admin']);
 
 
-    Route::resource('insurances', InsuranceController::class)
-    ->middleware(['auth','role:admin']);
+    Route::get('insurances/{insurance}/show-data', [InsuranceController::class, 'showData'])
+    ->name('insurances.show-data')
+    ->middleware(['auth', 'role:admin']);
 
+Route::get('insurances/{insurance}/edit-data', [InsuranceController::class, 'editData'])
+    ->name('insurances.edit-data')
+    ->middleware(['auth', 'role:admin']);
+
+// Tu resource existente (ya lo tienes):
+Route::resource('insurances', InsuranceController::class)
+    ->middleware(['auth', 'role:admin']);
+
+
+Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
+
+    // CRUD principal de facturas
+    Route::resource('invoices', InvoiceController::class)
+        ->only(['index', 'create', 'store', 'show']);
+
+    // Cancelar factura (solo admin)
+    Route::patch('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])
+        ->name('invoices.cancel')
+        ->middleware('role:admin');
+
+    // AJAX: buscar pacientes
+    Route::get('api/patients/search', [InvoiceController::class, 'searchPatients'])
+        ->name('api.patients.search');
+
+    // AJAX: precio de servicio
+    Route::get('api/services/{service}/price', [InvoiceController::class, 'getServicePrice'])
+        ->name('api.services.price');
+
+    // AJAX: crear paciente desde modal
+    Route::post('api/patients', [PatientController::class, 'storeAjax'])
+        ->name('api.patients.store');
+});
 
 require __DIR__.'/auth.php';

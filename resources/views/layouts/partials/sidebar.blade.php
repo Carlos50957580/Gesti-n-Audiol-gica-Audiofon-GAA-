@@ -85,13 +85,26 @@
     </li>
 @endif
 
+                 
+                @endif
 
+                
                    @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
     <li class="nav-item">
         <a class="nav-link menu-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" 
            href="{{ route('patients.index') }}">
             <i class="ri-stethoscope-line"></i>
             <span>Pacientes</span>
+        </a>
+    </li>
+@endif
+
+            @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" 
+           href="{{ route('invoices.index') }}">
+            <i class="ri-bill-line"></i>
+            <span>Facturacion</span>
         </a>
     </li>
 @endif
@@ -108,58 +121,6 @@
     </li>
 @endif
 
-
-                  
-                    
-                @endif
-
-                {{-- UNIVERSIDAD --}}
-                @if(auth()->user()->role->name === 'universidad')
-                    <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-menu">Universidad</span></li>
-
-                    
-
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('universidad.planes.*') ? 'active' : '' }}" 
-                           href="{{ route('universidad.planes.index') }}">
-                            <i class="ri-book-line"></i> 
-                            <span data-key="t-planes">Planes de Estudio</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('universidad.reportes.*') ? 'active' : '' }}" 
-                           href="{{ route('universidad.reportes.index') }}">
-                            <i class="ri-bar-chart-line"></i> 
-                            <span data-key="t-reportes">Mis Reportes</span>
-                        </a>
-                    </li>
-                @endif
-
-                {{-- EVALUADOR --}}
-                @if(auth()->user()->role->name === 'evaluador')
-                    <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-menu">Evaluador</span></li>
-
-                
-
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('evaluador.revision.*') ? 'active' : '' }}" 
-                           href="{{ route('evaluador.revision.index') }}">
-                            <i class="ri-file-list-line"></i> 
-                            <span data-key="t-revisiones">Revisiones</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('evaluador.reportes.*') ? 'active' : '' }}" 
-                           href="{{ route('evaluador.reportes.index') }}">
-                            <i class="ri-bar-chart-line"></i> 
-                            <span data-key="t-reportes">Mis Reportes</span>
-                        </a>
-                    </li>
-                @endif
-
-               
 
             </ul>
         </div>
