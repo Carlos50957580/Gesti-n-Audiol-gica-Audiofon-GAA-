@@ -97,8 +97,23 @@ Route::resource('branches', BranchController::class)
 
 
 
-Route::middleware(['auth','role:admin,recepcionista,audiologo'])
-    ->resource('appointments', AppointmentController::class);
+Route::get('api/patients/search', [AppointmentController::class, 'searchPatients'])
+    ->name('api.patients.search')
+    ->middleware(['auth']);
+ 
+// Datos para modales AJAX
+Route::get('appointments/{appointment}/show-data', [AppointmentController::class, 'showData'])
+    ->name('appointments.show-data')
+    ->middleware(['auth']);
+ 
+Route::get('appointments/{appointment}/edit-data', [AppointmentController::class, 'editData'])
+    ->name('appointments.edit-data')
+    ->middleware(['auth']);
+ 
+// Resource principal
+Route::resource('appointments', AppointmentController::class)
+    ->middleware(['auth']);
+ 
 
     Route::get('services/{service}/show-data', [ServiceController::class, 'showData'])
     ->name('services.show-data')

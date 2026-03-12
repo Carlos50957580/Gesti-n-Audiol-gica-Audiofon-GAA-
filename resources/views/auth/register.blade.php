@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Registrarse | UASD - Plataforma de Gestión de Carreras</title>
+    <title>Registrarse | Audiofon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="Plataforma de Gestión de Planes de Estudio UASD" name="description" />
     <meta content="UASD" name="author" />

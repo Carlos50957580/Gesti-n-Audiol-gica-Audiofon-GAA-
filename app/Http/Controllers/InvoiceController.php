@@ -14,13 +14,68 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $invoices = Invoice::with(['patient', 'user', 'branch', 'insurance'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        $user  = auth()->user();
+        $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
+            ->orderBy('created_at', 'desc');
 
-        return view('invoices.index', compact('invoices'));
+        // ── Filtro por rol ──────────────────────────────────────────────────
+        // Recepcionista solo ve facturas de su sucursal
+        if ($user->role->name !== 'admin') {
+            $query->where('branch_id', $user->branch_id);
+        }
+
+        // ── Filtros de búsqueda ─────────────────────────────────────────────
+        // Búsqueda de texto: número de factura o paciente (nombre / cédula)
+        if ($request->filled('q')) {
+            $q = $request->q;
+            // invoice_number es un accessor (FAC-000001), no columna real.
+            // Extraemos el ID numérico si el texto tiene el formato FAC-XXXXXX o es un número puro.
+            $numericId = null;
+            if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
+                $numericId = (int) $m[1];
+            }
+
+            $query->where(function ($sq) use ($q, $numericId) {
+                if ($numericId) {
+                    $sq->orWhere('id', $numericId);
+                }
+                $sq->orWhereHas('patient', function ($pq) use ($q) {
+                    $pq->where('first_name', 'like', "%{$q}%")
+                       ->orWhere('last_name',  'like', "%{$q}%")
+                       ->orWhere('cedula',     'like', "%{$q}%")
+                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
+                });
+            });
+        }
+
+        // Estado
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Sucursal (solo disponible para admin)
+        if ($user->role->name === 'admin' && $request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        // Rango de fechas
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $invoices = $query->paginate(15)->withQueryString();
+
+        // Sucursales para el filtro (solo admin las necesita)
+        $branches = $user->role->name === 'admin'
+            ? Branch::orderBy('name')->get()
+            : collect();
+
+        return view('invoices.index', compact('invoices', 'branches'));
     }
 
     public function create()
@@ -35,16 +90,15 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'patient_id'                  => 'required|exists:patients,id',
-            'branch_id'                   => 'required|exists:branches,id',
-            'services'                    => 'required|array|min:1',
-            'services.*.id'               => 'required|exists:services,id',
-            'services.*.quantity'         => 'required|integer|min:1',
-            // cobertura por fila (opcional — el JS la envía pero no es obligatoria)
-            'services.*.cov_value'        => 'nullable|numeric|min:0',
-            'services.*.cov_type'         => 'nullable|in:pct,amt',
-            'insurance_id'                => 'nullable|exists:insurances,id',
-            'authorization_number'        => 'nullable|string|max:255',
+            'patient_id'           => 'required|exists:patients,id',
+            'branch_id'            => 'required|exists:branches,id',
+            'services'             => 'required|array|min:1',
+            'services.*.id'        => 'required|exists:services,id',
+            'services.*.quantity'  => 'required|integer|min:1',
+            'services.*.cov_value' => 'nullable|numeric|min:0',
+            'services.*.cov_type'  => 'nullable|in:pct,amt',
+            'insurance_id'         => 'nullable|exists:insurances,id',
+            'authorization_number' => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
@@ -76,10 +130,8 @@ class InvoiceController extends Controller
                         $insuranceAmount = round($lineSubtotal * ($pct / 100), 2);
                         $coveragePct     = $pct;
                     } else {
-                        // Monto fijo — no puede superar el subtotal de la línea
                         $insuranceAmount = min($covValue, $lineSubtotal);
-                        // Guardamos el porcentaje equivalente para registro
-                        $coveragePct = $lineSubtotal > 0
+                        $coveragePct     = $lineSubtotal > 0
                             ? round(($insuranceAmount / $lineSubtotal) * 100, 2)
                             : 0;
                     }
@@ -145,22 +197,24 @@ class InvoiceController extends Controller
         if ($invoice->status !== 'pendiente') {
             return back()->with('error', 'Solo se pueden cancelar facturas pendientes.');
         }
+
         $invoice->update(['status' => 'cancelada']);
-        return back()->with('success', 'Factura cancelada correctamente.');
+
+        return back()->with('success', 'Factura ' . $invoice->invoice_number . ' cancelada correctamente.');
     }
 
-    // ── AJAX ─────────────────────────────────────────────────────────────────
+    // ── AJAX ──────────────────────────────────────────────────────────────────
 
     public function searchPatients(Request $request)
     {
-        $query = $request->get('q', '');
+        $q = $request->get('q', '');
 
         $patients = Patient::with('insurance')
-            ->where(function ($q) use ($query) {
-                $q->where('first_name', 'like', "%{$query}%")
-                  ->orWhere('last_name',  'like', "%{$query}%")
-                  ->orWhere('cedula',     'like', "%{$query}%")
-                  ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$query}%"]);
+            ->where(function ($query) use ($q) {
+                $query->where('first_name', 'like', "%{$q}%")
+                      ->orWhere('last_name',  'like', "%{$q}%")
+                      ->orWhere('cedula',     'like', "%{$q}%")
+                      ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
             })
             ->limit(10)
             ->get()
