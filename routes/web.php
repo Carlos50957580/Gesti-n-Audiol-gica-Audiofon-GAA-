@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ProfileController;
@@ -10,6 +9,8 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\DashboardController;
+
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -23,25 +24,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-
-Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth'])
-    ->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('auth');
 
 
-     /*
-    |--------------------------------------------------------------------------
-    | ADMIN
-    |--------------------------------------------------------------------------
-   */
-
-    Route::middleware(['auth', 'role:admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])
-            ->name('dashboard');
-    });
     
     Route::resource('usuarios', UserController::class)
     ->middleware(['auth', 'role:admin'])

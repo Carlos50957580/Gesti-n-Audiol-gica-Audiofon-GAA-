@@ -38,4 +38,10 @@ class Branch extends Model
     {
         return $this->hasMany(Patient::class);
     }
+
+    // Una sucursal tiene muchas facturas
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }
