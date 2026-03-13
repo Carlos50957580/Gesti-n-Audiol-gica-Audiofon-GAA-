@@ -10,7 +10,7 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DashboardController;
-
+use App\Http\Controllers\ReceiptController;
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -148,6 +148,24 @@ Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
     // AJAX: crear paciente desde modal
     Route::post('api/patients', [PatientController::class, 'storeAjax'])
         ->name('api.patients.store');
+});
+
+
+Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
+ 
+    // Index: facturas pendientes
+    Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts.index');
+ 
+    // Store: registrar pago
+    Route::post('receipts', [ReceiptController::class, 'store'])->name('receipts.store');
+ 
+    // Show: recibo imprimible
+    Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
+ 
+    // AJAX: datos de factura para el modal
+    Route::get('api/receipts/invoice-data/{invoice}', [ReceiptController::class, 'invoiceData'])
+        ->name('receipts.invoice-data');
+ 
 });
 
 require __DIR__.'/auth.php';

@@ -29,6 +29,12 @@ class Invoice extends Model
 
     // ── Relations ────────────────────────────────────────────────────────────
 
+
+    public function receipt()
+    {
+        return $this->hasOne(Receipt::class);
+    }
+
     public function patient()
     {
         return $this->belongsTo(Patient::class);

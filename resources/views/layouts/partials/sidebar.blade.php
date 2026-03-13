@@ -109,6 +109,15 @@
     </li>
 @endif
 
+        @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('receipts.*') ? 'active' : '' }}" 
+           href="{{ route('receipts.index') }}">
+            <i class="ri-bank-card-line"></i>
+            <span>Pagar</span>
+        </a>
+    </li>
+@endif
                 
                 
                     @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
