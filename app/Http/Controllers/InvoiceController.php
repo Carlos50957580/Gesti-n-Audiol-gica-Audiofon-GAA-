@@ -79,13 +79,29 @@ class InvoiceController extends Controller
     }
 
     public function create()
-    {
-        $services   = Service::where('active', 1)->orderBy('name')->get();
-        $insurances = Insurance::where('active', 1)->orderBy('name')->get();
-        $branches   = Branch::orderBy('name')->get();
+{
+    $user = auth()->user();
 
-        return view('invoices.create', compact('services', 'insurances', 'branches'));
-    }
+    $services   = Service::where('active', 1)->orderBy('name')->get();
+    $insurances = Insurance::where('active', 1)->orderBy('name')->get();
+    $branches   = Branch::orderBy('name')->get();
+
+    // Audiólogos según rol
+    $audiologists = \App\Models\User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
+        ->when(
+            $user->role->name !== 'admin',
+            fn($q) => $q->where('branch_id', $user->branch_id)
+        )
+        ->orderBy('name')
+        ->get();
+
+    return view('invoices.create', compact(
+        'services',
+        'insurances',
+        'branches',
+        'audiologists',
+    ));
+}
 
     public function store(Request $request)
     {
@@ -99,6 +115,8 @@ class InvoiceController extends Controller
             'services.*.cov_type'  => 'nullable|in:pct,amt',
             'insurance_id'         => 'nullable|exists:insurances,id',
             'authorization_number' => 'nullable|string|max:255',
+            'audiologist_id' => 'required|exists:users,id',
+
         ]);
 
         DB::beginTransaction();
@@ -165,6 +183,7 @@ class InvoiceController extends Controller
                 'total'                => $total,
                 'status'               => 'pendiente',
                 'authorization_number' => $request->authorization_number,
+                'audiologist_id' => $request->audiologist_id,
             ]);
 
             foreach ($items as $item) {

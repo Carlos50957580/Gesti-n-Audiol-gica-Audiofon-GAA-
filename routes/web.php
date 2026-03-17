@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\ClinicalRecordController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InvoiceController;
@@ -184,6 +185,37 @@ Route::middleware(['auth', 'role:audiologo'])->prefix('audiologist')->name('audi
     Route::get('appointments/{appointment}/show-data', [AudiologistAppointmentController::class, 'showData'])
         ->name('appointments.show-data');
 });
- 
+
+
+
+
+// routes/web.php
+
+// Antes del resource / rutas manuales
+Route::get('clinical-records/{invoice}/show-data', [ClinicalRecordController::class, 'showData'])
+    ->name('clinical-records.show-data')
+    ->middleware(['auth', 'role:audiologo']);
+    
+// Historial AJAX — antes del resource
+Route::get('clinical-records/patient/{patientId}/history', [ClinicalRecordController::class, 'patientHistory'])
+    ->name('clinical-records.patient-history')
+    ->middleware(['auth', 'role:audiologo']);
+
+// Rutas manuales (no resource, porque el parámetro es invoice)
+Route::get('clinical-records', [ClinicalRecordController::class, 'index'])
+    ->name('clinical-records.index')
+    ->middleware(['auth', 'role:audiologo']);
+
+Route::get('clinical-records/{invoice}/edit', [ClinicalRecordController::class, 'edit'])
+    ->name('clinical-records.edit')
+    ->middleware(['auth', 'role:audiologo']);
+
+Route::put('clinical-records/{invoice}', [ClinicalRecordController::class, 'update'])
+    ->name('clinical-records.update')
+    ->middleware(['auth', 'role:audiologo']);
+
+Route::get('clinical-records/{invoice}/show', [ClinicalRecordController::class, 'show'])
+    ->name('clinical-records.show')
+    ->middleware(['auth', 'role:audiologo']);
 
 require __DIR__.'/auth.php';

@@ -76,4 +76,9 @@ public function invoices()
     return $this->hasMany(Invoice::class);
 }
 
+public function clinicalRecords()
+{
+    return $this->hasMany(ClinicalRecord::class, 'audiologist_id');
+}
+
 }

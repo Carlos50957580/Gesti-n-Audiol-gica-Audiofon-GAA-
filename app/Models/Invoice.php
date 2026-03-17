@@ -19,6 +19,7 @@ class Invoice extends Model
         'total',
         'status',
         'authorization_number',
+        'audiologist_id',
     ];
 
     protected $casts = [
@@ -60,6 +61,15 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
+    public function clinicalRecord()
+{
+    return $this->hasOne(ClinicalRecord::class);
+}
+
+public function audiologist()
+{
+    return $this->belongsTo(User::class, 'audiologist_id');
+}
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     public function getInvoiceNumberAttribute(): string

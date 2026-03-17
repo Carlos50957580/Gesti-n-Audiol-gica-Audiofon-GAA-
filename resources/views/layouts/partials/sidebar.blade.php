@@ -141,6 +141,16 @@
     </li>
 @endif
 
+ @if(in_array(auth()->user()->role->name,['audiologo']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('audiologist.*') ? 'active' : '' }}" 
+           href="{{ route('clinical-records.index') }}">
+<i class="ri-file-history-line"></i>
+            <span>Historia Clinica</span>
+        </a>
+    </li>
+@endif
+
 
             </ul>
         </div>
