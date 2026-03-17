@@ -73,7 +73,7 @@
                                     <div class="p-lg-5 p-4">
                                         <div>
                                             <h5 class="text-primary">¡Bienvenido de Nuevo!</h5>
-                                            <p class="text-muted">Inicia sesión para continuar a la plataforma UASD.</p>
+                                            <p class="text-muted">Inicia sesión para continuar a la plataforma.</p>
                                         </div>
 
                                         <div class="mt-4">
