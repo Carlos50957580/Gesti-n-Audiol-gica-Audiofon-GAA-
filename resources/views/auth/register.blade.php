@@ -187,7 +187,7 @@
                     <div class="col-lg-12">
                         <div class="text-center">
                             <p class="mb-0">&copy;
-                                <script>document.write(new Date().getFullYear())</script> UASD - Universidad Autónoma de Santo Domingo. Todos los derechos reservados.
+                                <script>document.write(new Date().getFullYear())</script> Audiofon.
                             </p>
                         </div>
                     </div>

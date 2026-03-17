@@ -29,7 +29,6 @@
                             <div class="row g-0">
                                 <div class="col-lg-6">
                                     <div class="p-lg-5 p-4 auth-one-bg h-100">
-                                        <div class="bg-overlay"></div>
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
                                                 <a href="/" class="d-block">
@@ -51,17 +50,17 @@
                                                         <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="1" aria-label="Diapositiva 2"></button>
                                                         <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="2" aria-label="Diapositiva 3"></button>
                                                     </div>
-                                                    <div class="carousel-inner text-center text-white-50 pb-5">
-                                                        <div class="carousel-item active">
-                                                            <p class="fs-15 fst-italic">"Una plataforma excelente que ...."</p>
-                                                        </div>
-                                                        <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">"La mejor herramienta para ..."</p>
-                                                        </div>
-                                                        <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">"Interfaz intuitiva y soporte excepcional. Facilita enormemente nuestro trabajo diario."</p>
-                                                        </div>
-                                                    </div>
+                                                  <div class="carousel-inner text-center text-white-50 pb-5" style="background-color: rgba(0, 0, 0, 0.5); border-radius: 5px; padding: 10px;">
+    <div class="carousel-item active">
+        <p class="fs-15 fst-italic">"Oir bien, escucha mejor"</p>
+    </div>
+    <div class="carousel-item">
+        <p class="fs-15 fst-italic">"Escuchar bien cambia como vives."</p>
+    </div>
+    <div class="carousel-item">
+        <p class="fs-15 fst-italic">"Reserva tu cita ahora"</p>
+    </div>
+</div>
                                                 </div>
                                                 <!-- end carousel -->
                                             </div>
@@ -139,7 +138,7 @@
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                           <p class="mb-0">¿No tiene una cuenta? <a href="{{ route('register') }}" class="fw-semibold text-primary text-decoration-underline">Registrarse</a></p>
+                                           <p class="mb-0" class="fw-semibold text-primary text-decoration-underline">¿No tiene una cuenta? Contacta con el administrador</a></p>
                                         </div>
                                     </div>
                                 </div>
@@ -164,7 +163,7 @@
                     <div class="col-lg-12">
                         <div class="text-center">
                             <p class="mb-0">&copy;
-                                <script>document.write(new Date().getFullYear())</script> UASD - Universidad Autónoma de Santo Domingo. Todos los derechos reservados.
+                                <script>document.write(new Date().getFullYear())</script>  - Audiofon.
                             </p>
                         </div>
                     </div>
