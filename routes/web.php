@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AudiologistAppointmentController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PatientController;
@@ -167,5 +168,22 @@ Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
         ->name('receipts.invoice-data');
  
 });
+
+// ── Citas del audiólogo (solo su propio listado) ──────────────────────────────
+Route::middleware(['auth', 'role:audiologo'])->prefix('audiologist')->name('audiologist.')->group(function () {
+ 
+    Route::get('appointments',              [AudiologistAppointmentController::class, 'index'])
+        ->name('appointments.index');
+ 
+    Route::patch('appointments/{appointment}/status', [AudiologistAppointmentController::class, 'updateStatus'])
+        ->name('appointments.status');
+ 
+    Route::patch('appointments/{appointment}/notes',  [AudiologistAppointmentController::class, 'updateNotes'])
+        ->name('appointments.notes');
+ 
+    Route::get('appointments/{appointment}/show-data', [AudiologistAppointmentController::class, 'showData'])
+        ->name('appointments.show-data');
+});
+ 
 
 require __DIR__.'/auth.php';

@@ -118,6 +118,17 @@
         </a>
     </li>
 @endif
+
+
+ @if(in_array(auth()->user()->role->name,['audiologo']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('audiologist.*') ? 'active' : '' }}" 
+           href="{{ route('audiologist.appointments.index') }}">
+            <i class="ri-calendar-check-line"></i>
+            <span>Citas</span>
+        </a>
+    </li>
+@endif
                 
                 
                     @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
