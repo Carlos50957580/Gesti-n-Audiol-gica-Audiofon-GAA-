@@ -162,7 +162,7 @@
 
   @if(in_array(auth()->user()->role->name,['recepcionista']))
     <li class="nav-item">
-        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
+        <a class="nav-link menu-link {{ request()->routeIs('receptionist.reports.*') ? 'active' : '' }}" 
            href="{{ route('receptionist.reports.index') }}">
             <i class="ri-bar-chart-line"></i>
             <span>Reportes</span>
