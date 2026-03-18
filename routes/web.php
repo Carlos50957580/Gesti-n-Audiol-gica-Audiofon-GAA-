@@ -13,6 +13,10 @@ use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\ReceptionistReportController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\AudiologistReportController;
+
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -218,4 +222,27 @@ Route::get('clinical-records/{invoice}/show', [ClinicalRecordController::class, 
     ->name('clinical-records.show')
     ->middleware(['auth', 'role:audiologo']);
 
+
+    // routes/web.php
+Route::middleware(['auth', 'role:admin'])->prefix('reports')->name('reports.')->group(function () {
+    Route::get('/',               [ReportController::class, 'index'])->name('index');
+    Route::get('invoices',        [ReportController::class, 'invoices'])->name('invoices');
+    Route::get('appointments',    [ReportController::class, 'appointments'])->name('appointments');
+    Route::get('clinical-records',[ReportController::class, 'clinicalRecords'])->name('clinical-records');
+    Route::get('patients',        [ReportController::class, 'patients'])->name('patients');
+});
+
+
+Route::middleware(['auth', 'role:recepcionista'])->prefix('receptionist/reports')->name('receptionist.reports.')->group(function () {
+    Route::get('/',        [ReceptionistReportController::class, 'index'])->name('index');
+    Route::get('summary',  [ReceptionistReportController::class, 'summary'])->name('summary');
+    Route::get('invoices', [ReceptionistReportController::class, 'invoices'])->name('invoices');
+    Route::get('services', [ReceptionistReportController::class, 'services'])->name('services');
+});
+
+Route::middleware(['auth', 'role:audiologo'])->prefix('audiologist/reports')->name('audiologist.reports.')->group(function () {
+    Route::get('/',               [AudiologistReportController::class, 'index'])->name('index');
+    Route::get('appointments',    [AudiologistReportController::class, 'appointments'])->name('appointments');
+    Route::get('clinical-records',[AudiologistReportController::class, 'clinicalRecords'])->name('clinical-records');
+});
 require __DIR__.'/auth.php';

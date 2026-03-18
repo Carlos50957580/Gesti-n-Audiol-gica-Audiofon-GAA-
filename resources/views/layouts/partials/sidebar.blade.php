@@ -83,13 +83,12 @@
             <span>Servicios</span>
         </a>
     </li>
-@endif
-
-                 
+@endif    
                 @endif
 
-                
-                   @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+
+
+                @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
     <li class="nav-item">
         <a class="nav-link menu-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" 
            href="{{ route('patients.index') }}">
@@ -122,7 +121,7 @@
 
  @if(in_array(auth()->user()->role->name,['audiologo']))
     <li class="nav-item">
-        <a class="nav-link menu-link {{ request()->routeIs('audiologist.*') ? 'active' : '' }}" 
+        <a class="nav-link menu-link {{ request()->routeIs('audiologist.appointments*') ? 'active' : '' }}" 
            href="{{ route('audiologist.appointments.index') }}">
             <i class="ri-calendar-check-line"></i>
             <span>Citas</span>
@@ -141,15 +140,47 @@
     </li>
 @endif
 
+       @if(in_array(auth()->user()->role->name,['admin']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
+           href="{{ route('reports.index') }}">
+            <i class="ri-bar-chart-line"></i>
+            <span>Reportes</span>
+        </a>
+    </li>
+@endif
+
  @if(in_array(auth()->user()->role->name,['audiologo']))
     <li class="nav-item">
-        <a class="nav-link menu-link {{ request()->routeIs('audiologist.*') ? 'active' : '' }}" 
+        <a class="nav-link menu-link {{ request()->routeIs('clinical-records*') ? 'active' : '' }}" 
            href="{{ route('clinical-records.index') }}">
 <i class="ri-file-history-line"></i>
             <span>Historia Clinica</span>
         </a>
     </li>
 @endif
+
+  @if(in_array(auth()->user()->role->name,['recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
+           href="{{ route('receptionist.reports.index') }}">
+            <i class="ri-bar-chart-line"></i>
+            <span>Reportes</span>
+        </a>
+    </li>
+@endif
+               
+  @if(in_array(auth()->user()->role->name,['audiologo']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('audiologist.reports*') ? 'active' : '' }}" 
+           href="{{ route('audiologist.reports.index') }}">
+            <i class="ri-bar-chart-line"></i>
+            <span>Reportes</span>
+        </a>
+    </li>
+@endif
+                   
+
 
 
             </ul>
