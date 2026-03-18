@@ -182,6 +182,21 @@
     <script src="{{ asset('velzon/assets/js/pages/plugins/lord-icon-2.1.0.js') }}"></script>
     <script src="{{ asset('velzon/assets/js/plugins.js') }}"></script>
     <script src="{{ asset('velzon/assets/js/pages/password-addon.init.js') }}"></script>
+
+    <script>
+    const passwordBtn = document.getElementById('password-addon');
+    const passwordInput = document.getElementById('password');
+
+    passwordBtn.addEventListener('click', function () {
+        // Cambiar el tipo de input
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        // Cambiar el icono (opcional)
+        this.querySelector('i').classList.toggle('ri-eye-fill');
+        this.querySelector('i').classList.toggle('ri-eye-off-fill');
+    });
+</script>
 </body>
 
 </html>
