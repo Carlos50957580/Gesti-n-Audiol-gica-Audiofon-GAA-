@@ -20,27 +20,18 @@ class InvoiceController extends Controller
         $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
             ->orderBy('created_at', 'desc');
 
-        // ── Filtro por rol ──────────────────────────────────────────────────
-        // Recepcionista solo ve facturas de su sucursal
         if ($user->role->name !== 'admin') {
             $query->where('branch_id', $user->branch_id);
         }
 
-        // ── Filtros de búsqueda ─────────────────────────────────────────────
-        // Búsqueda de texto: número de factura o paciente (nombre / cédula)
         if ($request->filled('q')) {
-            $q = $request->q;
-            // invoice_number es un accessor (FAC-000001), no columna real.
-            // Extraemos el ID numérico si el texto tiene el formato FAC-XXXXXX o es un número puro.
+            $q         = $request->q;
             $numericId = null;
             if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
                 $numericId = (int) $m[1];
             }
-
             $query->where(function ($sq) use ($q, $numericId) {
-                if ($numericId) {
-                    $sq->orWhere('id', $numericId);
-                }
+                if ($numericId) $sq->orWhere('id', $numericId);
                 $sq->orWhereHas('patient', function ($pq) use ($q) {
                     $pq->where('first_name', 'like', "%{$q}%")
                        ->orWhere('last_name',  'like', "%{$q}%")
@@ -50,91 +41,68 @@ class InvoiceController extends Controller
             });
         }
 
-        // Estado
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Sucursal (solo disponible para admin)
-        if ($user->role->name === 'admin' && $request->filled('branch_id')) {
+        if ($request->filled('status'))    $query->where('status', $request->status);
+        if ($user->role->name === 'admin' && $request->filled('branch_id'))
             $query->where('branch_id', $request->branch_id);
-        }
-
-        // Rango de fechas
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
+        if ($request->filled('date_from')) $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->filled('date_to'))   $query->whereDate('created_at', '<=', $request->date_to);
 
         $invoices = $query->paginate(15)->withQueryString();
-
-        // Sucursales para el filtro (solo admin las necesita)
-        $branches = $user->role->name === 'admin'
-            ? Branch::orderBy('name')->get()
-            : collect();
+        $branches = $user->role->name === 'admin' ? Branch::orderBy('name')->get() : collect();
 
         return view('invoices.index', compact('invoices', 'branches'));
     }
 
     public function create()
-{
-    $user = auth()->user();
+    {
+        $user = auth()->user();
 
-    $services   = Service::where('active', 1)->orderBy('name')->get();
-    $insurances = Insurance::where('active', 1)->orderBy('name')->get();
-    $branches   = Branch::orderBy('name')->get();
+        $services   = Service::where('active', 1)->orderBy('name')->get();
+        $insurances = Insurance::where('active', 1)->orderBy('name')->get();
+        $branches   = Branch::orderBy('name')->get();
 
-    // Audiólogos según rol
-    $audiologists = \App\Models\User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
-        ->when(
-            $user->role->name !== 'admin',
-            fn($q) => $q->where('branch_id', $user->branch_id)
-        )
-        ->orderBy('name')
-        ->get();
+        $audiologists = \App\Models\User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
+            ->when($user->role->name !== 'admin', fn($q) => $q->where('branch_id', $user->branch_id))
+            ->orderBy('name')
+            ->get();
 
-    return view('invoices.create', compact(
-        'services',
-        'insurances',
-        'branches',
-        'audiologists',
-    ));
-}
+        return view('invoices.create', compact('services', 'insurances', 'branches', 'audiologists'));
+    }
 
     public function store(Request $request)
     {
         $request->validate([
-            'patient_id'           => 'required|exists:patients,id',
-            'branch_id'            => 'required|exists:branches,id',
-            'services'             => 'required|array|min:1',
-            'services.*.id'        => 'required|exists:services,id',
-            'services.*.quantity'  => 'required|integer|min:1',
-            'services.*.cov_value' => 'nullable|numeric|min:0',
-            'services.*.cov_type'  => 'nullable|in:pct,amt',
-            'insurance_id'         => 'nullable|exists:insurances,id',
-            'authorization_number' => 'nullable|string|max:255',
-            'audiologist_id' => 'required|exists:users,id',
-
+            'patient_id'              => 'required|exists:patients,id',
+            'branch_id'               => 'required|exists:branches,id',
+            'audiologist_id'          => 'required|exists:users,id',
+            'services'                => 'required|array|min:1',
+            'services.*.id'           => 'required|exists:services,id',
+            'services.*.quantity'     => 'required|integer|min:1',
+            'services.*.custom_price' => 'nullable|numeric|min:0',
+            'services.*.cov_value'    => 'nullable|numeric|min:0',
+            'services.*.cov_type'     => 'nullable|in:pct,amt',
+            'insurance_id'            => 'nullable|exists:insurances,id',
+            'authorization_number'    => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
 
         try {
-            $insurance = $request->insurance_id
-                ? Insurance::find($request->insurance_id)
-                : null;
-
+            $insurance         = $request->insurance_id ? Insurance::find($request->insurance_id) : null;
             $subtotal          = 0;
             $insuranceDiscount = 0;
             $items             = [];
 
             foreach ($request->services as $svc) {
-                $service      = Service::findOrFail($svc['id']);
-                $qty          = (int) $svc['quantity'];
-                $lineSubtotal = $service->price * $qty;
+                $service = Service::findOrFail($svc['id']);
+                $qty     = (int) $svc['quantity'];
 
+                // ── Precio personalizado o precio del catálogo ──────────
+                $price = isset($svc['custom_price']) && (float) $svc['custom_price'] > 0
+                    ? (float) $svc['custom_price']
+                    : (float) $service->price;
+
+                $lineSubtotal    = $price * $qty;
                 $coveragePct     = null;
                 $insuranceAmount = 0;
                 $patientAmount   = $lineSubtotal;
@@ -162,7 +130,7 @@ class InvoiceController extends Controller
 
                 $items[] = [
                     'service_id'          => $service->id,
-                    'price'               => $service->price,
+                    'price'               => $price,        // precio real cobrado
                     'quantity'            => $qty,
                     'subtotal'            => $lineSubtotal,
                     'coverage_percentage' => $coveragePct,
@@ -176,6 +144,7 @@ class InvoiceController extends Controller
             $invoice = Invoice::create([
                 'patient_id'           => $request->patient_id,
                 'user_id'              => Auth::id(),
+                'audiologist_id'       => $request->audiologist_id,
                 'branch_id'            => $request->branch_id,
                 'insurance_id'         => $insurance?->id,
                 'subtotal'             => $subtotal,
@@ -183,7 +152,6 @@ class InvoiceController extends Controller
                 'total'                => $total,
                 'status'               => 'pendiente',
                 'authorization_number' => $request->authorization_number,
-                'audiologist_id' => $request->audiologist_id,
             ]);
 
             foreach ($items as $item) {
@@ -199,9 +167,7 @@ class InvoiceController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()
-                ->withInput()
-                ->with('error', 'Error al crear la factura: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Error al crear la factura: ' . $e->getMessage());
         }
     }
 
@@ -216,13 +182,9 @@ class InvoiceController extends Controller
         if ($invoice->status !== 'pendiente') {
             return back()->with('error', 'Solo se pueden cancelar facturas pendientes.');
         }
-
         $invoice->update(['status' => 'cancelada']);
-
         return back()->with('success', 'Factura ' . $invoice->invoice_number . ' cancelada correctamente.');
     }
-
-    // ── AJAX ──────────────────────────────────────────────────────────────────
 
     public function searchPatients(Request $request)
     {
@@ -252,10 +214,6 @@ class InvoiceController extends Controller
 
     public function getServicePrice(Service $service)
     {
-        return response()->json([
-            'id'    => $service->id,
-            'name'  => $service->name,
-            'price' => $service->price,
-        ]);
+        return response()->json(['id' => $service->id, 'name' => $service->name, 'price' => $service->price]);
     }
 }

@@ -414,9 +414,6 @@
                         <div class="totals-row">
                             <span class="totals-label">
                                 Descuento seguro
-                                <span style="font-size:.72rem;color:#8098bb;">
-                                    ({{ $invoice->insurance->coverage_percentage ?? 0 }}%)
-                                </span>
                             </span>
                             <span class="discount-val">− RD$ {{ number_format($invoice->insurance_discount, 2) }}</span>
                         </div>
