@@ -222,7 +222,9 @@ Route::get('clinical-records/{invoice}/show', [ClinicalRecordController::class, 
     ->name('clinical-records.show')
     ->middleware(['auth', 'role:audiologo']);
 
-
+Route::get('reports/by-user', [ReportController::class, 'byUser'])
+    ->name('reports.by-user')
+    ->middleware(['auth', 'role:admin']);
     // routes/web.php
 Route::middleware(['auth', 'role:admin'])->prefix('reports')->name('reports.')->group(function () {
     Route::get('/',               [ReportController::class, 'index'])->name('index');
@@ -230,6 +232,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('reports')->name('reports.')->
     Route::get('appointments',    [ReportController::class, 'appointments'])->name('appointments');
     Route::get('clinical-records',[ReportController::class, 'clinicalRecords'])->name('clinical-records');
     Route::get('patients',        [ReportController::class, 'patients'])->name('patients');
+    
 });
 
 

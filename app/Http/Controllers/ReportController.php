@@ -15,13 +15,15 @@ use Illuminate\Support\Facades\DB;
 class ReportController extends Controller
 {
     public function index()
-    {
-        $branches     = Branch::orderBy('name')->get();
-        $audiologists = User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
-            ->orderBy('name')->get();
+{
+    $branches       = Branch::orderBy('name')->get();
+    $audiologists   = User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
+        ->orderBy('name')->get();
+    $receptionists  = User::whereHas('role', fn($q) => $q->where('name', 'recepcionista'))
+        ->orderBy('name')->get();
 
-        return view('reports.index', compact('branches', 'audiologists'));
-    }
+    return view('reports.index', compact('branches', 'audiologists', 'receptionists'));
+}
 
     public function invoices(Request $request): JsonResponse
     {
@@ -298,4 +300,77 @@ class ReportController extends Controller
             'top_patients'=> $topPatients,
         ]);
     }
+
+    public function byUser(Request $request): JsonResponse
+{
+    $baseFilters = function($q) use ($request) {
+        $q->when($request->filled('user_id'),   fn($q) => $q->where('invoices.user_id', $request->user_id))
+          ->when($request->filled('branch_id'), fn($q) => $q->where('invoices.branch_id', $request->branch_id))
+          ->when($request->filled('date_from'), fn($q) => $q->whereDate('invoices.created_at', '>=', $request->date_from))
+          ->when($request->filled('date_to'),   fn($q) => $q->whereDate('invoices.created_at', '<=', $request->date_to));
+    };
+
+    // ── KPIs por usuario ────────────────────────────────
+    $kpiByUser = DB::table('invoices')
+        ->join('users', 'invoices.user_id', '=', 'users.id')
+        ->tap($baseFilters)
+        ->selectRaw('
+            users.id as user_id,
+            users.name as user_name,
+            COUNT(*) as total_facturas,
+            SUM(CASE WHEN invoices.status = "pagada"    THEN 1 ELSE 0 END) as pagadas,
+            SUM(CASE WHEN invoices.status = "pendiente" THEN 1 ELSE 0 END) as pendientes,
+            SUM(CASE WHEN invoices.status = "cancelada" THEN 1 ELSE 0 END) as canceladas,
+            COALESCE(SUM(CASE WHEN invoices.status = "pagada" THEN invoices.total ELSE 0 END), 0) as total_cobrado,
+            COALESCE(SUM(CASE WHEN invoices.status = "pagada" THEN invoices.insurance_discount ELSE 0 END), 0) as total_descuentos
+        ')
+        ->groupBy('users.id', 'users.name')
+        ->orderByDesc('total_cobrado')
+        ->get();
+
+    // ── Detalle de facturas ──────────────────────────────
+    $invoices = DB::table('invoices')
+        ->join('users',    'invoices.user_id',    '=', 'users.id')
+        ->join('patients', 'invoices.patient_id', '=', 'patients.id')
+        ->join('branches', 'invoices.branch_id',  '=', 'branches.id')
+        ->leftJoin('users as audiologists', 'invoices.audiologist_id', '=', 'audiologists.id')
+        ->leftJoin('insurances', 'invoices.insurance_id', '=', 'insurances.id')
+        ->tap($baseFilters)
+        ->selectRaw("
+            invoices.id,
+            CONCAT('FAC-', LPAD(invoices.id, 6, '0')) as invoice_number,
+            invoices.created_at,
+            invoices.status,
+            users.name as receptionist,
+            CONCAT(patients.first_name,' ',patients.last_name) as patient,
+            patients.cedula,
+            branches.name as branch,
+            COALESCE(audiologists.name, '—') as audiologist,
+            COALESCE(insurances.name, '—') as insurance,
+            invoices.subtotal,
+            invoices.insurance_discount,
+            invoices.total
+        ")
+        ->orderByDesc('invoices.created_at')
+        ->get();
+
+    // ── Totales globales ─────────────────────────────────
+    $totals = DB::table('invoices')
+        ->tap($baseFilters)
+        ->selectRaw('
+            COUNT(*) as total,
+            SUM(CASE WHEN status = "pagada"    THEN 1 ELSE 0 END) as pagadas,
+            SUM(CASE WHEN status = "pendiente" THEN 1 ELSE 0 END) as pendientes,
+            SUM(CASE WHEN status = "cancelada" THEN 1 ELSE 0 END) as canceladas,
+            COALESCE(SUM(CASE WHEN status = "pagada" THEN total ELSE 0 END), 0) as total_cobrado,
+            COALESCE(SUM(CASE WHEN status = "pagada" THEN insurance_discount ELSE 0 END), 0) as total_descuentos
+        ')
+        ->first();
+
+    return response()->json([
+        'totals'      => $totals,
+        'kpi_by_user' => $kpiByUser,
+        'invoices'    => $invoices,
+    ]);
+}
 }

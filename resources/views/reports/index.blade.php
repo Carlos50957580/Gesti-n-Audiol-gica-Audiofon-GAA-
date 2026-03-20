@@ -170,6 +170,11 @@
     <button class="rpt-tab active" onclick="switchTab('invoices', this)">
         <i class="ri-file-text-line"></i> Facturación
     </button>
+
+    <button class="rpt-tab" onclick="switchTab('byuser', this)">
+    <i class="ri-user-2-line"></i> Por Recepcionista
+</button>
+
     <button class="rpt-tab" onclick="switchTab('appointments', this)">
         <i class="ri-calendar-check-line"></i> Citas
     </button>
@@ -241,6 +246,92 @@
         </div>
     </div>
 </div>
+{{-- ↑ CIERRE CORRECTO de tab-invoices --}}
+
+{{-- ════════════════════════════
+     TAB: POR RECEPCIONISTA
+════════════════════════════ --}}
+<div id="tab-byuser" class="tab-pane fade-up d-none">
+    <div id="loading-byuser" class="loading-overlay"><div class="spinner-ring"></div></div>
+
+    <div style="background:#f8faff;border:1px solid #e2e8f0;border-radius:.65rem;padding:.85rem 1.1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+            <div style="font-size:.7rem;font-weight:700;color:#8098bb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem;">Recepcionista</div>
+            <select id="f-user" class="form-select form-select-sm" style="width:220px;border:1.5px solid #e2e8f0;border-radius:.5rem;">
+                <option value="">Todos</option>
+                @foreach($receptionists as $r)
+                    <option value="{{ $r->id }}">{{ $r->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div style="margin-top:1.2rem;">
+            <button class="btn-apply" onclick="applyByUser()">
+                <i class="ri-search-line"></i> Filtrar
+            </button>
+        </div>
+        <div style="margin-top:1.2rem;margin-left:auto;">
+            <button class="btn btn-sm btn-light d-flex align-items-center gap-1" onclick="exportByUser()"
+                    style="border:1.5px solid #e2e8f0;border-radius:.45rem;font-size:.83rem;font-weight:600;">
+                <i class="ri-download-line"></i> Exportar CSV
+            </button>
+        </div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-byuser"></div>
+
+    <div class="chart-card chart-grid-1">
+        <div class="chart-card-header">
+            <i class="ri-user-2-line"></i>
+            <h6>Resumen por Recepcionista</h6>
+        </div>
+        <div class="chart-card-body">
+            <div class="table-responsive">
+                <table class="rpt-table" id="table-byuser-summary"></table>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-card chart-grid-1">
+        <div class="chart-card-header">
+            <i class="ri-file-list-3-line"></i>
+            <h6>Detalle de Facturas</h6>
+            <span id="byuser-inv-count" class="badge bg-primary-subtle text-primary ms-auto" style="font-size:.78rem;"></span>
+            <div class="position-relative ms-2">
+                <i class="ri-search-line" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:#8098bb;font-size:.85rem;"></i>
+                <input type="text" id="byuser-search" placeholder="Buscar..."
+                       oninput="filterByUserTable()"
+                       style="border:1.5px solid #e2e8f0;border-radius:2rem;padding:.3rem .8rem .3rem 2rem;font-size:.82rem;width:190px;">
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="rpt-table w-100">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Factura</th>
+                        <th>Recepcionista</th>
+                        <th>Paciente</th>
+                        <th>Cédula</th>
+                        <th>Sucursal</th>
+                        <th>Audiólogo</th>
+                        <th>Seguro</th>
+                        <th>Subtotal</th>
+                        <th>Desc.</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-byuser"></tbody>
+            </table>
+        </div>
+        <div id="byuser-empty" class="text-center py-4 d-none">
+            <i class="ri-file-list-3-line d-block text-muted mb-2" style="font-size:2.5rem;opacity:.3;"></i>
+            <p class="text-muted mb-0" style="font-size:.88rem;">No hay facturas en este período.</p>
+        </div>
+    </div>
+</div>
+{{-- ↑ CIERRE CORRECTO de tab-byuser --}}
+
 
 {{-- ════════════════════════════
      TAB: CITAS
@@ -403,6 +494,7 @@ const URLS = {
     appointments: "{{ route('reports.appointments') }}",
     clinical    : "{{ route('reports.clinical-records') }}",
     patients    : "{{ route('reports.patients') }}",
+    byuser      : "{{ route('reports.by-user') }}",
 };
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -493,6 +585,148 @@ function renderTab(tab, d) {
     if (tab === 'appointments') renderAppointments(d);
     if (tab === 'clinical')     renderClinical(d);
     if (tab === 'patients')     renderPatients(d);
+    if (tab === 'byuser')       renderByUser(d);
+}
+
+function applyByUser() {
+    loadedTabs['byuser'] = false;
+    loadTab('byuser');
+}
+
+let allByUserInvoices = [];
+
+function renderByUser(d) {
+    const t = d.totals;
+
+    // ── KPIs globales ────────────────────────────────────
+    document.getElementById('kpi-byuser').innerHTML = `
+        ${kpiCard('Total Facturas',    t.total,                              'ri-file-text-line',          'primary')}
+        ${kpiCard('Total Cobrado',     'RD$ '+fmtNum(t.total_cobrado),      'ri-money-dollar-circle-line','success')}
+        ${kpiCard('Pagadas',           t.pagadas,                            'ri-checkbox-circle-line',    'success')}
+        ${kpiCard('Pendientes',        t.pendientes,                         'ri-time-line',               'warning')}
+        ${kpiCard('Canceladas',        t.canceladas,                         'ri-close-circle-line',       'danger')}
+        ${kpiCard('Desc. Seguros',     'RD$ '+fmtNum(t.total_descuentos),   'ri-shield-check-line',       'info')}
+    `;
+
+    // ── Resumen por recepcionista ─────────────────────────
+    const maxCobrado = Math.max(...d.kpi_by_user.map(r => parseFloat(r.total_cobrado)), 1);
+    document.getElementById('table-byuser-summary').innerHTML =
+        tableHead(['#','Recepcionista','Facturas','Pagadas','Pendientes','Canceladas','Total Cobrado','%']) +
+        '<tbody>' + d.kpi_by_user.map((r, i) => `
+            <tr>
+                <td><span class="rank-badge ${rankClass(i)}">${i+1}</span></td>
+                <td class="fw-semibold">${r.user_name}</td>
+                <td>${r.total_facturas}</td>
+                <td><span style="color:#0ab39c;font-weight:700;">${r.pagadas}</span></td>
+                <td><span style="color:#f59e0b;font-weight:700;">${r.pendientes}</span></td>
+                <td><span style="color:#e74c3c;font-weight:700;">${r.canceladas}</span></td>
+                <td class="fw-bold text-success">RD$ ${fmtNum(r.total_cobrado)}</td>
+                <td style="min-width:120px;">
+                    <div class="prog-bar-wrap">
+                        <div class="prog-bar" style="width:${Math.round(parseFloat(r.total_cobrado)/maxCobrado*100)}%"></div>
+                    </div>
+                    <span style="font-size:.72rem;color:#8098bb;">${Math.round(parseFloat(r.total_cobrado)/maxCobrado*100)}%</span>
+                </td>
+            </tr>`).join('') + '</tbody>';
+
+    // ── Detalle facturas ──────────────────────────────────
+    allByUserInvoices = d.invoices;
+    renderByUserTable(allByUserInvoices);
+}
+
+function renderByUserTable(invoices) {
+    const tbody = document.getElementById('tbody-byuser');
+    const empty = document.getElementById('byuser-empty');
+    const badge = document.getElementById('byuser-inv-count');
+
+    badge.textContent = invoices.length + ' factura' + (invoices.length !== 1 ? 's' : '');
+
+    if (!invoices.length) {
+        tbody.innerHTML = '';
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+
+    const statusBadge = {
+        pagada   : '<span style="background:#d1fae5;color:#065f46;padding:.18rem .55rem;border-radius:2rem;font-size:.72rem;font-weight:700;">Pagada</span>',
+        pendiente: '<span style="background:#fef9c3;color:#92400e;padding:.18rem .55rem;border-radius:2rem;font-size:.72rem;font-weight:700;">Pendiente</span>',
+        cancelada: '<span style="background:#fee2e2;color:#991b1b;padding:.18rem .55rem;border-radius:2rem;font-size:.72rem;font-weight:700;">Cancelada</span>',
+    };
+
+    tbody.innerHTML = invoices.map(inv => `
+        <tr data-search="${(inv.receptionist+inv.patient+inv.invoice_number+inv.cedula+inv.branch).toLowerCase()}">
+            <td style="font-size:.82rem;color:#8098bb;white-space:nowrap;">
+                ${inv.created_at ? inv.created_at.substring(0,10).split('-').reverse().join('/') : '—'}
+                <br><span style="font-size:.75rem;">${inv.created_at ? inv.created_at.substring(11,16) : ''}</span>
+            </td>
+            <td style="font-family:monospace;font-weight:700;color:#405189;">${inv.invoice_number}</td>
+            <td class="fw-semibold" style="font-size:.84rem;">${inv.receptionist}</td>
+            <td>
+                <div style="font-size:.84rem;font-weight:600;">${inv.patient}</div>
+                <div style="font-size:.75rem;color:#8098bb;">${inv.cedula}</div>
+            </td>
+            <td style="font-size:.82rem;color:#8098bb;">${inv.cedula}</td>
+            <td style="font-size:.82rem;">${inv.branch}</td>
+            <td style="font-size:.82rem;">${inv.audiologist}</td>
+            <td style="font-size:.78rem;color:#8098bb;">${inv.insurance}</td>
+            <td style="font-size:.84rem;">RD$ ${fmtNum(inv.subtotal)}</td>
+            <td style="font-size:.84rem;color:#f59e0b;">RD$ ${fmtNum(inv.insurance_discount)}</td>
+            <td class="fw-bold ${inv.status === 'pagada' ? 'text-success' : ''}">
+                RD$ ${fmtNum(inv.total)}
+            </td>
+            <td>${statusBadge[inv.status] ?? inv.status}</td>
+        </tr>`).join('');
+}
+
+function filterByUserTable() {
+    const q = document.getElementById('byuser-search').value.toLowerCase().trim();
+    if (!q) { renderByUserTable(allByUserInvoices); return; }
+    renderByUserTable(allByUserInvoices.filter(inv =>
+        (inv.receptionist + inv.patient + inv.invoice_number + inv.cedula + inv.branch)
+            .toLowerCase().includes(q)
+    ));
+}
+
+// ── Exportar CSV ──────────────────────────────────────────
+function exportByUser() {
+    const rows = [
+        ['Fecha','Factura','Recepcionista','Paciente','Cédula','Sucursal','Audiólogo','Seguro','Subtotal','Descuento','Total','Estado']
+    ];
+    allByUserInvoices.forEach(inv => {
+        rows.push([
+            inv.created_at?.substring(0,10) ?? '',
+            inv.invoice_number,
+            inv.receptionist,
+            inv.patient,
+            inv.cedula,
+            inv.branch,
+            inv.audiologist,
+            inv.insurance,
+            inv.subtotal,
+            inv.insurance_discount,
+            inv.total,
+            inv.status,
+        ]);
+    });
+    const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'facturas_por_recepcionista.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function getFilters() {
+    return {
+        date_from     : document.getElementById('f-date-from').value,
+        date_to       : document.getElementById('f-date-to').value,
+        branch_id     : document.getElementById('f-branch').value,
+        audiologist_id: document.getElementById('f-audiologist').value,
+        user_id       : document.getElementById('f-user')?.value ?? '',
+    };
 }
 
 // ── RENDER: Facturación ───────────────────────────────────
@@ -561,8 +795,7 @@ function renderAppointments(d) {
     document.getElementById('kpi-appointments').innerHTML = `
         ${kpiCard('Citas Totales',   k.total,       'ri-calendar-line',        'primary')}
         ${kpiCard('Completadas',     k.completadas, 'ri-checkbox-circle-line', 'success')}
-        ${kpiCard('Confirmadas',     k.confirmadas, 'ri-calendar-check-line',  'info')}
-        ${kpiCard('Pendientes',      k.pendientes,  'ri-time-line',            'warning')}
+        ${kpiCard('Programadas',      k.programadas,  'ri-time-line',            'warning')}
         ${kpiCard('Canceladas',      k.canceladas,  'ri-close-circle-line',    'danger')}
         ${kpiCard('Tasa Compleción', k.tasa+'%',    'ri-percent-line',         'purple')}
     `;
