@@ -23,7 +23,6 @@ Route::get('/', function () {
 });
 
 
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -191,11 +190,6 @@ Route::middleware(['auth', 'role:audiologo'])->prefix('audiologist')->name('audi
 });
 
 
-
-
-// routes/web.php
-
-// Antes del resource / rutas manuales
 Route::get('clinical-records/{invoice}/show-data', [ClinicalRecordController::class, 'showData'])
     ->name('clinical-records.show-data')
     ->middleware(['auth', 'role:audiologo']);
@@ -234,7 +228,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('reports')->name('reports.')->
     Route::get('patients',        [ReportController::class, 'patients'])->name('patients');
     
 });
-
 
 Route::middleware(['auth', 'role:recepcionista'])->prefix('receptionist/reports')->name('receptionist.reports.')->group(function () {
     Route::get('/',        [ReceptionistReportController::class, 'index'])->name('index');
