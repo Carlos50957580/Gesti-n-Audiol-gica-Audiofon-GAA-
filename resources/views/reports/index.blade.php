@@ -600,39 +600,40 @@ function renderByUser(d) {
 
     // ── KPIs globales ────────────────────────────────────
     document.getElementById('kpi-byuser').innerHTML = `
-        ${kpiCard('Total Facturas',    t.total,                              'ri-file-text-line',          'primary')}
-        ${kpiCard('Total Cobrado',     'RD$ '+fmtNum(t.total_cobrado),      'ri-money-dollar-circle-line','success')}
-        ${kpiCard('Pagadas',           t.pagadas,                            'ri-checkbox-circle-line',    'success')}
-        ${kpiCard('Pendientes',        t.pendientes,                         'ri-time-line',               'warning')}
-        ${kpiCard('Canceladas',        t.canceladas,                         'ri-close-circle-line',       'danger')}
-        ${kpiCard('Desc. Seguros',     'RD$ '+fmtNum(t.total_descuentos),   'ri-shield-check-line',       'info')}
+        ${kpiCard('Total Facturas',    t.total ?? 0,                              'ri-file-text-line',          'primary')}
+        ${kpiCard('Total Cobrado',     'RD$ '+fmtNum(t.total_cobrado ?? 0),      'ri-money-dollar-circle-line','success')}
+        ${kpiCard('Pagadas',           t.pagadas ?? 0,                            'ri-checkbox-circle-line',    'success')}
+        ${kpiCard('Pendientes',        t.pendientes ?? 0,                         'ri-time-line',               'warning')}
+        ${kpiCard('Canceladas',        t.canceladas ?? 0,                         'ri-close-circle-line',       'danger')}
+        ${kpiCard('Desc. Seguros',     'RD$ '+fmtNum(t.total_descuentos ?? 0),   'ri-shield-check-line',       'info')}
     `;
 
     // ── Resumen por recepcionista ─────────────────────────
-    const maxCobrado = Math.max(...d.kpi_by_user.map(r => parseFloat(r.total_cobrado)), 1);
+    const maxCobrado = Math.max(...d.kpi_by_user.map(r => parseFloat(r.total_cobrado ?? 0)), 1);
     document.getElementById('table-byuser-summary').innerHTML =
         tableHead(['#','Recepcionista','Facturas','Pagadas','Pendientes','Canceladas','Total Cobrado','%']) +
         '<tbody>' + d.kpi_by_user.map((r, i) => `
             <tr>
                 <td><span class="rank-badge ${rankClass(i)}">${i+1}</span></td>
-                <td class="fw-semibold">${r.user_name}</td>
-                <td>${r.total_facturas}</td>
-                <td><span style="color:#0ab39c;font-weight:700;">${r.pagadas}</span></td>
-                <td><span style="color:#f59e0b;font-weight:700;">${r.pendientes}</span></td>
-                <td><span style="color:#e74c3c;font-weight:700;">${r.canceladas}</span></td>
-                <td class="fw-bold text-success">RD$ ${fmtNum(r.total_cobrado)}</td>
+                <td class="fw-semibold">${r.user_name ?? ''}</td>
+                <td>${r.total_facturas ?? 0}</td>
+                <td><span style="color:#0ab39c;font-weight:700;">${r.pagadas ?? 0}</span></td>
+                <td><span style="color:#f59e0b;font-weight:700;">${r.pendientes ?? 0}</span></td>
+                <td><span style="color:#e74c3c;font-weight:700;">${r.canceladas ?? 0}</span></td>
+                <td class="fw-bold text-success">RD$ ${fmtNum(r.total_cobrado ?? 0)}</td>
                 <td style="min-width:120px;">
                     <div class="prog-bar-wrap">
-                        <div class="prog-bar" style="width:${Math.round(parseFloat(r.total_cobrado)/maxCobrado*100)}%"></div>
+                        <div class="prog-bar" style="width:${Math.round((parseFloat(r.total_cobrado ?? 0)/maxCobrado)*100)}%"></div>
                     </div>
-                    <span style="font-size:.72rem;color:#8098bb;">${Math.round(parseFloat(r.total_cobrado)/maxCobrado*100)}%</span>
+                    <span style="font-size:.72rem;color:#8098bb;">${Math.round((parseFloat(r.total_cobrado ?? 0)/maxCobrado)*100)}%</span>
                 </td>
             </tr>`).join('') + '</tbody>';
 
     // ── Detalle facturas ──────────────────────────────────
-    allByUserInvoices = d.invoices;
+    allByUserInvoices = d.invoices ?? [];
     renderByUserTable(allByUserInvoices);
 }
+
 
 function renderByUserTable(invoices) {
     const tbody = document.getElementById('tbody-byuser');
