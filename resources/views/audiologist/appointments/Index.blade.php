@@ -8,6 +8,11 @@
     --ink:#1e2535; --muted:#6b7a99; --border:#edf0f7; --surface:#f8faff; --radius:.85rem;
 }
 
+/* ── SweetAlert2 custom ── */
+.swal-ap-popup  { border-radius: 1rem !important; font-family: inherit !important; }
+.swal-ap-confirm,
+.swal-ap-cancel { border-radius: 2rem !important; font-size: .84rem !important; font-weight: 700 !important; padding: .5rem 1.3rem !important; }
+
 /* ── Stat cards ── */
 .sc {
     background:#fff; border-radius:var(--radius);
@@ -692,8 +697,52 @@ async function saveNotes() {
 
 /* ── Change status ─────────────────────────────────── */
 async function changeStatus(id, status, btn) {
+    const config = {
+        completada: {
+            title: '¿Completar esta cita?',
+            text:  'La cita quedará marcada como completada.',
+            icon:  'success',
+            confirmButtonText: '<i class="ri-checkbox-circle-line me-1"></i>Sí, completar',
+            confirmButtonColor: '#0ab39c',
+        },
+        cancelada: {
+            title: '¿Cancelar esta cita?',
+            text:  'Esta acción puede revertirse más adelante.',
+            icon:  'warning',
+            confirmButtonText: '<i class="ri-close-circle-line me-1"></i>Sí, cancelar',
+            confirmButtonColor: '#f06548',
+        },
+        programada: {
+            title: '¿Reactivar esta cita?',
+            text:  'La cita volverá al estado programada.',
+            icon:  'question',
+            confirmButtonText: '<i class="ri-restart-line me-1"></i>Sí, reactivar',
+            confirmButtonColor: '#7066e0',
+        },
+    };
+
     const labels = { completada:'completada', cancelada:'cancelada', programada:'reactivada' };
-    if (!confirm(`¿Marcar esta cita como ${labels[status]}?`)) return;
+    const cfg = config[status];
+
+    const result = await Swal.fire({
+        title: cfg.title,
+        text:  cfg.text,
+        icon:  cfg.icon,
+        showCancelButton: true,
+        cancelButtonText: 'No, volver',
+        confirmButtonText: cfg.confirmButtonText,
+        confirmButtonColor: cfg.confirmButtonColor,
+        cancelButtonColor: '#adb5bd',
+        reverseButtons: true,
+        borderRadius: '1rem',
+        customClass: {
+            popup:         'swal-ap-popup',
+            confirmButton: 'swal-ap-confirm',
+            cancelButton:  'swal-ap-cancel',
+        }
+    });
+
+    if (!result.isConfirmed) return;
 
     btn.disabled = true;
 
@@ -727,7 +776,11 @@ function showToast(msg, type) {
 @if(session('success'))
     document.addEventListener('DOMContentLoaded', () => showToast('{{ session('success') }}', 'ok'));
 @endif
+
+
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @endpush
 
 </x-app-layout>
