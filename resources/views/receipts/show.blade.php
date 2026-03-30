@@ -8,6 +8,16 @@
     --ink:#1e2535; --muted:#6b7a99; --border:#edf0f7; --surface:#f8faff;
 }
 
+
+.btn-print-thermal {
+    background: linear-gradient(135deg, #0ab39c, #089b86);
+    color: #fff; border: none; border-radius: 2rem;
+    padding: .5rem 1.2rem; font-size: .85rem; font-weight: 700;
+    cursor: pointer; transition: opacity .18s;
+    display: flex; align-items: center; gap: .4rem;
+}
+.btn-print-thermal:hover { opacity: .88; }
+
 /* ── Action bar (hidden on print) ── */
 .action-bar {
     display:flex; align-items:center; justify-content:space-between;
@@ -134,21 +144,24 @@
             <li class="breadcrumb-item active">{{ $receipt->receipt_number }}</li>
         </ol>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{{ route('invoices.show', $receipt->invoice) }}"
-           class="btn btn-light btn-sm d-flex align-items-center gap-1"
-           style="border-radius:2rem;font-size:.82rem;">
-            <i class="ri-file-text-line"></i>Ver factura
-        </a>
-        <a href="{{ route('receipts.index') }}"
-           class="btn btn-light btn-sm d-flex align-items-center gap-1"
-           style="border-radius:2rem;font-size:.82rem;">
-            <i class="ri-arrow-left-line"></i>Volver
-        </a>
-        <button onclick="window.print()" class="btn-print">
-            <i class="ri-printer-line"></i>Imprimir
-        </button>
-    </div>
+   <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ route('invoices.show', $receipt->invoice) }}"
+       class="btn btn-light btn-sm d-flex align-items-center gap-1"
+       style="border-radius:2rem;font-size:.82rem;">
+        <i class="ri-file-text-line"></i>Ver factura
+    </a>
+    <a href="{{ route('receipts.index') }}"
+       class="btn btn-light btn-sm d-flex align-items-center gap-1"
+       style="border-radius:2rem;font-size:.82rem;">
+        <i class="ri-arrow-left-line"></i>Volver
+    </a>
+    <button onclick="window.print()" class="btn-print">
+        <i class="ri-printer-line"></i>Imprimir
+    </button>
+    <button type="button" class="btn-print-thermal" onclick="printThermal()">
+        <i class="ri-receipt-line"></i>Ticket POS
+    </button>
+</div>
 </div>
 
 {{-- ══════════════════════
@@ -396,4 +409,147 @@
 <div style="height:2rem;"></div>
 </div>
 </div>
+
+<iframe id="thermal-frame" style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;"></iframe>
+
+@push('scripts')
+<script>
+function printThermal() {
+    const frame = document.getElementById('thermal-frame');
+    const doc   = frame.contentDocument || frame.contentWindow.document;
+
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Courier New',monospace; font-size:12px; color:#000; background:#fff; padding:8px; }
+  .center { text-align:center; }
+  .right  { text-align:right; }
+  .bold   { font-weight:bold; }
+  .big    { font-size:15px; font-weight:bold; }
+  .small  { font-size:10px; }
+  .sep    { border-top:1px dashed #000; margin:6px 0; }
+  .sep2   { border-top:2px solid #000; margin:6px 0; }
+  table   { width:100%; border-collapse:collapse; }
+  td      { padding:2px 0; vertical-align:top; }
+  .td-r   { text-align:right; white-space:nowrap; }
+  .lbl    { font-size:10px; color:#555; }
+  .total-row td { font-size:14px; font-weight:bold; padding-top:4px; }
+  @media print { @page { margin:0; } }
+</style>
+</head>
+<body>
+
+<div class="center bold big">AUDIOFON</div>
+<div class="center small">{{ $receipt->branch->name }}</div>
+<div class="sep2"></div>
+
+<table>
+  <tr><td class="lbl">Recibo</td><td class="td-r bold">{{ $receipt->receipt_number }}</td></tr>
+  <tr><td class="lbl">Fecha</td><td class="td-r">{{ $receipt->created_at->format('d/m/Y H:i') }}</td></tr>
+  <tr><td class="lbl">Factura</td><td class="td-r">{{ $receipt->invoice->invoice_number }}</td></tr>
+</table>
+<div class="sep"></div>
+
+<div class="lbl">PACIENTE</div>
+<div class="bold">{{ $receipt->invoice->patient->first_name }} {{ $receipt->invoice->patient->last_name }}</div>
+<div class="small">Cédula: {{ $receipt->invoice->patient->cedula ?? '—' }}</div>
+@if($receipt->invoice->patient->phone)
+<div class="small">Tel: {{ $receipt->invoice->patient->phone }}</div>
+@endif
+<div class="sep"></div>
+
+<table>
+  <tr><td class="lbl">Cobrado por</td><td class="td-r small">{{ $receipt->user->name }}</td></tr>
+</table>
+<div class="sep2"></div>
+
+<div class="lbl" style="margin-bottom:3px;">SERVICIOS</div>
+@foreach($receipt->invoice->items as $item)
+<table style="margin-bottom:4px;">
+  <tr>
+    <td class="bold">{{ $item->service->name }}</td>
+    <td class="td-r bold">RD$ {{ number_format($item->subtotal, 2) }}</td>
+  </tr>
+  <tr>
+    <td class="small" style="color:#444;">Cant: {{ $item->quantity }}</td>
+  </tr>
+</table>
+@endforeach
+<div class="sep2"></div>
+
+<div class="lbl" style="margin-bottom:3px;">MÉTODOS DE PAGO</div>
+@if($receipt->cash_amount > 0)
+@php
+    $nonCash    = ($receipt->card_amount ?? 0) + ($receipt->transfer_amount ?? 0);
+    $cashNeeded = max(0, $receipt->total_paid - $nonCash);
+    $vuelto     = $receipt->cash_amount - $cashNeeded;
+@endphp
+<table>
+  <tr><td class="lbl">Efectivo</td><td class="td-r">RD$ {{ number_format($cashNeeded, 2) }}</td></tr>
+  @if($vuelto > 0.009)
+  <tr><td class="lbl">Vuelto</td><td class="td-r">RD$ {{ number_format($vuelto, 2) }}</td></tr>
+  @endif
+</table>
+@endif
+@if($receipt->card_amount > 0)
+<table>
+  <tr>
+    <td class="lbl">Tarjeta{{ $receipt->card_reference ? ' ('.$receipt->card_reference.')' : '' }}</td>
+    <td class="td-r">RD$ {{ number_format($receipt->card_amount, 2) }}</td>
+  </tr>
+</table>
+@endif
+@if($receipt->transfer_amount > 0)
+<table>
+  <tr>
+    <td class="lbl">Transferencia{{ $receipt->transfer_reference ? ' ('.$receipt->transfer_reference.')' : '' }}</td>
+    <td class="td-r">RD$ {{ number_format($receipt->transfer_amount, 2) }}</td>
+  </tr>
+</table>
+@endif
+<div class="sep"></div>
+
+<table>
+  <tr><td class="lbl">Subtotal</td><td class="td-r">RD$ {{ number_format($receipt->invoice->subtotal, 2) }}</td></tr>
+  @if($receipt->invoice->insurance_discount > 0)
+  <tr>
+    <td class="lbl">Desc. seguro</td>
+    <td class="td-r">- RD$ {{ number_format($receipt->invoice->insurance_discount, 2) }}</td>
+  </tr>
+  @endif
+</table>
+<div class="sep"></div>
+<table>
+  <tr class="total-row">
+    <td>TOTAL PAGADO</td>
+    <td class="td-r">RD$ {{ number_format($receipt->total_paid, 2) }}</td>
+  </tr>
+</table>
+
+@if($receipt->notes)
+<div class="sep"></div>
+<div class="lbl">NOTAS</div>
+<div class="small">{{ $receipt->notes }}</div>
+@endif
+
+<div class="sep2"></div>
+<div class="center small" style="margin-top:4px;">Gracias por su preferencia</div>
+<div style="margin-top:24px;"></div>
+
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+    }, 350);
+}
+</script>
+@endpush
+
 </x-app-layout>

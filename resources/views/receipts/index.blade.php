@@ -9,6 +9,33 @@
     --ink:#1e2535; --muted:#6b7a99; --border:#edf0f7; --surface:#f8faff; --radius:.85rem;
 }
 
+.rpt-tabs {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+.rpt-tab {
+    border: none;
+    background: #e9ecef;
+    padding: .5rem 1.2rem;
+    border-radius: 50px;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.rpt-tab:hover {
+    background: #dee2e6;
+}
+
+.rpt-tab.active {
+    background: linear-gradient(135deg, #405189, #0ab39c);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(0,0,0,.15);
+}
+
 /* ── Stat glass cards ── */
 .stat-card {
     background:rgba(255,255,255,.6); backdrop-filter:blur(10px);
@@ -214,7 +241,23 @@
     </div>
 </div>
 
-{{-- ── Filters + Table ── --}}
+
+<div class="rpt-tabs mb-3">
+    <button class="rpt-tab active" onclick="switchTab('pending', this)">
+        Pendientes
+    </button>
+    <button class="rpt-tab" onclick="switchTab('paid', this)">
+        Pagadas
+    </button>
+</div>
+
+
+
+<div id="tab-pending">
+
+
+
+    {{-- ── Filters + Table ── --}}
 <div class="main-card fa1">
     <div class="main-card-head">
         <div style="width:30px;height:30px;border-radius:.4rem;background:rgba(247,184,75,.12);color:var(--ra);display:flex;align-items:center;justify-content:center;">
@@ -231,7 +274,7 @@
                     <div class="search-bar">
                         <i class="ri-search-line"></i>
                         <input type="text" name="q" value="{{ request('q') }}"
-                               placeholder="Buscar por nombre, cédula o FAC-..."
+                               placeholder="Buscar por nombre o cédula..."
                                autocomplete="off">
                     </div>
                 </div>
@@ -321,7 +364,7 @@
                         <td class="text-center">
                             <div style="font-size:.82rem;">{{ $inv->created_at->format('d/m/Y') }}</div>
                             <div class="days-old {{ $urgnt ? 'urgent' : '' }}">
-                                hace {{ $days }}d{{ $urgnt ? ' ⚠' : '' }}
+                                
                             </div>
                         </td>
                         <td class="text-center">
@@ -361,6 +404,155 @@
 
 </div>
 </div>
+    
+</div>
+
+
+
+
+<div id="tab-paid" class="d-none">
+
+{{-- ── RECIBOS PAGADOS ── --}}
+<div class="main-card mt-4 fa2">
+    <div class="main-card-head">
+        <div style="width:30px;height:30px;border-radius:.4rem;background:rgba(10,179,156,.12);color:var(--rt);display:flex;align-items:center;justify-content:center;">
+            <i class="ri-check-double-line"></i>
+        </div>
+        <h5>Recibos pagados</h5>
+    </div>
+
+
+    <div class="p-3 border-bottom" style="background:var(--surface);">
+    <form method="GET" action="{{ route('receipts.index') }}">
+        <input type="hidden" name="tab" value="paid">
+
+        <div class="row g-2">
+            <div class="col-md-4">
+                <div class="search-bar">
+                    <i class="ri-search-line"></i>
+                    <input type="text" name="q_paid"
+                           value="{{ request('q_paid') }}"
+                           placeholder="Buscar por paciente o cédula">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <input type="date" name="from"
+                       value="{{ request('from') }}"
+                       class="form-control form-control-sm">
+            </div>
+
+            <div class="col-md-3">
+                <input type="date" name="to"
+                       value="{{ request('to') }}"
+                       class="form-control form-control-sm">
+            </div>
+
+            <div class="col-auto">
+                <button class="btn btn-primary btn-sm">
+                    <i class="ri-search-line"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+    <div class="table-responsive">
+        <table class="rec-table">
+            <thead>
+                <tr>
+                    <th>Recibo</th>
+                    <th>Paciente</th>
+                    @if($isAdmin)<th>Sucursal</th>@endif
+                    <th>Método</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-center">Fecha</th>
+                    <th class="text-center">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($receipts as $rec)
+                    @php
+                        $p = $rec->invoice->patient;
+                        $ini = strtoupper(substr($p->first_name,0,1).substr($p->last_name,0,1));
+                    @endphp
+                    <tr>
+                        <td>
+                            <div class="inv-num">{{ $rec->receipt_number }}</div>
+                            <span class="badge-pend mt-1 d-inline-block" style="background:rgba(10,179,156,.15);color:var(--rt);">
+                                Pagado
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="pat-av">{{ $ini }}</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:.85rem;">
+                                        {{ $p->first_name }} {{ $p->last_name }}
+                                    </div>
+                                    <div style="font-size:.72rem;color:var(--muted);">
+                                        {{ $p->cedula }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        @if($isAdmin)
+                        <td>{{ $rec->branch->name }}</td>
+                        @endif
+
+                        <td>
+                            <span style="font-size:.78rem;font-weight:700;color:var(--rp);">
+                                {{ $rec->payment_summary }}
+                            </span>
+                        </td>
+
+                        <td class="text-end">
+                            <div class="amt-cell">
+                                RD$ {{ number_format($rec->total_paid, 2, ',', '.') }}
+                            </div>
+                        </td>
+
+                        <td class="text-center">
+                            {{ $rec->created_at->format('d/m/Y') }}
+                        </td>
+
+                        <td class="text-center">
+                            <a href="{{ route('receipts.show', $rec) }}"
+                               class="btn-pay"
+                               style="background:linear-gradient(135deg,var(--rt),#3d9f80);">
+                                <i class="ri-eye-line"></i>Ver
+                            </a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ $isAdmin ? 7 : 6 }}">
+                            <div class="empty-state">
+                                <i class="ri-file-check-line"></i>
+                                <p>No hay recibos registrados.</p>
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    {{-- Pagination --}}
+    @if($receipts->hasPages())
+    <div class="p-3 border-top d-flex justify-content-center">
+        {{ $receipts->withQueryString()->links('pagination::bootstrap-5') }}
+    </div>
+    @endif
+</div>
+
+
+
+</div>
+
+
 
 {{-- ════════════════════════════════════════
      MODAL DE PAGO
@@ -590,6 +782,15 @@ function resetModal() {
     recalcPay();
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+
+    if (tab === 'paid') {
+        const btn = document.querySelectorAll('.rpt-tab')[1];
+        switchTab('paid', btn);
+    }
+});
+
 function fillModal(d) {
     invoiceTotal = d.total;
 
@@ -760,6 +961,27 @@ function fmt(n) {
 @if(session('success'))
     document.addEventListener('DOMContentLoaded', () => showToast('{{ session('success') }}', 'ok'));
 @endif
+
+function switchTab(tab, btn) {
+
+    // ocultar tabs
+    ['pending','paid'].forEach(t => {
+        document.getElementById('tab-' + t).classList.add('d-none');
+    });
+
+    // quitar active
+    document.querySelectorAll('.rpt-tab').forEach(b => b.classList.remove('active'));
+
+    // mostrar actual
+    document.getElementById('tab-' + tab).classList.remove('d-none');
+    btn.classList.add('active');
+
+    // guardar en URL
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url);
+}
+
 </script>
 @endpush
 

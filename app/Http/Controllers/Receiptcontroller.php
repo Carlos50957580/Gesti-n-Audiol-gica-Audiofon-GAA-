@@ -12,56 +12,94 @@ class ReceiptController extends Controller
 {
     // ── INDEX — Facturas pendientes de pago ───────────────────────────────────
     public function index(Request $request)
-    {
-        $user    = auth()->user();
-        $isAdmin = $user->role->name === 'admin';
+{
+    $user    = auth()->user();
+    $isAdmin = $user->role->name === 'admin';
 
-        $query = Invoice::with(['patient', 'branch', 'receipt'])
-            ->where('status', 'pendiente')
-            ->orderBy('created_at', 'asc');   // más antiguas primero
+    // ── FACTURAS PENDIENTES ─────────────────────
+    $query = Invoice::with(['patient', 'branch', 'receipt'])
+        ->where('status', 'pendiente')
+        ->orderBy('created_at', 'asc');
 
-        // Scope por sucursal para recepcionista
-        if (!$isAdmin) {
-            $query->where('branch_id', $user->branch_id);
-        }
+    // Filtro por sucursal si no es admin
+    $query->when(!$isAdmin, function ($q) use ($user) {
+        $q->where('branch_id', $user->branch_id);
+    });
 
-        // Búsqueda
-        if ($request->filled('q')) {
-            $q         = $request->q;
-            $numericId = null;
-            if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
-                $numericId = (int) $m[1];
-            }
-            $query->where(function ($sq) use ($q, $numericId) {
-                if ($numericId) $sq->orWhere('id', $numericId);
-                $sq->orWhereHas('patient', fn($pq) =>
-                    $pq->where('first_name', 'like', "%{$q}%")
-                       ->orWhere('last_name',  'like', "%{$q}%")
-                       ->orWhere('cedula',     'like', "%{$q}%")
-                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"])
-                );
-            });
-        }
+    // Filtro por sucursal (admin)
+    $query->when($isAdmin && request('branch_id'), function ($q) {
+        $q->where('branch_id', request('branch_id'));
+    });
 
-        // Filtro de sucursal (solo admin)
-        if ($isAdmin && $request->filled('branch_id')) {
-            $query->where('branch_id', $request->branch_id);
-        }
+    // 🔍 Búsqueda SOLO por nombre y cédula (pendientes)
+    $query->when($request->filled('q'), function ($q) use ($request) {
+        $search = $request->q;
 
-        $invoices = $query->paginate(20)->withQueryString();
+        $q->whereHas('patient', function ($pq) use ($search) {
+            $pq->where('first_name', 'like', "%{$search}%")
+               ->orWhere('cedula',     'like', "%{$search}%");
+        });
+    });
 
-        // Stats rápidas
-        $totalPending = (clone $query->getQuery())->count();   // ya filtrado
-        $totalAmount  = Invoice::where('status', 'pendiente')
-            ->when(!$isAdmin, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->sum('total');
+    $invoices = $query->paginate(20, ['*'], 'pending_page')->withQueryString();
 
-        $branches = $isAdmin ? Branch::orderBy('name')->get() : collect();
 
-        return view('receipts.index', compact(
-            'invoices', 'branches', 'isAdmin', 'totalAmount'
-        ));
-    }
+    // ── RECIBOS PAGADOS ─────────────────────────
+    $receiptsQuery = Receipt::with(['invoice.patient', 'branch'])
+        ->latest();
+
+    // Filtro por sucursal si no es admin
+    $receiptsQuery->when(!$isAdmin, function ($q) use ($user) {
+        $q->where('branch_id', $user->branch_id);
+    });
+
+    // Filtro por sucursal (admin)
+    $receiptsQuery->when($isAdmin && request('branch_id'), function ($q) {
+        $q->where('branch_id', request('branch_id'));
+    });
+
+    // 🔍 Búsqueda SOLO por nombre y cédula (pagadas)
+    $receiptsQuery->when($request->filled('q_paid'), function ($q) use ($request) {
+        $search = $request->q_paid;
+
+        $q->whereHas('invoice.patient', function ($pq) use ($search) {
+            $pq->where('first_name', 'like', "%{$search}%")
+               ->orWhere('cedula',     'like', "%{$search}%");
+        });
+    });
+
+    // 📅 Filtro por fecha
+    $receiptsQuery->when($request->filled('from'), function ($q) use ($request) {
+        $q->whereDate('created_at', '>=', $request->from);
+    });
+
+    $receiptsQuery->when($request->filled('to'), function ($q) use ($request) {
+        $q->whereDate('created_at', '<=', $request->to);
+    });
+
+    $receipts = $receiptsQuery->paginate(10, ['*'], 'paid_page')->withQueryString();
+
+
+    // ── STATS ───────────────────────────────────
+    $totalAmount = Invoice::where('status', 'pendiente')
+        ->when(!$isAdmin, fn($q) => $q->where('branch_id', $user->branch_id))
+        ->sum('total');
+
+
+    // ── SUCURSALES (solo admin) ─────────────────
+    $branches = $isAdmin
+        ? Branch::orderBy('name')->get()
+        : collect();
+
+
+    return view('receipts.index', compact(
+        'invoices',
+        'receipts',
+        'branches',
+        'isAdmin',
+        'totalAmount'
+    ));
+}
 
     // ── CREATE — Modal de pago para una factura ───────────────────────────────
     public function create(Request $request)
