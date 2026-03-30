@@ -11,128 +11,94 @@ use Illuminate\Support\Facades\DB;
 class ReceiptController extends Controller
 {
     // ── INDEX — Facturas pendientes de pago ───────────────────────────────────
-public function index(Request $request)
+    public function index(Request $request)
 {
     $user    = auth()->user();
     $isAdmin = $user->role->name === 'admin';
+    $tab     = $request->get('tab', 'pending');
 
-    // Determinar qué página estamos viendo
-    $currentTab = $request->get('tab', 'pending');
-    
-    // ── FACTURAS PENDIENTES ─────────────────────
-    $query = Invoice::with(['patient', 'branch', 'receipt'])
+    // ── FACTURAS PENDIENTES ──────────────────────────────────
+    $invoicesQuery = Invoice::with(['patient', 'branch', 'insurance'])
         ->where('status', 'pendiente')
         ->orderBy('created_at', 'asc');
 
-    // Filtro por sucursal si no es admin
-    $query->when(!$isAdmin, function ($q) use ($user) {
-        $q->where('branch_id', $user->branch_id);
-    });
+    if (!$isAdmin) {
+        $invoicesQuery->where('branch_id', $user->branch_id);
+    }
 
-    // Filtro por sucursal (admin)
-    $query->when($isAdmin && request('branch_id'), function ($q) {
-        $q->where('branch_id', request('branch_id'));
-    });
-
-    // 🔍 Búsqueda SOLO por nombre y cédula (pendientes)
-    $query->when($request->filled('q'), function ($q) use ($request) {
-        $search = $request->q;
-
-        $q->whereHas('patient', function ($pq) use ($search) {
-            $pq->where('first_name', 'like', "%{$search}%")
-               ->orWhere('cedula',     'like', "%{$search}%");
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $invoicesQuery->where(function ($sq) use ($q) {
+            $sq->whereHas('patient', fn($pq) =>
+                $pq->where('first_name', 'like', "%{$q}%")
+                   ->orWhere('last_name',  'like', "%{$q}%")
+                   ->orWhere('cedula',     'like', "%{$q}%")
+                   ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"])
+            );
         });
-    });
+    }
 
-    $invoices = $query->paginate(20, ['*'], 'pending_page')->withQueryString();
+    if ($isAdmin && $request->filled('branch_id')) {
+        $invoicesQuery->where('branch_id', $request->branch_id);
+    }
 
+    $invoices = $invoicesQuery->paginate(20, ['*'], 'ppage')->withQueryString();
 
-    // ── RECIBOS PAGADOS ─────────────────────────
-    $receiptsQuery = Receipt::with(['invoice.patient', 'branch'])
-        ->latest();
-
-    // Filtro por sucursal si no es admin
-    $receiptsQuery->when(!$isAdmin, function ($q) use ($user) {
-        $q->where('branch_id', $user->branch_id);
-    });
-
-    // Filtro por sucursal (admin)
-    $receiptsQuery->when($isAdmin && request('branch_id'), function ($q) {
-        $q->where('branch_id', request('branch_id'));
-    });
-
-    // 🔍 Búsqueda SOLO por nombre y cédula (pagadas)
-    $receiptsQuery->when($request->filled('q_paid'), function ($q) use ($request) {
-        $search = $request->q_paid;
-
-        $q->whereHas('invoice.patient', function ($pq) use ($search) {
-            $pq->where('first_name', 'like', "%{$search}%")
-               ->orWhere('cedula',     'like', "%{$search}%");
-        });
-    });
-
-    // 📅 Filtro por fecha
-    $receiptsQuery->when($request->filled('from'), function ($q) use ($request) {
-        $q->whereDate('created_at', '>=', $request->from);
-    });
-
-    $receiptsQuery->when($request->filled('to'), function ($q) use ($request) {
-        $q->whereDate('created_at', '<=', $request->to);
-    });
-
-    $receipts = $receiptsQuery->paginate(10, ['*'], 'paid_page')->withQueryString();
-
-
-    // ── STATS ───────────────────────────────────
     $totalAmount = Invoice::where('status', 'pendiente')
         ->when(!$isAdmin, fn($q) => $q->where('branch_id', $user->branch_id))
         ->sum('total');
 
+    // ── RECIBOS PAGADOS ──────────────────────────────────────
+    $receiptsQuery = Receipt::with([
+            'invoice.patient',
+            'invoice.insurance',
+            'branch',
+            'user',
+        ])
+        ->whereHas('invoice.patient')   // evita nulos en Linux
+        ->orderBy('created_at', 'desc');
 
-    // ── SUCURSALES (solo admin) ─────────────────
-    $branches = $isAdmin
-        ? Branch::orderBy('name')->get()
-        : collect();
+    if (!$isAdmin) {
+        $receiptsQuery->where('branch_id', $user->branch_id);
+    }
 
+    if ($request->filled('rq')) {
+        $rq = $request->rq;
+        $receiptsQuery->where(function ($sq) use ($rq) {
+            $sq->whereHas('invoice.patient', fn($pq) =>
+                $pq->where('first_name', 'like', "%{$rq}%")
+                   ->orWhere('last_name',  'like', "%{$rq}%")
+                   ->orWhere('cedula',     'like', "%{$rq}%")
+                   ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$rq}%"])
+            );
+        });
+    }
+
+    if ($request->filled('rfrom')) {
+        $receiptsQuery->whereDate('created_at', '>=', $request->rfrom);
+    }
+    if ($request->filled('rto')) {
+        $receiptsQuery->whereDate('created_at', '<=', $request->rto);
+    }
+
+    if ($isAdmin && $request->filled('rbranch_id')) {
+        $receiptsQuery->where('branch_id', $request->rbranch_id);
+    }
+
+    $receipts = $receiptsQuery->paginate(20, ['*'], 'rpage')->withQueryString();
+
+    $totalCollected = Receipt::when(!$isAdmin, fn($q) => $q->where('branch_id', $user->branch_id))
+        ->whereMonth('created_at', now()->month)
+        ->whereYear('created_at',  now()->year)
+        ->sum('total_paid');
+
+    $branches = $isAdmin ? Branch::orderBy('name')->get() : collect();
 
     return view('receipts.index', compact(
-        'invoices',
-        'receipts',
-        'branches',
-        'isAdmin',
-        'totalAmount',
-        'currentTab'  // 👈 Agrega esto
+        'invoices', 'receipts', 'branches',
+        'isAdmin', 'totalAmount', 'totalCollected', 'tab'
     ));
 }
-
-    // ── CREATE — Modal de pago para una factura ───────────────────────────────
-    public function create(Request $request)
-    {
-        $invoice = Invoice::with(['patient', 'branch', 'insurance', 'items.service'])
-            ->where('status', 'pendiente')
-            ->findOrFail($request->invoice_id);
-
-        // Autorización: recepcionista solo puede cobrar su sucursal
-        $user = auth()->user();
-        if ($user->role->name !== 'admin' && $invoice->branch_id !== $user->branch_id) {
-            abort(403);
-        }
-
-        return response()->json([
-            'invoice' => [
-                'id'                 => $invoice->id,
-                'invoice_number'     => $invoice->invoice_number,
-                'patient_name'       => $invoice->patient->first_name . ' ' . $invoice->patient->last_name,
-                'patient_cedula'     => $invoice->patient->cedula,
-                'branch_name'        => $invoice->branch->name,
-                'insurance_name'     => $invoice->insurance?->name,
-                'total'              => (float) $invoice->total,
-                'subtotal'           => (float) $invoice->subtotal,
-                'insurance_discount' => (float) $invoice->insurance_discount,
-                'created_at'         => $invoice->created_at->format('d/m/Y'),
-            ]
-        ]);
-    }
 
     // ── STORE — Registrar el pago ─────────────────────────────────────────────
     public function store(Request $request)

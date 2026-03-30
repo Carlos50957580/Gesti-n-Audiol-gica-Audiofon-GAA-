@@ -3,63 +3,51 @@
 <div class="container-fluid pt-3">
 
 <style>
-/* ── Variables ── */
 :root {
     --rp:#405189; --rt:#0ab39c; --ra:#f7b84b; --rr:#f06548; --rv:#7066e0;
     --ink:#1e2535; --muted:#6b7a99; --border:#edf0f7; --surface:#f8faff; --radius:.85rem;
 }
-
-.rpt-tabs {
-    display: flex;
-    gap: .5rem;
-    margin-bottom: 1rem;
-}
-
-.rpt-tab {
-    border: none;
-    background: #e9ecef;
-    padding: .5rem 1.2rem;
-    border-radius: 50px;
-    font-size: .85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s ease;
-}
-
-.rpt-tab:hover {
-    background: #dee2e6;
-}
-
-.rpt-tab.active {
-    background: linear-gradient(135deg, #405189, #0ab39c);
-    color: #fff;
-    box-shadow: 0 3px 10px rgba(0,0,0,.15);
-}
-
-/* ── Stat glass cards ── */
 .stat-card {
     background:rgba(255,255,255,.6); backdrop-filter:blur(10px);
     border:1px solid rgba(255,255,255,.8); border-radius:var(--radius);
     box-shadow:0 2px 20px rgba(64,81,137,.09); padding:1.2rem 1.3rem;
     border-left:4px solid transparent; position:relative; overflow:hidden;
-    transition:transform .18s, box-shadow .18s; margin-bottom:1.25rem;
+    transition:transform .18s, box-shadow .18s;
 }
 .stat-card:hover { transform:translateY(-3px); box-shadow:0 8px 28px rgba(64,81,137,.14); }
 .stat-card.sc-a { border-color:var(--ra); }
 .stat-card.sc-p { border-color:var(--rp); }
 .stat-card.sc-r { border-color:var(--rr); }
+.stat-card.sc-t { border-color:var(--rt); }
 .stat-ico { width:42px; height:42px; border-radius:.55rem; display:flex; align-items:center; justify-content:center; font-size:1.2rem; margin-bottom:.75rem; }
 .sc-a .stat-ico { background:rgba(247,184,75,.12); color:var(--ra); }
 .sc-p .stat-ico { background:rgba(64,81,137,.1);   color:var(--rp); }
 .sc-r .stat-ico { background:rgba(240,101,72,.1);  color:var(--rr); }
-.stat-val { font-size:1.55rem; font-weight:800; color:var(--ink); letter-spacing:-.04em; line-height:1; }
-.stat-lbl { font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-top:.2rem; }
-.stat-ghost { position:absolute; right:-6px; bottom:-6px; font-size:4rem; opacity:.04; line-height:1; }
+.sc-t .stat-ico { background:rgba(10,179,156,.1);  color:var(--rt); }
+.stat-val  { font-size:1.55rem; font-weight:800; color:var(--ink); letter-spacing:-.04em; line-height:1; }
+.stat-lbl  { font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-top:.2rem; }
+.stat-ghost{ position:absolute; right:-6px; bottom:-6px; font-size:4rem; opacity:.04; line-height:1; }
 
 /* ── Main card ── */
-.main-card { background:#fff; border-radius:var(--radius); box-shadow:0 2px 20px rgba(64,81,137,.08); border:none; overflow:hidden; }
+.main-card { background:#fff; border-radius:var(--radius); box-shadow:0 2px 20px rgba(64,81,137,.08); overflow:hidden; }
 .main-card-head { padding:.9rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:.65rem; }
 .main-card-head h5 { margin:0; font-size:.95rem; font-weight:700; color:var(--ink); flex-grow:1; }
+
+/* ── Tabs ── */
+.ap-tabs { display:flex; border-bottom:2px solid var(--border); padding:0 1.25rem; gap:.15rem; background:#fff; }
+.ap-tab {
+    padding:.7rem 1.1rem; font-size:.82rem; font-weight:700; color:var(--muted);
+    border:none; background:none; cursor:pointer; border-bottom:2px solid transparent;
+    margin-bottom:-2px; transition:color .18s, border-color .18s; white-space:nowrap;
+    display:flex; align-items:center; gap:.45rem; text-decoration:none;
+}
+.ap-tab:hover { color:var(--rp); }
+.ap-tab.active { color:var(--rp); border-bottom-color:var(--rp); }
+.ap-tab .tab-badge {
+    font-size:.65rem; font-weight:800; padding:.1rem .45rem; border-radius:2rem;
+    background:rgba(64,81,137,.1); color:var(--rp);
+}
+.ap-tab.active .tab-badge { background:var(--rp); color:#fff; }
 
 /* ── Search bar ── */
 .search-bar {
@@ -81,35 +69,48 @@
 }
 .rec-table td { padding:.85rem 1rem; border-bottom:1px solid var(--border); font-size:.85rem; color:var(--ink); vertical-align:middle; }
 .rec-table tbody tr:last-child td { border-bottom:none; }
-.rec-table tbody tr { transition:background .12s; }
 .rec-table tbody tr:hover td { background:var(--surface); }
 
-/* ── Patient avatar ── */
+/* ── Avatars & badges ── */
 .pat-av {
     width:34px; height:34px; border-radius:50%; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
     font-size:.72rem; font-weight:800; color:#fff;
     background:linear-gradient(135deg,var(--rp),#6b7fe0);
 }
-
-/* ── Invoice badge ── */
-.inv-num { font-size:.78rem; font-weight:800; color:var(--rp); font-family:monospace; }
+.pat-av.av-paid { background:linear-gradient(135deg,var(--rt),#089b86); }
+.inv-num   { font-size:.78rem; font-weight:800; color:var(--rp); font-family:monospace; }
+.rec-num   { font-size:.78rem; font-weight:800; color:var(--rt); font-family:monospace; }
 .badge-pend { background:rgba(247,184,75,.15); color:#b8860b; font-size:.7rem; font-weight:700; padding:.22rem .65rem; border-radius:2rem; }
-
-/* ── Amount ── */
-.amt-cell { font-size:.92rem; font-weight:800; color:var(--ink); white-space:nowrap; }
-.days-old { font-size:.7rem; color:var(--muted); }
+.badge-paid { background:rgba(10,179,156,.12); color:#065f46; font-size:.7rem; font-weight:700; padding:.22rem .65rem; border-radius:2rem; }
+.amt-cell  { font-size:.92rem; font-weight:800; color:var(--ink); white-space:nowrap; }
+.days-old  { font-size:.7rem; color:var(--muted); }
 .days-old.urgent { color:var(--rr); font-weight:700; }
 
-/* ── Pay button ── */
+/* ── Method chips ── */
+.method-chips { display:flex; gap:.3rem; flex-wrap:wrap; }
+.mchip { font-size:.68rem; font-weight:700; padding:.15rem .5rem; border-radius:2rem; display:inline-flex; align-items:center; gap:.25rem; }
+.mchip-cash     { background:rgba(10,179,156,.1);  color:var(--rt); }
+.mchip-card     { background:rgba(64,81,137,.1);   color:var(--rp); }
+.mchip-transfer { background:rgba(112,102,224,.1); color:var(--rv); }
+
+/* ── Buttons ── */
 .btn-pay {
     background:linear-gradient(135deg,var(--rp),var(--rt));
     color:#fff; border:none; border-radius:2rem;
     padding:.38rem .9rem; font-size:.78rem; font-weight:700;
-    cursor:pointer; transition:all .18s; display:flex; align-items:center; gap:.35rem;
-    white-space:nowrap;
+    cursor:pointer; transition:all .18s; display:inline-flex; align-items:center; gap:.35rem;
+    white-space:nowrap; text-decoration:none;
 }
-.btn-pay:hover { opacity:.88; transform:translateY(-1px); box-shadow:0 4px 14px rgba(64,81,137,.3); }
+.btn-pay:hover { opacity:.88; transform:translateY(-1px); box-shadow:0 4px 14px rgba(64,81,137,.3); color:#fff; }
+.btn-view {
+    background:rgba(10,179,156,.1); color:var(--rt);
+    border:none; border-radius:2rem; padding:.38rem .9rem;
+    font-size:.78rem; font-weight:700; cursor:pointer;
+    transition:all .18s; display:inline-flex; align-items:center; gap:.35rem;
+    white-space:nowrap; text-decoration:none;
+}
+.btn-view:hover { background:var(--rt); color:#fff; }
 
 /* ── Empty state ── */
 .empty-state { text-align:center; padding:3.5rem 1rem; color:var(--muted); }
@@ -117,73 +118,34 @@
 .empty-state p { font-size:.88rem; margin:0; }
 
 /* ── MODAL ── */
-.mh-pay { background:linear-gradient(135deg,var(--rp),var(--rt)); border-radius:.55rem .55rem 0 0; }
+.mh-pay { background:linear-gradient(135deg,var(--rp),var(--rt)); }
 .mh-pay .btn-close { filter:invert(1); }
-
-/* Payment method cards */
-.method-card {
-    border:2px solid var(--border); border-radius:.65rem; padding:.9rem;
-    cursor:pointer; transition:all .18s; background:#fff; position:relative;
-}
+.method-card { border:2px solid var(--border); border-radius:.65rem; padding:.9rem; cursor:pointer; transition:all .18s; background:#fff; position:relative; }
 .method-card:hover { border-color:var(--rp); background:rgba(64,81,137,.03); }
 .method-card.selected { border-color:var(--rp); background:rgba(64,81,137,.05); }
-.method-card .method-ico {
-    width:36px; height:36px; border-radius:.45rem; margin-bottom:.5rem;
-    display:flex; align-items:center; justify-content:center; font-size:1.1rem;
-}
+.method-card .method-ico { width:36px; height:36px; border-radius:.45rem; margin-bottom:.5rem; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
 .method-card .method-label { font-size:.8rem; font-weight:700; color:var(--ink); }
-.method-card .method-check {
-    position:absolute; top:.5rem; right:.5rem; width:18px; height:18px;
-    border-radius:50%; background:var(--rp); color:#fff;
-    display:none; align-items:center; justify-content:center; font-size:.65rem;
-}
+.method-card .method-check { position:absolute; top:.5rem; right:.5rem; width:18px; height:18px; border-radius:50%; background:var(--rp); color:#fff; display:none; align-items:center; justify-content:center; font-size:.65rem; }
 .method-card.selected .method-check { display:flex; }
-
-/* Amount input in method card */
 .method-amount { margin-top:.65rem; display:none; }
 .method-card.selected .method-amount { display:block; }
-.method-amount input {
-    width:100%; border:1.5px solid var(--border); border-radius:.45rem;
-    padding:.42rem .65rem; font-size:.87rem; font-weight:700; outline:none;
-    transition:border-color .18s;
-}
+.method-amount input { width:100%; border:1.5px solid var(--border); border-radius:.45rem; padding:.42rem .65rem; font-size:.87rem; font-weight:700; outline:none; transition:border-color .18s; }
 .method-amount input:focus { border-color:var(--rp); box-shadow:0 0 0 2px rgba(64,81,137,.1); }
 .method-ref { margin-top:.4rem; display:none; }
 .method-card.selected .method-ref { display:block; }
 .method-ref input { width:100%; border:1.5px solid var(--border); border-radius:.45rem; padding:.35rem .6rem; font-size:.78rem; outline:none; }
-.method-ref input:focus { border-color:var(--rp); }
-
-/* Invoice summary in modal */
 .inv-summary { background:var(--surface); border-radius:.55rem; padding:.9rem 1rem; border:1px solid var(--border); }
 .inv-sum-row { display:flex; justify-content:space-between; font-size:.83rem; padding:.22rem 0; }
 .inv-sum-row.total-row { font-weight:800; font-size:.95rem; border-top:1px solid var(--border); margin-top:.3rem; padding-top:.55rem; color:var(--rp); }
-
-/* Payment breakdown */
 .pay-total-box { background:linear-gradient(135deg,rgba(64,81,137,.06),rgba(10,179,156,.06)); border-radius:.65rem; padding:.9rem 1rem; border:1px solid rgba(64,81,137,.12); margin-top:.85rem; }
 .pay-total-row { display:flex; justify-content:space-between; font-size:.82rem; padding:.2rem 0; color:var(--muted); }
 .pay-total-row.pay-final { font-size:1rem; font-weight:800; color:var(--ink); border-top:1px solid rgba(64,81,137,.15); margin-top:.35rem; padding-top:.5rem; }
-.pay-diff-ok   { color:var(--rt); }
+.pay-diff-ok { color:var(--rt); }
 .pay-diff-warn { color:var(--rr); }
-
-/* ── Vuelto box ── */
-.vuelto-box {
-    display:none;
-    margin-top:.75rem;
-    background:linear-gradient(135deg,rgba(10,179,156,.08),rgba(10,179,156,.04));
-    border:1.5px solid rgba(10,179,156,.3); border-radius:.65rem;
-    padding:.85rem 1.1rem;
-    animation:fadeVuelto .25s ease;
-}
+.vuelto-box { display:none; margin-top:.75rem; background:linear-gradient(135deg,rgba(10,179,156,.08),rgba(10,179,156,.04)); border:1.5px solid rgba(10,179,156,.3); border-radius:.65rem; padding:.85rem 1.1rem; animation:fadeVuelto .25s ease; }
 @keyframes fadeVuelto { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-.vuelto-lbl {
-    font-size:.7rem; font-weight:800; text-transform:uppercase;
-    letter-spacing:.09em; color:var(--rt); margin-bottom:.25rem;
-    display:flex; align-items:center; gap:.4rem;
-}
-.vuelto-amt {
-    font-size:1.55rem; font-weight:900; color:var(--rt);
-    letter-spacing:-.04em; line-height:1;
-}
+.vuelto-lbl { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:var(--rt); margin-bottom:.25rem; display:flex; align-items:center; gap:.4rem; }
+.vuelto-amt { font-size:1.55rem; font-weight:900; color:var(--rt); letter-spacing:-.04em; line-height:1; }
 .vuelto-sub { font-size:.74rem; color:var(--muted); margin-top:.2rem; }
 
 /* ── Toast ── */
@@ -192,8 +154,6 @@
 @keyframes tin { from{opacity:0;transform:translateX(36px)} to{opacity:1;transform:translateX(0)} }
 .t-ok  { background:linear-gradient(135deg,#0ab39c,#3d9f80); }
 .t-err { background:linear-gradient(135deg,#f06548,#c0392b); }
-
-/* ── Animations ── */
 @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 .fa0{animation:fadeUp .38s ease both}
 .fa1{animation:fadeUp .38s .06s ease both}
@@ -214,8 +174,8 @@
 </div>
 
 {{-- ── Stat cards ── --}}
-<div class="row g-4 mb-1">
-    <div class="col-xl-4 col-md-6 fa0">
+<div class="row g-3 mb-3">
+    <div class="col-xl-3 col-md-6 fa0">
         <div class="stat-card sc-a">
             <div class="stat-ico"><i class="ri-file-list-3-line"></i></div>
             <div class="stat-val">{{ $invoices->total() }}</div>
@@ -223,7 +183,7 @@
             <div class="stat-ghost"><i class="ri-file-list-fill"></i></div>
         </div>
     </div>
-    <div class="col-xl-4 col-md-6 fa1">
+    <div class="col-xl-3 col-md-6 fa1">
         <div class="stat-card sc-r">
             <div class="stat-ico"><i class="ri-coins-line"></i></div>
             <div class="stat-val">RD$ {{ number_format($totalAmount, 0, ',', '.') }}</div>
@@ -231,46 +191,57 @@
             <div class="stat-ghost"><i class="ri-coins-fill"></i></div>
         </div>
     </div>
-    <div class="col-xl-4 col-md-6 fa2">
+    <div class="col-xl-3 col-md-6 fa2">
+        <div class="stat-card sc-t">
+            <div class="stat-ico"><i class="ri-checkbox-circle-line"></i></div>
+            <div class="stat-val">{{ $receipts->total() }}</div>
+            <div class="stat-lbl">Recibos este mes</div>
+            <div class="stat-ghost"><i class="ri-checkbox-circle-fill"></i></div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 fa2">
         <div class="stat-card sc-p">
-            <div class="stat-ico"><i class="ri-calendar-line"></i></div>
-            <div class="stat-val">{{ now()->locale('es')->isoFormat('D MMM') }}</div>
-            <div class="stat-lbl">{{ now()->locale('es')->isoFormat('dddd') }}</div>
-            <div class="stat-ghost"><i class="ri-calendar-fill"></i></div>
+            <div class="stat-ico"><i class="ri-money-dollar-circle-line"></i></div>
+            <div class="stat-val">RD$ {{ number_format($totalCollected, 0, ',', '.') }}</div>
+            <div class="stat-lbl">Cobrado este mes</div>
+            <div class="stat-ghost"><i class="ri-money-dollar-circle-fill"></i></div>
         </div>
     </div>
 </div>
 
-
-<div class="rpt-tabs mb-3">
-    <button class="rpt-tab active" onclick="switchTab('pending', this)">
-        Pendientes
-    </button>
-    <button class="rpt-tab" onclick="switchTab('paid', this)">
-        Pagadas
-    </button>
-</div>
-
-<div id="tab-pending">
-
-    {{-- ── Filters + Table ── --}}
+{{-- ── Main card con tabs ── --}}
 <div class="main-card fa1">
-    <div class="main-card-head">
-        <div style="width:30px;height:30px;border-radius:.4rem;background:rgba(247,184,75,.12);color:var(--ra);display:flex;align-items:center;justify-content:center;">
-            <i class="ri-bill-line"></i>
-        </div>
-        <h5>Facturas pendientes de cobro</h5>
+
+    {{-- Tabs (links reales a la URL) --}}
+    <div class="ap-tabs">
+        <a href="{{ route('receipts.index', array_merge(request()->except(['tab','rpage']), ['tab'=>'pending'])) }}"
+           class="ap-tab {{ $tab === 'pending' ? 'active' : '' }}">
+            <i class="ri-bill-line"></i>Pendientes
+            @if($invoices->total() > 0)
+                <span class="tab-badge">{{ $invoices->total() }}</span>
+            @endif
+        </a>
+        <a href="{{ route('receipts.index', array_merge(request()->except(['tab','ppage']), ['tab'=>'paid'])) }}"
+           class="ap-tab {{ $tab === 'paid' ? 'active' : '' }}">
+            <i class="ri-checkbox-circle-line"></i>Recibos pagados
+            @if($receipts->total() > 0)
+                <span class="tab-badge">{{ $receipts->total() }}</span>
+            @endif
+        </a>
     </div>
 
-    {{-- Filters --}}
-    <div class="p-3 border-bottom" style="border-color:var(--border)!important; background:var(--surface);">
+    {{-- ══════════ TAB PENDIENTES ══════════ --}}
+    @if($tab === 'pending')
+
+    <div class="p-3 border-bottom" style="border-color:var(--border)!important;background:var(--surface);">
         <form method="GET" action="{{ route('receipts.index') }}" id="filter-form">
+            <input type="hidden" name="tab" value="pending">
             <div class="row g-2 align-items-center">
                 <div class="col-md-5">
                     <div class="search-bar">
                         <i class="ri-search-line"></i>
                         <input type="text" name="q" value="{{ request('q') }}"
-                               placeholder="Buscar por nombre o cédula..."
+                               placeholder="Buscar por nombre, cédula o FAC-..."
                                autocomplete="off">
                     </div>
                 </div>
@@ -281,7 +252,7 @@
                             onchange="document.getElementById('filter-form').submit()">
                         <option value="">Todas las sucursales</option>
                         @foreach($branches as $br)
-                            <option value="{{ $br->id }}" {{ request('branch_id') == $br->id ? 'selected' : '' }}>
+                            <option value="{{ $br->id }}" {{ request('branch_id') == $br->id ? 'selected':'' }}>
                                 {{ $br->name }}
                             </option>
                         @endforeach
@@ -293,7 +264,8 @@
                         <i class="ri-search-line me-1"></i>Buscar
                     </button>
                     @if(request()->hasAny(['q','branch_id']))
-                        <a href="{{ route('receipts.index') }}" class="btn btn-light btn-sm ms-1" style="border-radius:2rem;font-size:.8rem;">
+                        <a href="{{ route('receipts.index', ['tab'=>'pending']) }}"
+                           class="btn btn-light btn-sm ms-1" style="border-radius:2rem;font-size:.8rem;">
                             <i class="ri-close-line"></i>
                         </a>
                     @endif
@@ -302,7 +274,6 @@
         </form>
     </div>
 
-    {{-- Table --}}
     <div class="table-responsive">
         <table class="rec-table">
             <thead>
@@ -359,13 +330,12 @@
                         </td>
                         <td class="text-center">
                             <div style="font-size:.82rem;">{{ $inv->created_at->format('d/m/Y') }}</div>
-                            <div class="days-old {{ $urgnt ? 'urgent' : '' }}">
-                                
+                            <div class="days-old {{ $urgnt ? 'urgent':'' }}">
+                                hace {{ $days }}d{{ $urgnt ? ' ⚠':'' }}
                             </div>
                         </td>
                         <td class="text-center">
-                            <button type="button" class="btn-pay"
-                                    onclick="openPayModal({{ $inv->id }})">
+                            <button type="button" class="btn-pay" onclick="openPayModal({{ $inv->id }})">
                                 <i class="ri-cash-line"></i>Cobrar
                             </button>
                         </td>
@@ -390,80 +360,70 @@
         </table>
     </div>
 
-    {{-- Pagination --}}
     @if($invoices->hasPages())
     <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
         {{ $invoices->withQueryString()->links('pagination::bootstrap-5') }}
     </div>
     @endif
-</div>
 
-</div>
-    
+    @endif {{-- /tab pending --}}
 
-<div id="tab-paid" class="d-none">
 
-<div class="main-card fa1">
-    <div class="main-card-head">
-        <div style="width:30px;height:30px;border-radius:.4rem;background:rgba(10,179,156,.12);color:var(--rt);display:flex;align-items:center;justify-content:center;">
-            <i class="ri-check-double-line"></i>
-        </div>
-        <h5>Recibos pagados</h5>
-    </div>
+    {{-- ══════════ TAB RECIBOS PAGADOS ══════════ --}}
+    @if($tab === 'paid')
 
-    {{-- Filters --}}
-    <div class="p-3 border-bottom" style="border-color:var(--border)!important; background:var(--surface);">
-        <form method="GET" action="{{ route('receipts.index') }}">
+    <div class="p-3 border-bottom" style="border-color:var(--border)!important;background:var(--surface);">
+        <form method="GET" action="{{ route('receipts.index') }}" id="receipts-filter-form">
             <input type="hidden" name="tab" value="paid">
-
             <div class="row g-2 align-items-center">
-
-                {{-- 🔍 Buscador --}}
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <div class="search-bar">
                         <i class="ri-search-line"></i>
-                        <input type="text" name="q_paid"
-                               value="{{ request('q_paid') }}"
-                               placeholder="Buscar por nombre o cédula..."
+                        <input type="text" name="rq" value="{{ request('rq') }}"
+                               placeholder="Buscar por nombre, cédula o REC-..."
                                autocomplete="off">
                     </div>
                 </div>
-
-                {{-- 📅 Fechas --}}
                 <div class="col-md-2">
-                    <input type="date" name="from"
-                           value="{{ request('from') }}"
+                    <input type="date" name="rfrom" value="{{ request('rfrom') }}"
                            class="form-control form-control-sm"
                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;">
                 </div>
-
                 <div class="col-md-2">
-                    <input type="date" name="to"
-                           value="{{ request('to') }}"
+                    <input type="date" name="rto" value="{{ request('rto') }}"
                            class="form-control form-control-sm"
                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;">
                 </div>
-
-                {{-- 🔘 Botones --}}
+                @if($isAdmin)
+                <div class="col-md-2">
+                    <select name="rbranch_id" class="form-select form-select-sm"
+                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
+                            onchange="document.getElementById('receipts-filter-form').submit()">
+                        <option value="">Todas las sucursales</option>
+                        @foreach($branches as $br)
+                            <option value="{{ $br->id }}" {{ request('rbranch_id') == $br->id ? 'selected':'' }}>
+                                {{ $br->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
                 <div class="col-auto">
-                    <button class="btn btn-primary btn-sm" style="border-radius:2rem;font-size:.8rem;">
+                    <button type="submit" class="btn btn-sm"
+                            style="border-radius:2rem;font-size:.8rem;background:var(--rt);color:#fff;border:none;">
                         <i class="ri-search-line me-1"></i>Buscar
                     </button>
-
-                    @if(request()->hasAny(['q_paid','from','to']))
-                        <a href="{{ route('receipts.index', ['tab' => 'paid']) }}"
-                           class="btn btn-light btn-sm ms-1"
-                           style="border-radius:2rem;font-size:.8rem;">
+                    @if(request()->hasAny(['rq','rfrom','rto','rbranch_id']))
+                        <a href="{{ route('receipts.index', ['tab'=>'paid']) }}"
+                           class="btn btn-light btn-sm ms-1" style="border-radius:2rem;font-size:.8rem;">
                             <i class="ri-close-line"></i>
                         </a>
                     @endif
                 </div>
-
             </div>
         </form>
     </div>
 
-    {{-- Table --}}
     <div class="table-responsive">
         <table class="rec-table">
             <thead>
@@ -471,85 +431,89 @@
                     <th>Recibo</th>
                     <th>Paciente</th>
                     @if($isAdmin)<th>Sucursal</th>@endif
-                    <th>Método</th>
-                    <th class="text-end">Total</th>
+                    <th>Métodos</th>
+                    <th class="text-end">Total cobrado</th>
                     <th class="text-center">Fecha</th>
+                    <th>Cobrado por</th>
                     <th class="text-center">Acción</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($receipts ?? [] as $rec)
+                @forelse($receipts as $rec)
                     @php
-                        $p = $rec->invoice->patient;
-                        $ini = strtoupper(substr($p->first_name,0,1).substr($p->last_name,0,1));
+                        $p   = $rec->invoice?->patient;
+                        $fn  = $p?->first_name ?? '';
+                        $ln  = $p?->last_name  ?? '';
+                        $ini = strtoupper(substr($fn,0,1).substr($ln,0,1));
                     @endphp
                     <tr>
                         <td>
-                            <div class="inv-num">{{ $rec->receipt_number }}</div>
-                            <span class="badge-pend mt-1 d-inline-block"
-                                  style="background:rgba(10,179,156,.15);color:var(--rt);">
-                                Pagado
-                            </span>
+                            <div class="rec-num">{{ $rec->receipt_number }}</div>
+                            <span class="badge-paid mt-1 d-inline-block">Pagado</span>
                         </td>
-
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="pat-av">{{ $ini }}</div>
+                                <div class="pat-av av-paid">{{ $ini ?: '?' }}</div>
                                 <div>
-                                    <div style="font-weight:600;font-size:.85rem;">
-                                        {{ $p->first_name }} {{ $p->last_name }}
-                                    </div>
-                                    <div style="font-size:.72rem;color:var(--muted);">
-                                        {{ $p->cedula }}
-                                    </div>
+                                    <div style="font-weight:600;font-size:.85rem;">{{ $fn }} {{ $ln }}</div>
+                                    <div style="font-size:.72rem;color:var(--muted);">{{ $p?->cedula ?? '—' }}</div>
                                 </div>
                             </div>
                         </td>
-
                         @if($isAdmin)
-                        <td><span style="font-size:.82rem;">{{ $rec->branch->name }}</span></td>
+                        <td><span style="font-size:.82rem;">{{ $rec->branch?->name ?? '—' }}</span></td>
                         @endif
-
                         <td>
-                            <span style="font-size:.78rem;font-weight:700;color:var(--rp);">
-                                {{ $rec->payment_summary }}
-                            </span>
+                            <div class="method-chips">
+                                @if($rec->cash_amount > 0)
+                                    <span class="mchip mchip-cash"><i class="ri-money-dollar-circle-line"></i>Efectivo</span>
+                                @endif
+                                @if($rec->card_amount > 0)
+                                    <span class="mchip mchip-card"><i class="ri-bank-card-line"></i>Tarjeta</span>
+                                @endif
+                                @if($rec->transfer_amount > 0)
+                                    <span class="mchip mchip-transfer"><i class="ri-exchange-dollar-line"></i>Transferencia</span>
+                                @endif
+                            </div>
                         </td>
-
                         <td class="text-end">
-                            <div class="amt-cell">
+                            <div class="amt-cell" style="color:var(--rt);">
                                 RD$ {{ number_format($rec->total_paid, 2, ',', '.') }}
                             </div>
+                            @if(($rec->invoice?->insurance_discount ?? 0) > 0)
+                                <div style="font-size:.7rem;color:var(--muted);">
+                                    Seg: -RD$ {{ number_format($rec->invoice->insurance_discount, 0, ',', '.') }}
+                                </div>
+                            @endif
                         </td>
-
                         <td class="text-center">
-                            <div style="font-size:.82rem;">
-                                {{ $rec->created_at->format('d/m/Y') }}
+                            <div style="font-size:.82rem;">{{ $rec->created_at->format('d/m/Y') }}</div>
+                            <div style="font-size:.72rem;color:var(--muted);">{{ $rec->created_at->format('g:i A') }}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;font-size:.83rem;">{{ $rec->user?->name ?? '—' }}</div>
+                            <div style="font-size:.71rem;color:var(--muted);text-transform:capitalize;">
+                                {{ $rec->user?->role?->name ?? '' }}
                             </div>
                         </td>
-
                         <td class="text-center">
-    <a href="{{ route('receipts.show', $rec) }}"
-       class="btn-pay"
-       style="
-           background:linear-gradient(135deg,var(--rt),#3d9f80);
-           padding:.35rem .7rem;
-           font-size:.75rem;
-           border-radius:1.5rem;
-           display:inline-flex;
-           align-items:center;
-           gap:.3rem;
-       ">
-        <i class="ri-eye-line"></i>Ver
-    </a>
-</td>
+                            <a href="{{ route('receipts.show', $rec) }}" class="btn-view">
+                                <i class="ri-eye-line"></i>Ver recibo
+                            </a>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ $isAdmin ? 7 : 6 }}">
+                        <td colspan="{{ $isAdmin ? 8 : 7 }}">
                             <div class="empty-state">
-                                <i class="ri-file-check-line"></i>
-                                <p>No hay recibos registrados.</p>
+                                <i class="ri-receipt-line"></i>
+                                <p>
+                                    @if(request()->hasAny(['rq','rfrom','rto','rbranch_id']))
+                                        No se encontraron recibos con ese criterio.
+                                    @else
+                                        Aún no hay recibos registrados.
+                                    @endif
+                                </p>
                             </div>
                         </td>
                     </tr>
@@ -558,12 +522,15 @@
         </table>
     </div>
 
-    {{-- Pagination --}}
-@if(isset($receipts) && method_exists($receipts, 'hasPages') && $receipts->hasPages())
-<div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
-    {{ $receipts->appends(['tab' => 'paid'])->links('pagination::bootstrap-5') }}
-</div>
-@endif
+    @if($receipts->hasPages())
+    <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
+        {{ $receipts->withQueryString()->links('pagination::bootstrap-5') }}
+    </div>
+    @endif
+
+    @endif {{-- /tab paid --}}
+
+</div>{{-- /main-card --}}
 
 </div>
 </div>
@@ -574,26 +541,21 @@
 <div class="modal fade" id="payModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" style="border-radius:.75rem;overflow:hidden;">
-
             <div class="modal-header mh-pay py-3 text-white px-4">
                 <div>
                     <h5 class="modal-title mb-0 d-flex align-items-center gap-2">
-                        <i class="ri-cash-line fs-18"></i>
-                        Registrar Pago
+                        <i class="ri-cash-line fs-18"></i>Registrar Pago
                     </h5>
                     <div style="font-size:.78rem;opacity:.85;margin-top:.1rem;" id="modal-inv-num">—</div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body p-4">
                 <div id="modal-loading" class="text-center py-4">
                     <div class="spinner-border text-primary" style="width:2rem;height:2rem;"></div>
                     <div class="mt-2 text-muted" style="font-size:.84rem;">Cargando datos…</div>
                 </div>
-
                 <div id="modal-content" style="display:none;">
-                    {{-- ── Resumen de la factura ── --}}
                     <div class="inv-summary mb-4">
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--rp),#6b7fe0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:800;" id="modal-av">?</div>
@@ -616,119 +578,60 @@
                             <span style="color:var(--rt);" id="modal-insurance">—</span>
                         </div>
                         <div class="inv-sum-row total-row">
-                            <span>Total a cobrar</span>
-                            <span id="modal-total">—</span>
+                            <span>Total a cobrar</span><span id="modal-total">—</span>
                         </div>
                     </div>
-
-                    {{-- ── Form de pago ── --}}
                     <form id="pay-form" action="{{ route('receipts.store') }}" method="POST">
                         @csrf
                         <input type="hidden" name="invoice_id" id="f-invoice-id">
-
-                        <p style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem;">
-                            Método de pago
-                        </p>
-
+                        <p style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem;">Método de pago</p>
                         <div class="row g-3 mb-3">
-                            {{-- Efectivo --}}
                             <div class="col-md-4">
                                 <div class="method-card" id="mc-cash" onclick="toggleMethod('cash')">
                                     <div class="method-check"><i class="ri-check-line"></i></div>
-                                    <div class="method-ico" style="background:rgba(10,179,156,.1);color:var(--rt);">
-                                        <i class="ri-money-dollar-circle-line"></i>
-                                    </div>
+                                    <div class="method-ico" style="background:rgba(10,179,156,.1);color:var(--rt);"><i class="ri-money-dollar-circle-line"></i></div>
                                     <div class="method-label">Efectivo</div>
-                                    <div class="method-amount">
-                                        <input type="number" name="cash_amount" id="i-cash"
-                                               min="0" step="0.01" placeholder="RD$ 0.00"
-                                               oninput="recalcPay()">
-                                    </div>
+                                    <div class="method-amount"><input type="number" name="cash_amount" id="i-cash" min="0" step="0.01" placeholder="RD$ 0.00" oninput="recalcPay()"></div>
                                 </div>
                             </div>
-
-                            {{-- Tarjeta --}}
                             <div class="col-md-4">
                                 <div class="method-card" id="mc-card" onclick="toggleMethod('card')">
                                     <div class="method-check"><i class="ri-check-line"></i></div>
-                                    <div class="method-ico" style="background:rgba(64,81,137,.1);color:var(--rp);">
-                                        <i class="ri-bank-card-line"></i>
-                                    </div>
+                                    <div class="method-ico" style="background:rgba(64,81,137,.1);color:var(--rp);"><i class="ri-bank-card-line"></i></div>
                                     <div class="method-label">Tarjeta</div>
-                                    <div class="method-amount">
-                                        <input type="number" name="card_amount" id="i-card"
-                                               min="0" step="0.01" placeholder="RD$ 0.00"
-                                               oninput="recalcPay()">
-                                    </div>
-                                    <div class="method-ref">
-                                        <input type="text" name="card_reference" id="i-card-ref"
-                                               placeholder="Referencia (opcional)">
-                                    </div>
+                                    <div class="method-amount"><input type="number" name="card_amount" id="i-card" min="0" step="0.01" placeholder="RD$ 0.00" oninput="recalcPay()"></div>
+                                    <div class="method-ref"><input type="text" name="card_reference" id="i-card-ref" placeholder="Referencia (opcional)"></div>
                                 </div>
                             </div>
-
-                            {{-- Transferencia --}}
                             <div class="col-md-4">
                                 <div class="method-card" id="mc-transfer" onclick="toggleMethod('transfer')">
                                     <div class="method-check"><i class="ri-check-line"></i></div>
-                                    <div class="method-ico" style="background:rgba(112,102,224,.1);color:var(--rv);">
-                                        <i class="ri-exchange-dollar-line"></i>
-                                    </div>
+                                    <div class="method-ico" style="background:rgba(112,102,224,.1);color:var(--rv);"><i class="ri-exchange-dollar-line"></i></div>
                                     <div class="method-label">Transferencia</div>
-                                    <div class="method-amount">
-                                        <input type="number" name="transfer_amount" id="i-transfer"
-                                               min="0" step="0.01" placeholder="RD$ 0.00"
-                                               oninput="recalcPay()">
-                                    </div>
-                                    <div class="method-ref">
-                                        <input type="text" name="transfer_reference" id="i-transfer-ref"
-                                               placeholder="N° de referencia (opcional)">
-                                    </div>
+                                    <div class="method-amount"><input type="number" name="transfer_amount" id="i-transfer" min="0" step="0.01" placeholder="RD$ 0.00" oninput="recalcPay()"></div>
+                                    <div class="method-ref"><input type="text" name="transfer_reference" id="i-transfer-ref" placeholder="N° de referencia (opcional)"></div>
                                 </div>
                             </div>
                         </div>
-
-                        {{-- Resumen de pago ── --}}
                         <div class="pay-total-box">
-                            <div class="pay-total-row" id="pr-cash"    style="display:none;">
-                                <span><i class="ri-money-dollar-circle-line me-1"></i>Efectivo</span><span id="pd-cash">—</span>
-                            </div>
-                            <div class="pay-total-row" id="pr-card"    style="display:none;">
-                                <span><i class="ri-bank-card-line me-1"></i>Tarjeta</span><span id="pd-card">—</span>
-                            </div>
-                            <div class="pay-total-row" id="pr-transfer" style="display:none;">
-                                <span><i class="ri-exchange-dollar-line me-1"></i>Transferencia</span><span id="pd-transfer">—</span>
-                            </div>
-                            <div class="pay-total-row pay-final">
-                                <span>Total ingresado</span>
-                                <span id="pd-total">RD$ 0.00</span>
-                            </div>
+                            <div class="pay-total-row" id="pr-cash"     style="display:none;"><span><i class="ri-money-dollar-circle-line me-1"></i>Efectivo</span><span id="pd-cash">—</span></div>
+                            <div class="pay-total-row" id="pr-card"     style="display:none;"><span><i class="ri-bank-card-line me-1"></i>Tarjeta</span><span id="pd-card">—</span></div>
+                            <div class="pay-total-row" id="pr-transfer" style="display:none;"><span><i class="ri-exchange-dollar-line me-1"></i>Transferencia</span><span id="pd-transfer">—</span></div>
+                            <div class="pay-total-row pay-final"><span>Total ingresado</span><span id="pd-total">RD$ 0.00</span></div>
                             <div style="font-size:.78rem;margin-top:.35rem;text-align:right;" id="pd-diff"></div>
                         </div>
-
-                        {{-- Vuelto / Cambio --}}
                         <div class="vuelto-box" id="vuelto-box">
-                            <div class="vuelto-lbl">
-                                <i class="ri-exchange-funds-line"></i>
-                                Cambio a devolver al paciente
-                            </div>
+                            <div class="vuelto-lbl"><i class="ri-exchange-funds-line"></i>Cambio a devolver al paciente</div>
                             <div class="vuelto-amt" id="vuelto-amt">RD$ 0.00</div>
                             <div class="vuelto-sub" id="vuelto-sub">—</div>
                         </div>
-
-                        {{-- Notas --}}
                         <div class="mt-3">
-                            <label style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">
-                                Notas (opcional)
-                            </label>
-                            <textarea name="notes" rows="2"
-                                      class="form-control mt-1"
+                            <label style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Notas (opcional)</label>
+                            <textarea name="notes" rows="2" class="form-control mt-1"
                                       style="border:1.5px solid var(--border);border-radius:.5rem;font-size:.85rem;resize:none;"
                                       placeholder="Observaciones del cobro…"
                                       onclick="event.stopPropagation()"></textarea>
                         </div>
-
-                        {{-- Error server-side --}}
                         @if($errors->has('payment'))
                             <div class="alert alert-danger mt-3 py-2" style="font-size:.83rem;">
                                 <i class="ri-error-warning-line me-1"></i>{{ $errors->first('payment') }}
@@ -737,10 +640,8 @@
                     </form>
                 </div>
             </div>
-
             <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal"
-                        style="border-radius:2rem;font-size:.83rem;">Cancelar</button>
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius:2rem;font-size:.83rem;">Cancelar</button>
                 <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-2"
                         id="btn-confirm-pay"
                         style="border-radius:2rem;padding:.45rem 1.1rem;font-size:.85rem;background:linear-gradient(135deg,var(--rp),var(--rt));border:none;"
@@ -756,33 +657,30 @@
 
 @push('scripts')
 <script>
-const CSRF          = document.querySelector('meta[name="csrf-token"]').content;
-const URL_INV_DATA  = '/api/receipts/invoicedata/';  // ← todo minúsculas
-let   invoiceTotal  = 0;
+const CSRF         = document.querySelector('meta[name="csrf-token"]').content;
+const URL_INV_DATA = '/api/receipts/invoice-data/';
+let   invoiceTotal = 0;
 
-/* ── Open modal ─────────────────────────────────────────── */
 async function openPayModal(invoiceId) {
     resetModal();
     document.getElementById('f-invoice-id').value = invoiceId;
-    const modal = new bootstrap.Modal(document.getElementById('payModal'));
-    modal.show();
-
+    new bootstrap.Modal(document.getElementById('payModal')).show();
     try {
         const r    = await fetch(URL_INV_DATA + invoiceId, {
-            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+            headers: { 'Accept':'application/json', 'X-CSRF-TOKEN': CSRF }
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Error al cargar');
         fillModal(data);
-    } catch (e) {
+    } catch(e) {
         showToast(e.message, 'err');
         bootstrap.Modal.getInstance(document.getElementById('payModal')).hide();
     }
 }
 
 function resetModal() {
-    document.getElementById('modal-loading').style.display  = '';
-    document.getElementById('modal-content').style.display  = 'none';
+    document.getElementById('modal-loading').style.display = '';
+    document.getElementById('modal-content').style.display = 'none';
     ['cash','card','transfer'].forEach(m => {
         document.getElementById('mc-'+m).classList.remove('selected');
         const inp = document.getElementById('i-'+m);
@@ -792,40 +690,26 @@ function resetModal() {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
-    document.querySelector('[name="notes"]').value = '';
+    const notes = document.querySelector('[name="notes"]');
+    if (notes) notes.value = '';
     recalcPay();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const tab = new URLSearchParams(window.location.search).get('tab');
-
-    if (tab === 'paid') {
-        const btn = document.querySelectorAll('.rpt-tab')[1];
-        switchTab('paid', btn);
-    }
-});
-
 function fillModal(d) {
     invoiceTotal = d.total;
-
-    document.getElementById('modal-inv-num').textContent     = d.invoice_number;
-    document.getElementById('modal-patient-name').textContent = d.patient_name;
+    document.getElementById('modal-inv-num').textContent        = d.invoice_number;
+    document.getElementById('modal-patient-name').textContent   = d.patient_name;
     document.getElementById('modal-patient-cedula').textContent = 'Cédula: ' + d.patient_cedula;
-    document.getElementById('modal-branch').textContent      = d.branch_name;
-    document.getElementById('modal-date').textContent        = 'Emitida: ' + d.created_at;
-    document.getElementById('modal-av').textContent          =
-        d.patient_name.split(' ').map(w => w[0] || '').slice(0,2).join('').toUpperCase();
-
-    // Items list
-    const itemsBox = document.getElementById('modal-items-list');
-    itemsBox.innerHTML = d.items.map(it =>
+    document.getElementById('modal-branch').textContent         = d.branch_name;
+    document.getElementById('modal-date').textContent           = 'Emitida: ' + d.created_at;
+    document.getElementById('modal-av').textContent             =
+        d.patient_name.split(' ').map(w => w[0]||'').slice(0,2).join('').toUpperCase();
+    document.getElementById('modal-items-list').innerHTML = d.items.map(it =>
         `<div class="inv-sum-row">
             <span style="color:var(--muted)">${it.name} ×${it.qty}</span>
             <span>RD$ ${fmt(it.subtotal)}</span>
         </div>`
     ).join('');
-
-    // Subtotal / insurance rows
     if (d.insurance_discount > 0) {
         document.getElementById('row-subtotal').style.display  = '';
         document.getElementById('row-insurance').style.display = '';
@@ -837,78 +721,55 @@ function fillModal(d) {
         }
     }
     document.getElementById('modal-total').textContent = 'RD$ ' + fmt(d.total);
-
-    // Auto-fill cash with full amount as convenience
     document.getElementById('mc-cash').classList.add('selected');
     document.getElementById('i-cash').value = d.total.toFixed(2);
-
     document.getElementById('modal-loading').style.display = 'none';
     document.getElementById('modal-content').style.display = '';
     recalcPay();
 }
 
-/* ── Toggle method card ─────────────────────────────────── */
 function toggleMethod(m) {
     const card = document.getElementById('mc-'+m);
     const inp  = document.getElementById('i-'+m);
-    const isOn = card.classList.contains('selected');
-
-    if (isOn) {
+    if (card.classList.contains('selected')) {
         card.classList.remove('selected');
         if (inp) inp.value = '';
     } else {
         card.classList.add('selected');
-        if (inp) { inp.focus(); }
+        if (inp) inp.focus();
     }
     recalcPay();
 }
 
-/* ── Recalculate totals ─────────────────────────────────── */
 function recalcPay() {
     const cash     = parseFloat(document.getElementById('i-cash')?.value)     || 0;
     const card     = parseFloat(document.getElementById('i-card')?.value)     || 0;
     const transfer = parseFloat(document.getElementById('i-transfer')?.value) || 0;
     const total    = cash + card + transfer;
-
-    // Show/hide breakdown rows
     toggleRow('pr-cash',     'pd-cash',     cash);
     toggleRow('pr-card',     'pd-card',     card);
     toggleRow('pr-transfer', 'pd-transfer', transfer);
-
     document.getElementById('pd-total').textContent = 'RD$ ' + fmt(total);
-
     const diffEl    = document.getElementById('pd-diff');
     const vueltoBox = document.getElementById('vuelto-box');
-    const vueltoAmt = document.getElementById('vuelto-amt');
-    const vueltoSub = document.getElementById('vuelto-sub');
-
     if (invoiceTotal <= 0) { diffEl.textContent = ''; vueltoBox.style.display = 'none'; return; }
-
     const diff       = total - invoiceTotal;
-    // El vuelto en efectivo: lo que sobra del efectivo después de cubrir
-    // la parte que tarjeta/transferencia no cubren
     const nonCash    = card + transfer;
-    const cashNeeded = Math.max(0, invoiceTotal - nonCash);  // cuánto efectivo se necesita
-    const vuelto     = cash - cashNeeded;                    // excedente en efectivo
-
-    // ── Vuelto box ──
+    const cashNeeded = Math.max(0, invoiceTotal - nonCash);
+    const vuelto     = cash - cashNeeded;
     if (vuelto > 0.009) {
         vueltoBox.style.display = '';
-        vueltoAmt.textContent   = 'RD$ ' + fmt(vuelto);
-        vueltoSub.textContent   = `Efectivo recibido: RD$ ${fmt(cash)} · Efectivo necesario: RD$ ${fmt(cashNeeded)}`;
+        document.getElementById('vuelto-amt').textContent = 'RD$ ' + fmt(vuelto);
+        document.getElementById('vuelto-sub').textContent =
+            `Efectivo recibido: RD$ ${fmt(cash)} · Efectivo necesario: RD$ ${fmt(cashNeeded)}`;
     } else {
         vueltoBox.style.display = 'none';
     }
-
-    // ── Status line ──
-    const cardOrTransferExcess = (card + transfer) - Math.min(invoiceTotal, card + transfer);
     if (Math.abs(diff) < 0.01) {
         diffEl.innerHTML = '<span class="pay-diff-ok"><i class="ri-check-double-line me-1"></i>Monto exacto ✓</span>';
     } else if (vuelto > 0.009 && Math.abs(diff - vuelto) < 0.01) {
-        // El excedente es solo de efectivo → válido
         diffEl.innerHTML = '<span class="pay-diff-ok"><i class="ri-check-double-line me-1"></i>Pago con cambio ✓</span>';
     } else if (diff > 0 && vuelto <= 0.009) {
-        // Excedente en tarjeta o transferencia → error
         diffEl.innerHTML = `<span class="pay-diff-warn"><i class="ri-error-warning-line me-1"></i>Exceso en tarjeta/transferencia: RD$ ${fmt(diff)}</span>`;
     } else if (diff < -0.009) {
         diffEl.innerHTML = `<span class="pay-diff-warn"><i class="ri-error-warning-line me-1"></i>Faltan RD$ ${fmt(Math.abs(diff))}</span>`;
@@ -923,48 +784,38 @@ function toggleRow(rowId, valId, amount) {
     val.textContent   = 'RD$ ' + fmt(amount);
 }
 
-/* ── Submit ─────────────────────────────────────────────── */
 function submitPay() {
     const cash     = parseFloat(document.getElementById('i-cash')?.value)     || 0;
     const card     = parseFloat(document.getElementById('i-card')?.value)     || 0;
     const transfer = parseFloat(document.getElementById('i-transfer')?.value) || 0;
     const total    = cash + card + transfer;
-
     if (total <= 0) { showToast('Ingresa al menos un monto de pago.', 'err'); return; }
-
-    // Validar: tarjeta + transferencia no pueden exceder el total de la factura
     if ((card + transfer) > invoiceTotal + 0.01) {
         showToast('Tarjeta y/o transferencia no pueden exceder el total de la factura.', 'err'); return;
     }
-
-    // El efectivo puede ser mayor (genera vuelto). Lo demás debe cuadrar.
     const nonCash    = card + transfer;
     const cashNeeded = Math.max(0, invoiceTotal - nonCash);
     if (cash < cashNeeded - 0.01) {
         showToast(`Faltan RD$ ${fmt(cashNeeded - cash)} para completar el pago.`, 'err'); return;
     }
-
     document.getElementById('btn-confirm-pay').disabled = true;
     document.getElementById('pay-spin').classList.remove('d-none');
     document.getElementById('pay-icon').classList.add('d-none');
     document.getElementById('pay-form').submit();
 }
 
-/* ── Toast ──────────────────────────────────────────────── */
 function showToast(msg, type) {
     const d = document.createElement('div');
-    d.className = 'T-item t-' + (type || 'ok');
+    d.className = 't-item t-' + (type || 'ok');
     d.innerHTML = `<i class="ri-${type==='err'?'error-warning':'checkbox-circle'}-line"></i>${msg}`;
     document.getElementById('toast-c').appendChild(d);
     setTimeout(() => { d.style.transition='opacity .3s'; d.style.opacity='0'; setTimeout(()=>d.remove(),320); }, 3500);
 }
 
-/* ── Format ─────────────────────────────────────────────── */
 function fmt(n) {
     return parseFloat(n||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
-/* ── Re-open modal if validation failed ─────────────────── */
 @if($errors->has('payment'))
     document.addEventListener('DOMContentLoaded', () => {
         const inv = document.querySelector('[name="invoice_id"]')?.value || '';
@@ -975,35 +826,6 @@ function fmt(n) {
 @if(session('success'))
     document.addEventListener('DOMContentLoaded', () => showToast('{{ session('success') }}', 'ok'));
 @endif
-
-function switchTab(tab, btn) {
-    // ocultar tabs
-    ['pending','paid'].forEach(t => {
-        const tabEl = document.getElementById('tab-' + t);
-        if (tabEl) tabEl.classList.add('d-none');
-    });
-
-    // quitar active
-    document.querySelectorAll('.rpt-tab').forEach(b => b.classList.remove('active'));
-
-    // mostrar actual
-    const currentTab = document.getElementById('tab-' + tab);
-    if (currentTab) currentTab.classList.remove('d-none');
-    btn.classList.add('active');
-
-    // Actualizar URL manteniendo los parámetros existentes
-    const url = new URL(window.location);
-    url.searchParams.set('tab', tab);
-    
-    // Limpiar las páginas del otro tab para evitar conflictos
-    if (tab === 'paid') {
-        url.searchParams.delete('pending_page');
-    } else {
-        url.searchParams.delete('paid_page');
-    }
-    
-    window.history.replaceState({}, '', url);
-}
 </script>
 @endpush
 
