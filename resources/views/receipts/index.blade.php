@@ -757,7 +757,7 @@
 @push('scripts')
 <script>
 const CSRF          = document.querySelector('meta[name="csrf-token"]').content;
-const URL_INV_DATA  = '/api/receipts/invoice-data/';
+const URL_INV_DATA  = '/api/receipts/invoicedata/';  // ← todo minúsculas
 let   invoiceTotal  = 0;
 
 /* ── Open modal ─────────────────────────────────────────── */
