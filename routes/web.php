@@ -157,20 +157,16 @@ Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
 
 
 Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
- 
-    // Index: facturas pendientes
+
     Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts.index');
- 
-    // Store: registrar pago
     Route::post('receipts', [ReceiptController::class, 'store'])->name('receipts.store');
- 
-    // Show: recibo imprimible
-    Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
- 
-    // AJAX: datos de factura para el modal
+
+    // ⚠️ Esta DEBE ir ANTES de receipts/{receipt}
     Route::get('api/receipts/invoice-data/{invoice}', [ReceiptController::class, 'invoiceData'])
         ->name('receipts.invoice-data');
- 
+
+    // Esta va AL FINAL porque {receipt} captura cualquier segmento
+    Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
 });
 
 // ── Citas del audiólogo (solo su propio listado) ──────────────────────────────

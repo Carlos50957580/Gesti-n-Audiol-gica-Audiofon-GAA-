@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class ReceiptController extends Controller
 {
-    // ── INDEX — Facturas pendientes de pago ───────────────────────────────────
     public function index(Request $request)
 {
     $user    = auth()->user();
