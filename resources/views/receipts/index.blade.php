@@ -251,11 +251,7 @@
     </button>
 </div>
 
-
-
 <div id="tab-pending">
-
-
 
     {{-- ── Filters + Table ── --}}
 <div class="main-card fa1">
@@ -403,17 +399,11 @@
 </div>
 
 </div>
-</div>
     
-</div>
-
-
-
 
 <div id="tab-paid" class="d-none">
 
-{{-- ── RECIBOS PAGADOS ── --}}
-<div class="main-card mt-4 fa2">
+<div class="main-card fa1">
     <div class="main-card-head">
         <div style="width:30px;height:30px;border-radius:.4rem;background:rgba(10,179,156,.12);color:var(--rt);display:flex;align-items:center;justify-content:center;">
             <i class="ri-check-double-line"></i>
@@ -421,42 +411,59 @@
         <h5>Recibos pagados</h5>
     </div>
 
+    {{-- Filters --}}
+    <div class="p-3 border-bottom" style="border-color:var(--border)!important; background:var(--surface);">
+        <form method="GET" action="{{ route('receipts.index') }}">
+            <input type="hidden" name="tab" value="paid">
 
-    <div class="p-3 border-bottom" style="background:var(--surface);">
-    <form method="GET" action="{{ route('receipts.index') }}">
-        <input type="hidden" name="tab" value="paid">
+            <div class="row g-2 align-items-center">
 
-        <div class="row g-2">
-            <div class="col-md-4">
-                <div class="search-bar">
-                    <i class="ri-search-line"></i>
-                    <input type="text" name="q_paid"
-                           value="{{ request('q_paid') }}"
-                           placeholder="Buscar por paciente o cédula">
+                {{-- 🔍 Buscador --}}
+                <div class="col-md-5">
+                    <div class="search-bar">
+                        <i class="ri-search-line"></i>
+                        <input type="text" name="q_paid"
+                               value="{{ request('q_paid') }}"
+                               placeholder="Buscar por nombre o cédula..."
+                               autocomplete="off">
+                    </div>
                 </div>
-            </div>
 
-            <div class="col-md-3">
-                <input type="date" name="from"
-                       value="{{ request('from') }}"
-                       class="form-control form-control-sm">
-            </div>
+                {{-- 📅 Fechas --}}
+                <div class="col-md-2">
+                    <input type="date" name="from"
+                           value="{{ request('from') }}"
+                           class="form-control form-control-sm"
+                           style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;">
+                </div>
 
-            <div class="col-md-3">
-                <input type="date" name="to"
-                       value="{{ request('to') }}"
-                       class="form-control form-control-sm">
-            </div>
+                <div class="col-md-2">
+                    <input type="date" name="to"
+                           value="{{ request('to') }}"
+                           class="form-control form-control-sm"
+                           style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;">
+                </div>
 
-            <div class="col-auto">
-                <button class="btn btn-primary btn-sm">
-                    <i class="ri-search-line"></i>
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
+                {{-- 🔘 Botones --}}
+                <div class="col-auto">
+                    <button class="btn btn-primary btn-sm" style="border-radius:2rem;font-size:.8rem;">
+                        <i class="ri-search-line me-1"></i>Buscar
+                    </button>
 
+                    @if(request()->hasAny(['q_paid','from','to']))
+                        <a href="{{ route('receipts.index', ['tab' => 'paid']) }}"
+                           class="btn btn-light btn-sm ms-1"
+                           style="border-radius:2rem;font-size:.8rem;">
+                            <i class="ri-close-line"></i>
+                        </a>
+                    @endif
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    {{-- Table --}}
     <div class="table-responsive">
         <table class="rec-table">
             <thead>
@@ -479,7 +486,8 @@
                     <tr>
                         <td>
                             <div class="inv-num">{{ $rec->receipt_number }}</div>
-                            <span class="badge-pend mt-1 d-inline-block" style="background:rgba(10,179,156,.15);color:var(--rt);">
+                            <span class="badge-pend mt-1 d-inline-block"
+                                  style="background:rgba(10,179,156,.15);color:var(--rt);">
                                 Pagado
                             </span>
                         </td>
@@ -499,7 +507,7 @@
                         </td>
 
                         @if($isAdmin)
-                        <td>{{ $rec->branch->name }}</td>
+                        <td><span style="font-size:.82rem;">{{ $rec->branch->name }}</span></td>
                         @endif
 
                         <td>
@@ -515,16 +523,26 @@
                         </td>
 
                         <td class="text-center">
-                            {{ $rec->created_at->format('d/m/Y') }}
+                            <div style="font-size:.82rem;">
+                                {{ $rec->created_at->format('d/m/Y') }}
+                            </div>
                         </td>
 
                         <td class="text-center">
-                            <a href="{{ route('receipts.show', $rec) }}"
-                               class="btn-pay"
-                               style="background:linear-gradient(135deg,var(--rt),#3d9f80);">
-                                <i class="ri-eye-line"></i>Ver
-                            </a>
-                        </td>
+    <a href="{{ route('receipts.show', $rec) }}"
+       class="btn-pay"
+       style="
+           background:linear-gradient(135deg,var(--rt),#3d9f80);
+           padding:.35rem .7rem;
+           font-size:.75rem;
+           border-radius:1.5rem;
+           display:inline-flex;
+           align-items:center;
+           gap:.3rem;
+       ">
+        <i class="ri-eye-line"></i>Ver
+    </a>
+</td>
                     </tr>
                 @empty
                     <tr>
@@ -542,14 +560,12 @@
 
     {{-- Pagination --}}
     @if($receipts->hasPages())
-    <div class="p-3 border-top d-flex justify-content-center">
+    <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
         {{ $receipts->withQueryString()->links('pagination::bootstrap-5') }}
     </div>
     @endif
+
 </div>
-
-
-
 </div>
 
 
