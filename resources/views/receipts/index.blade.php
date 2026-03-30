@@ -559,11 +559,11 @@
     </div>
 
     {{-- Pagination --}}
-   @if(isset($receipts) && method_exists($receipts, 'hasPages') && $receipts->hasPages())
-    <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
-        {{ $receipts->withQueryString()->links('pagination::bootstrap-5') }}
-    </div>
-    @endif
+@if(isset($receipts) && method_exists($receipts, 'hasPages') && $receipts->hasPages())
+<div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
+    {{ $receipts->appends(['tab' => 'paid'])->links('pagination::bootstrap-5') }}
+</div>
+@endif
 
 </div>
 </div>
@@ -977,25 +977,33 @@ function fmt(n) {
 @endif
 
 function switchTab(tab, btn) {
-
     // ocultar tabs
     ['pending','paid'].forEach(t => {
-        document.getElementById('tab-' + t).classList.add('d-none');
+        const tabEl = document.getElementById('tab-' + t);
+        if (tabEl) tabEl.classList.add('d-none');
     });
 
     // quitar active
     document.querySelectorAll('.rpt-tab').forEach(b => b.classList.remove('active'));
 
     // mostrar actual
-    document.getElementById('tab-' + tab).classList.remove('d-none');
+    const currentTab = document.getElementById('tab-' + tab);
+    if (currentTab) currentTab.classList.remove('d-none');
     btn.classList.add('active');
 
-    // guardar en URL
+    // Actualizar URL manteniendo los parámetros existentes
     const url = new URL(window.location);
     url.searchParams.set('tab', tab);
+    
+    // Limpiar las páginas del otro tab para evitar conflictos
+    if (tab === 'paid') {
+        url.searchParams.delete('pending_page');
+    } else {
+        url.searchParams.delete('paid_page');
+    }
+    
     window.history.replaceState({}, '', url);
 }
-
 </script>
 @endpush
 

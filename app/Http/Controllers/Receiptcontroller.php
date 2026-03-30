@@ -11,11 +11,14 @@ use Illuminate\Support\Facades\DB;
 class ReceiptController extends Controller
 {
     // ── INDEX — Facturas pendientes de pago ───────────────────────────────────
-    public function index(Request $request)
+public function index(Request $request)
 {
     $user    = auth()->user();
     $isAdmin = $user->role->name === 'admin';
 
+    // Determinar qué página estamos viendo
+    $currentTab = $request->get('tab', 'pending');
+    
     // ── FACTURAS PENDIENTES ─────────────────────
     $query = Invoice::with(['patient', 'branch', 'receipt'])
         ->where('status', 'pendiente')
@@ -97,7 +100,8 @@ class ReceiptController extends Controller
         'receipts',
         'branches',
         'isAdmin',
-        'totalAmount'
+        'totalAmount',
+        'currentTab'  // 👈 Agrega esto
     ));
 }
 
