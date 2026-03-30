@@ -241,4 +241,6 @@ Route::middleware(['auth', 'role:audiologo'])->prefix('audiologist/reports')->na
     Route::get('appointments',    [AudiologistReportController::class, 'appointments'])->name('appointments');
     Route::get('clinical-records',[AudiologistReportController::class, 'clinicalRecords'])->name('clinical-records');
 });
+
+
 require __DIR__.'/auth.php';

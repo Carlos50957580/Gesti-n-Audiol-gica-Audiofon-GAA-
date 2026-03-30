@@ -478,7 +478,7 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse($receipts as $rec)
+                @forelse($receipts ?? [] as $rec)
                     @php
                         $p = $rec->invoice->patient;
                         $ini = strtoupper(substr($p->first_name,0,1).substr($p->last_name,0,1));
@@ -559,7 +559,7 @@
     </div>
 
     {{-- Pagination --}}
-    @if($receipts->hasPages())
+   @if(($receipts ?? collect())->hasPages())
     <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
         {{ $receipts->withQueryString()->links('pagination::bootstrap-5') }}
     </div>
@@ -567,8 +567,6 @@
 
 </div>
 </div>
-
-
 
 {{-- ════════════════════════════════════════
      MODAL DE PAGO
