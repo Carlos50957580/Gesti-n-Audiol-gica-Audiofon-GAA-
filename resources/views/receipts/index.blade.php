@@ -559,7 +559,7 @@
     </div>
 
     {{-- Pagination --}}
-   @if(($receipts ?? collect())->hasPages())
+   @if(isset($receipts) && method_exists($receipts, 'hasPages') && $receipts->hasPages())
     <div class="p-3 border-top d-flex justify-content-center" style="border-color:var(--border)!important;">
         {{ $receipts->withQueryString()->links('pagination::bootstrap-5') }}
     </div>
