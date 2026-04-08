@@ -215,13 +215,7 @@
             {{ now()->locale('es')->isoFormat('dddd, D [de] MMMM [de] YYYY') }}
         </p>
     </div>
-    <div class="col-auto d-flex gap-2">
-        <a href="{{ route('invoices.create') }}"
-           class="btn btn-primary btn-sm d-flex align-items-center gap-1"
-           style="border-radius:2rem;font-size:.8rem;">
-            <i class="ri-add-line"></i>Nueva factura
-        </a>
-    </div>
+   
 </div>
 
 {{-- ══════════════════════════════════

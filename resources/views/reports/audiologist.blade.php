@@ -281,17 +281,7 @@
         </div>
 
         <div class="chart-grid-2">
-            <div class="chart-card">
-                <div class="chart-card-header">
-                    <i class="ri-building-2-line"></i>
-                    <h6>HCs por Sucursal</h6>
-                </div>
-                <div class="chart-card-body">
-                    <div class="table-responsive">
-                        <table class="rpt-table" id="table-hc-branch"></table>
-                    </div>
-                </div>
-            </div>
+            
             <div class="chart-card">
                 <div class="chart-card-header">
                     <i class="ri-time-line"></i>
@@ -581,16 +571,7 @@ function renderClinical(d) {
         ['#0ab39c','#f59e0b']
     );
 
-    // Tabla por sucursal
-    document.getElementById('table-hc-branch').innerHTML =
-        tableHead(['Sucursal','Total','Completadas','Pendientes']) +
-        '<tbody>' + d.by_branch.map(r => `
-            <tr>
-                <td class="fw-semibold">${r.branch}</td>
-                <td>${r.total}</td>
-                <td><span style="color:#0ab39c;font-weight:700;">${r.completadas}</span></td>
-                <td><span style="color:#f59e0b;font-weight:700;">${r.pendientes}</span></td>
-            </tr>`).join('') + '</tbody>';
+  
 
     // HCs pendientes
     const pending = d.pending_list;
