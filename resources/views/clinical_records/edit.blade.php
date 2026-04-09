@@ -214,6 +214,81 @@
     ══════════════════════════════ --}}
     <div class="d-flex flex-column gap-3 fade-in">
 
+
+
+        {{-- ════════════════════════════════════════
+     SECCIÓN: DOCUMENTOS DEL PACIENTE
+════════════════════════════════════════ --}}
+<div class="card border-0 shadow-sm mb-3" style="border-radius:.75rem;">
+    <div class="card-header d-flex align-items-center gap-2 py-3"
+         style="border-bottom:1px solid #f0f2f7;background:#fff;border-radius:.75rem .75rem 0 0;">
+        <div style="width:32px;height:32px;border-radius:.4rem;background:linear-gradient(135deg,#405189,#0ab39c);
+                    display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;">
+            <i class="ri-folder-open-line"></i>
+        </div>
+        <h6 class="mb-0 fw-bold" style="color:#344563;font-size:.88rem;">
+            Documentos del Paciente
+        </h6>
+        <span id="doc-count-badge" class="badge bg-primary-subtle text-primary ms-1" style="font-size:.75rem;">
+            {{ $documents->count() }}
+        </span>
+        <button type="button" class="btn btn-sm ms-auto d-flex align-items-center gap-1"
+                style="background:linear-gradient(135deg,#405189,#0ab39c);color:#fff;border:none;
+                       border-radius:2rem;padding:.3rem .85rem;font-size:.8rem;font-weight:600;"
+                onclick="openUploadModal()">
+            <i class="ri-upload-2-line"></i> Subir documento
+        </button>
+    </div>
+    <div class="card-body p-0">
+
+        {{-- Lista de documentos --}}
+        <div id="doc-list">
+            @forelse($documents as $doc)
+            <div class="doc-item d-flex align-items-center gap-3 px-3 py-2"
+                 style="border-bottom:1px solid #f3f5f9;" id="doc-item-{{ $doc->id }}">
+                <div style="width:40px;height:40px;border-radius:.45rem;flex-shrink:0;
+                            background:#f8faff;display:flex;align-items:center;justify-content:center;
+                            font-size:1.4rem;">
+                    <i class="{{ $doc->file_icon }} {{ $doc->file_icon_color }}"></i>
+                </div>
+                <div class="flex-grow-1" style="min-width:0;">
+                    <div class="fw-semibold text-truncate" style="font-size:.87rem;color:#344563;">
+                        {{ $doc->name }}
+                    </div>
+                    <div class="text-muted" style="font-size:.73rem;">
+                        {{ $doc->file_name }} · {{ $doc->file_size_formatted }}
+                        · {{ $doc->created_at->format('d/m/Y H:i') }}
+                    </div>
+                </div>
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <a href="{{ route('clinical-records.documents.download', $doc->id) }}"
+                       class="btn btn-sm d-flex align-items-center justify-content-center"
+                       style="width:32px;height:32px;padding:0;background:#d1fae5;color:#065f46;
+                              border:none;border-radius:.4rem;" title="Descargar">
+                        <i class="ri-download-2-line fs-14"></i>
+                    </a>
+                    <button type="button"
+                            class="btn btn-sm d-flex align-items-center justify-content-center"
+                            style="width:32px;height:32px;padding:0;background:#fee2e2;color:#991b1b;
+                                   border:none;border-radius:.4rem;" title="Eliminar"
+                            onclick="deleteDocument({{ $doc->id }}, '{{ addslashes($doc->name) }}')">
+                        <i class="ri-delete-bin-line fs-14"></i>
+                    </button>
+                </div>
+            </div>
+            @empty
+            <div id="doc-empty" class="text-center py-4">
+                <i class="ri-folder-open-line d-block text-muted mb-2" style="font-size:2.5rem;opacity:.3;"></i>
+                <p class="text-muted mb-0" style="font-size:.85rem;">No hay documentos adjuntos.</p>
+            </div>
+            @endforelse
+        </div>
+
+    </div>
+</div>
+
+
+
         {{-- Card: Guardar --}}
         <div class="side-card">
             <div class="side-header">
@@ -374,6 +449,96 @@
 </div>
 </div>
 
+{{-- Modal: Subir Documento --}}
+<div class="modal fade" id="uploadDocModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:.75rem;overflow:hidden;">
+            <div class="modal-header py-3"
+                 style="background:linear-gradient(135deg,#405189,#0ab39c);color:#fff;border-radius:.75rem .75rem 0 0;">
+                <h5 class="modal-title d-flex align-items-center gap-2" style="font-size:.95rem;">
+                    <i class="ri-upload-2-line fs-18"></i> Subir Documento
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1);"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="upload-alert" class="alert d-none mb-3" style="border-radius:.5rem;font-size:.85rem;"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="font-size:.82rem;color:#344563;">
+                        Nombre del documento <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" id="doc-name-input" class="form-control"
+                           placeholder="Ej. Audiometría Tonal Inicial"
+                           style="border:1.5px solid #e2e8f0;border-radius:.5rem;">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="font-size:.82rem;color:#344563;">
+                        Archivo <span class="text-danger">*</span>
+                    </label>
+
+                    {{-- Drop zone --}}
+                    <div id="drop-zone"
+                         style="border:2px dashed #e2e8f0;border-radius:.65rem;padding:2rem 1rem;
+                                text-align:center;cursor:pointer;transition:all .2s;background:#fafbff;"
+                         onclick="document.getElementById('doc-file-input').click()"
+                         ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
+                        <i class="ri-upload-cloud-2-line d-block mb-2" style="font-size:2.2rem;color:#8098bb;"></i>
+                        <div style="font-size:.85rem;color:#8098bb;">
+                            Arrastra el archivo aquí o <span style="color:#405189;font-weight:600;">haz clic para seleccionar</span>
+                        </div>
+                        <div style="font-size:.75rem;color:#adb5bd;margin-top:.35rem;">
+                            PDF, DOC, DOCX · Máximo 10 MB
+                        </div>
+                    </div>
+                    <input type="file" id="doc-file-input" accept=".pdf,.doc,.docx" class="d-none"
+                           onchange="onFileSelected(this)">
+
+                    {{-- Preview del archivo seleccionado --}}
+                    <div id="file-preview" class="d-none mt-2 d-flex align-items-center gap-2 p-2 rounded"
+                         style="background:#f0f4ff;border:1px solid rgba(64,81,137,.15);">
+                        <i id="file-preview-icon" class="ri-file-line fs-20 text-primary"></i>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div id="file-preview-name" class="fw-semibold text-truncate" style="font-size:.83rem;"></div>
+                            <div id="file-preview-size" class="text-muted" style="font-size:.73rem;"></div>
+                        </div>
+                        <button type="button" onclick="clearFile()"
+                                style="background:none;border:none;color:#8098bb;padding:.2rem;cursor:pointer;font-size:1rem;">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Barra de progreso --}}
+                <div id="upload-progress" class="d-none">
+                    <div class="d-flex justify-content-between mb-1" style="font-size:.78rem;color:#8098bb;">
+                        <span>Subiendo...</span>
+                        <span id="progress-pct">0%</span>
+                    </div>
+                    <div class="progress" style="height:6px;border-radius:3px;">
+                        <div id="progress-bar" class="progress-bar"
+                             style="background:linear-gradient(90deg,#405189,#0ab39c);width:0%;transition:width .3s;border-radius:3px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-3 px-4">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal"
+                        style="border-radius:2rem;">Cancelar</button>
+                <button type="button" id="btn-upload-doc"
+                        class="btn btn-sm d-flex align-items-center gap-2"
+                        style="background:linear-gradient(135deg,#405189,#0ab39c);color:#fff;
+                               border:none;border-radius:2rem;padding:.42rem 1.1rem;font-weight:700;"
+                        onclick="submitDocument()">
+                    <span class="spinner-border spinner-border-sm d-none" id="upload-spin"></span>
+                    <i class="ri-upload-2-line" id="upload-icon"></i>
+                    <span>Subir</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @push('scripts')
 <script>
 function updateCounter(fieldId, counterId, max) {
@@ -431,6 +596,264 @@ function showToast(msg, type) {
     div.innerHTML = '<i class="ri-' + (type === 'success' ? 'checkbox-circle' : 'error-warning') + '-line fs-16"></i>' + msg;
     document.getElementById('toast-container').appendChild(div);
     setTimeout(() => { div.style.transition='opacity .4s'; div.style.opacity='0'; setTimeout(()=>div.remove(),400); }, 3500);
+}
+
+
+/* ══════════════════════════════════════
+   DOCUMENTOS
+══════════════════════════════════════ */
+const CLINICAL_RECORD_ID = {{ $clinicalRecord->id }};
+const URL_DOCS_STORE     = "{{ route('clinical-records.documents.store', $clinicalRecord->id) }}";
+const CSRF_DOC           = document.querySelector('meta[name="csrf-token"]').content;
+
+let uploadModal = null;
+let selectedFile = null;
+
+function openUploadModal() {
+    if (!uploadModal) uploadModal = new bootstrap.Modal(document.getElementById('uploadDocModal'));
+    // Reset
+    document.getElementById('doc-name-input').value = '';
+    document.getElementById('upload-alert').className = 'alert d-none';
+    clearFile();
+    uploadModal.show();
+}
+
+// ── Drag & Drop ──────────────────────────────────────────
+function dzOver(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').style.borderColor   = '#405189';
+    document.getElementById('drop-zone').style.background    = '#f0f4ff';
+}
+function dzLeave(e) {
+    document.getElementById('drop-zone').style.borderColor = '#e2e8f0';
+    document.getElementById('drop-zone').style.background  = '#fafbff';
+}
+function dzDrop(e) {
+    e.preventDefault();
+    dzLeave(e);
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+}
+function onFileSelected(input) {
+    if (input.files[0]) processFile(input.files[0]);
+}
+
+function processFile(file) {
+    const allowed = ['application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+
+    if (!allowed.includes(file.type)) {
+        showUploadAlert('Solo se permiten archivos PDF, DOC o DOCX.', 'danger');
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        showUploadAlert('El archivo no puede superar los 10 MB.', 'danger');
+        return;
+    }
+
+    selectedFile = file;
+    const ext    = file.name.split('.').pop().toLowerCase();
+    const icon   = ext === 'pdf' ? 'ri-file-pdf-line text-danger'
+                 : 'ri-file-word-line text-primary';
+    const size   = file.size < 1048576
+        ? Math.round(file.size / 1024) + ' KB'
+        : (file.size / 1048576).toFixed(1) + ' MB';
+
+    document.getElementById('file-preview-icon').className = icon + ' fs-20';
+    document.getElementById('file-preview-name').textContent = file.name;
+    document.getElementById('file-preview-size').textContent = size;
+    document.getElementById('file-preview').classList.remove('d-none');
+    document.getElementById('file-preview').classList.add('d-flex');
+    document.getElementById('upload-alert').className = 'alert d-none';
+}
+
+function clearFile() {
+    selectedFile = null;
+    document.getElementById('doc-file-input').value = '';
+    document.getElementById('file-preview').classList.add('d-none');
+    document.getElementById('file-preview').classList.remove('d-flex');
+}
+
+// ── Subir documento ──────────────────────────────────────
+async function submitDocument() {
+    const alertEl = document.getElementById('upload-alert');
+    const name    = document.getElementById('doc-name-input').value.trim();
+
+    if (!name) {
+        showUploadAlert('El nombre del documento es obligatorio.', 'danger');
+        return;
+    }
+    if (!selectedFile) {
+        showUploadAlert('Selecciona un archivo para subir.', 'danger');
+        return;
+    }
+
+    // UI loading
+    document.getElementById('btn-upload-doc').disabled = true;
+    document.getElementById('upload-spin').classList.remove('d-none');
+    document.getElementById('upload-icon').classList.add('d-none');
+    document.getElementById('upload-progress').classList.remove('d-none');
+
+    const formData = new FormData();
+    formData.append('document',       selectedFile);
+    formData.append('document_name',  name);
+    formData.append('_token',         CSRF_DOC);
+
+    try {
+        // XMLHttpRequest para mostrar progreso real
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('progress-pct').textContent = pct + '%';
+            }
+        });
+
+        const response = await new Promise((resolve, reject) => {
+            xhr.onload  = () => resolve(xhr);
+            xhr.onerror = () => reject(new Error('Error de red'));
+            xhr.open('POST', URL_DOCS_STORE);
+            xhr.setRequestHeader('X-CSRF-TOKEN', CSRF_DOC);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.send(formData);
+        });
+
+        const data = JSON.parse(response.responseText);
+        if (response.status !== 200) throw data;
+
+        // Agregar el documento a la lista sin recargar
+        appendDocToList(data.document);
+        updateDocCount(1);
+        uploadModal.hide();
+        showToastCR('Documento subido correctamente.', 'success');
+
+    } catch (err) {
+        const msg = err.errors
+            ? Object.values(err.errors).flat().join(' ')
+            : (err.message || 'Error al subir el documento.');
+        showUploadAlert(msg, 'danger');
+    } finally {
+        document.getElementById('btn-upload-doc').disabled = false;
+        document.getElementById('upload-spin').classList.add('d-none');
+        document.getElementById('upload-icon').classList.remove('d-none');
+        document.getElementById('upload-progress').classList.add('d-none');
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-pct').textContent = '0%';
+    }
+}
+
+// ── Agregar doc al DOM ───────────────────────────────────
+function appendDocToList(doc) {
+    // Ocultar empty state si estaba visible
+    const empty = document.getElementById('doc-empty');
+    if (empty) empty.style.display = 'none';
+
+    const html = `
+    <div class="doc-item d-flex align-items-center gap-3 px-3 py-2"
+         style="border-bottom:1px solid #f3f5f9;animation:fadeInUp .3s ease;"
+         id="doc-item-${doc.id}">
+        <div style="width:40px;height:40px;border-radius:.45rem;flex-shrink:0;
+                    background:#f8faff;display:flex;align-items:center;justify-content:center;
+                    font-size:1.4rem;">
+            <i class="${doc.file_icon} ${doc.file_icon_color}"></i>
+        </div>
+        <div class="flex-grow-1" style="min-width:0;">
+            <div class="fw-semibold text-truncate" style="font-size:.87rem;color:#344563;">
+                ${escHtml(doc.name)}
+            </div>
+            <div class="text-muted" style="font-size:.73rem;">
+                ${escHtml(doc.file_name)} · ${doc.file_size} · ${doc.created_at}
+            </div>
+        </div>
+        <div class="d-flex gap-1 flex-shrink-0">
+            <a href="${doc.download_url}"
+               class="btn btn-sm d-flex align-items-center justify-content-center"
+               style="width:32px;height:32px;padding:0;background:#d1fae5;color:#065f46;
+                      border:none;border-radius:.4rem;" title="Descargar">
+                <i class="ri-download-2-line fs-14"></i>
+            </a>
+            <button type="button"
+                    class="btn btn-sm d-flex align-items-center justify-content-center"
+                    style="width:32px;height:32px;padding:0;background:#fee2e2;color:#991b1b;
+                           border:none;border-radius:.4rem;" title="Eliminar"
+                    onclick="deleteDocument(${doc.id}, '${escHtml(doc.name)}')">
+                <i class="ri-delete-bin-line fs-14"></i>
+            </button>
+        </div>
+    </div>`;
+
+    document.getElementById('doc-list').insertAdjacentHTML('afterbegin', html);
+}
+
+// ── Eliminar documento ───────────────────────────────────
+async function deleteDocument(docId, docName) {
+    if (!confirm(`¿Eliminar el documento "${docName}"? Esta acción no se puede deshacer.`)) return;
+
+    try {
+        const res = await fetch(`/clinical-records/documents/${docId}`, {
+            method : 'DELETE',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF_DOC },
+        });
+        if (!res.ok) throw new Error();
+
+        document.getElementById('doc-item-' + docId)?.remove();
+        updateDocCount(-1);
+        showToastCR('Documento eliminado.', 'success');
+
+        // Mostrar empty si no quedan docs
+        if (!document.querySelectorAll('.doc-item').length) {
+            const empty = document.getElementById('doc-empty');
+            if (empty) empty.style.display = '';
+        }
+    } catch {
+        showToastCR('Error al eliminar el documento.', 'error');
+    }
+}
+
+// ── Helpers ──────────────────────────────────────────────
+function updateDocCount(delta) {
+    const badge = document.getElementById('doc-count-badge');
+    if (badge) badge.textContent = Math.max(0, parseInt(badge.textContent || 0) + delta);
+}
+
+function showUploadAlert(msg, type) {
+    const el = document.getElementById('upload-alert');
+    el.className = `alert alert-${type}`;
+    el.textContent = msg;
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Toast local (para no colisionar con el toast del form)
+function showToastCR(msg, type) {
+    const container = document.getElementById('toast-container')
+        || document.body;
+    const d = document.createElement('div');
+    d.style.cssText = `
+        position:fixed;top:1.1rem;right:1.1rem;z-index:99999;
+        min-width:260px;padding:.78rem 1rem;border-radius:.5rem;color:#fff;
+        font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:.5rem;
+        box-shadow:0 4px 20px rgba(0,0,0,.2);
+        background:${type === 'success'
+            ? 'linear-gradient(135deg,#0ab39c,#3d9f80)'
+            : 'linear-gradient(135deg,#e74c3c,#c0392b)'};
+        animation:toastIn .25s ease;
+    `;
+    d.innerHTML = `<i class="ri-${type === 'success' ? 'checkbox-circle' : 'error-warning'}-line fs-16"></i>${msg}`;
+    document.body.appendChild(d);
+    setTimeout(() => {
+        d.style.transition = 'opacity .32s'; d.style.opacity = '0';
+        setTimeout(() => d.remove(), 340);
+    }, 3500);
 }
 </script>
 @endpush

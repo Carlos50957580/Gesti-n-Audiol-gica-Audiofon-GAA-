@@ -326,6 +326,17 @@
                         <div class="detail-icon bg-secondary-subtle text-secondary"><i class="ri-sticky-note-line"></i></div>
                         <div class="flex-grow-1"><div class="detail-lbl">Notas</div><div class="detail-val" id="show-notes">—</div></div>
                     </div>
+
+
+                    <p class="section-label mt-3">
+    <i class="ri-folder-2-line me-1"></i>Documentos
+</p>
+
+<div id="show-documents" class="d-flex flex-column gap-2">
+    <div class="text-muted" style="font-size:.85rem;">
+        No hay documentos
+    </div>
+</div>
                 </div>
             </div>
             <div class="modal-footer border-0 pb-3 px-4">
@@ -455,6 +466,39 @@ async function openShowModal(invoiceId) {
 
         document.getElementById('show-skeleton').classList.add('d-none');
         document.getElementById('show-content').classList.remove('d-none');
+
+        // ── DOCUMENTOS ─────────────────────────────
+const docsContainer = document.getElementById('show-documents');
+docsContainer.innerHTML = '';
+
+if (d.documents && d.documents.length > 0) {
+    d.documents.forEach(doc => {
+        docsContainer.innerHTML += `
+            <div class="d-flex align-items-center justify-content-between p-2 rounded"
+                 style="background:#f8faff;border:1px solid #eef2ff;">
+                
+                <div class="d-flex align-items-center gap-2">
+                    <i class="ri-file-line text-primary"></i>
+                    <div>
+                        <div style="font-size:.85rem;font-weight:600;">${doc.name}</div>
+                        <div class="text-muted" style="font-size:.75rem;">${doc.date}</div>
+                    </div>
+                </div>
+
+                <a href="${doc.url}" target="_blank"
+                   class="btn btn-sm btn-light">
+                    <i class="ri-eye-line"></i>
+                </a>
+            </div>
+        `;
+    });
+} else {
+    docsContainer.innerHTML = `
+        <div class="text-muted" style="font-size:.85rem;">
+            No hay documentos disponibles
+        </div>
+    `;
+}
 
     } catch {
         showToast('Error al cargar los datos.', 'error');

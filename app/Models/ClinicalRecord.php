@@ -49,4 +49,11 @@ class ClinicalRecord extends Model
             default      => '<span class="badge bg-secondary">Desconocido</span>',
         };
     }
+
+
+    public function documents()
+    {
+        return $this->hasMany(ClinicalRecordDocument::class);
+    }
+
 }

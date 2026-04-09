@@ -48,26 +48,37 @@ class ClinicalRecordController extends Controller
      * Formulario para llenar la HC de una factura
      * Si no existe HC la crea automáticamente aquí
      */
-    public function edit(Invoice $invoice)
-    {
-        abort_if($invoice->audiologist_id !== auth()->id(), 403);
-        abort_if($invoice->status !== 'pagada', 403);
 
-        $invoice->load(['patient.insurance', 'items.service', 'branch']);
 
-        // Crear HC si no existe — sin Observer, aquí mismo
-        $clinicalRecord = ClinicalRecord::firstOrCreate(
-            ['invoice_id' => $invoice->id],
-            [
-                'patient_id'     => $invoice->patient_id,
-                'audiologist_id' => $invoice->audiologist_id,
-                'branch_id'      => $invoice->branch_id,
-                'status'         => 'pendiente',
-            ]
-        );
+private function authorizeAudiologist(Invoice $invoice)
+{
+    abort_if($invoice->audiologist_id !== auth()->id(), 403);
+}
 
-        return view('clinical_records.edit', compact('invoice', 'clinicalRecord'));
-    }
+   public function edit(Invoice $invoice)
+{
+    $this->authorizeAudiologist($invoice);
+
+    $clinicalRecord = ClinicalRecord::firstOrCreate(
+        ['invoice_id' => $invoice->id],
+        [
+            'patient_id'     => $invoice->patient_id,
+            'audiologist_id' => auth()->id(),
+            'branch_id'      => $invoice->branch_id,
+            'status'         => 'pendiente',
+        ]
+    );
+
+    $invoice->load(['patient.insurance', 'branch', 'items.service', 'insurance']);
+
+    // ── Cargar documentos del paciente ────────────────────
+    $documents = $clinicalRecord->documents()
+        ->with('uploadedBy')
+        ->orderByDesc('created_at')
+        ->get();
+
+    return view('clinical_records.edit', compact('invoice', 'clinicalRecord', 'documents'));
+}
 
     /**
      * Guardar la HC
@@ -153,22 +164,37 @@ public function showData(Invoice $invoice): JsonResponse
 {
     abort_if($invoice->audiologist_id !== auth()->id(), 403);
 
-    $invoice->load(['patient', 'branch', 'clinicalRecord']);
+    $invoice->load([
+        'patient',
+        'branch',
+        'clinicalRecord.documents' // 👈 IMPORTANTE
+    ]);
 
     $hc = $invoice->clinicalRecord;
 
     return response()->json([
-        'patient_name'            => $invoice->patient->first_name . ' ' . $invoice->patient->last_name,
-        'patient_cedula'          => $invoice->patient->cedula,
-        'invoice_number'          => 'FAC-' . str_pad($invoice->id, 6, '0', STR_PAD_LEFT),
-        'branch'                  => $invoice->branch->name,
-        'date'                    => $invoice->updated_at->format('d/m/Y'),
+        'patient_name'   => $invoice->patient->first_name . ' ' . $invoice->patient->last_name,
+        'patient_cedula' => $invoice->patient->cedula,
+        'invoice_number' => 'FAC-' . str_pad($invoice->id, 6, '0', STR_PAD_LEFT),
+        'branch'         => $invoice->branch->name,
+        'date'           => $invoice->updated_at->format('d/m/Y'),
+
         'hc_status'               => $hc?->status ?? 'pendiente',
         'reason_for_consultation' => $hc?->reason_for_consultation,
         'diagnosis'               => $hc?->diagnosis,
         'treatment_plan'          => $hc?->treatment_plan,
         'notes'                   => $hc?->notes,
         'updated_at'              => $hc?->updated_at?->format('d/m/Y H:i') ?? '—',
+
+        // ── DOCUMENTOS ─────────────────────────
+        'documents' => $hc
+            ? $hc->documents->map(fn($doc) => [
+                'id'   => $doc->id,
+                'name' => $doc->file_name ?? 'Documento',
+                'url'  => asset('storage/' . $doc->file_path),
+                'date' => $doc->created_at->format('d/m/Y H:i'),
+            ])
+            : [],
     ]);
 }
 }

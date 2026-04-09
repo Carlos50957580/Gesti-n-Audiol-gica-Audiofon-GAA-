@@ -16,7 +16,7 @@ use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReceptionistReportController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AudiologistReportController;
-
+use App\Http\Controllers\ClinicalRecordDocumentController;
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -211,6 +211,35 @@ Route::put('clinical-records/{invoice}', [ClinicalRecordController::class, 'upda
 Route::get('clinical-records/{invoice}/show', [ClinicalRecordController::class, 'show'])
     ->name('clinical-records.show')
     ->middleware(['auth', 'role:audiologo']);
+
+
+    // Agregar junto a las rutas de clinical-records existentes
+
+Route::middleware(['auth', 'role:audiologo'])->group(function () {
+
+    // Subir documento
+    Route::post('clinical-records/{clinicalRecord}/documents',
+        [ClinicalRecordDocumentController::class, 'store'])
+        ->name('clinical-records.documents.store');
+
+    // Descargar documento
+    Route::get('clinical-records/documents/{document}/download',
+        [ClinicalRecordDocumentController::class, 'download'])
+        ->name('clinical-records.documents.download');
+
+    // Eliminar documento
+    Route::delete('clinical-records/documents/{document}',
+        [ClinicalRecordDocumentController::class, 'destroy'])
+        ->name('clinical-records.documents.destroy');
+
+    // Listar documentos AJAX
+    Route::get('clinical-records/{clinicalRecord}/documents',
+        [ClinicalRecordDocumentController::class, 'index'])
+        ->name('clinical-records.documents.index');
+});
+
+
+
 
 Route::get('reports/by-user', [ReportController::class, 'byUser'])
     ->name('reports.by-user')
