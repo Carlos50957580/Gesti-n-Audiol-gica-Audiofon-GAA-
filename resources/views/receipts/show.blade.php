@@ -425,37 +425,93 @@ function printThermal() {
 <meta charset="UTF-8">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Courier New',monospace; font-size:12px; color:#000; background:#fff; padding:8px; }
-  .center { text-align:center; }
-  .right  { text-align:right; }
-  .bold   { font-weight:bold; }
-  .big    { font-size:15px; font-weight:bold; }
-  .small  { font-size:10px; }
-  .sep    { border-top:1px dashed #000; margin:6px 0; }
-  .sep2   { border-top:2px solid #000; margin:6px 0; }
-  table   { width:100%; border-collapse:collapse; }
-  td      { padding:2px 0; vertical-align:top; }
-  .td-r   { text-align:right; white-space:nowrap; }
-  .lbl    { font-size:10px; color:#555; }
-  .total-row td { font-size:14px; font-weight:bold; padding-top:4px; }
-  @media print { @page { margin:0; } }
+
+  /* ── Clave para térmica: fuente más gruesa y tamaño base mayor ── */
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    font-weight: 600;        /* Todo el texto base en semibold */
+    color: #000;
+    background: #fff;
+    padding: 6px 8px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .center { text-align: center; }
+  .right  { text-align: right; }
+
+  /* Negrita real para títulos */
+  .bold { font-weight: 900; }
+  .big  { font-size: 16px; font-weight: 900; letter-spacing: 1px; }
+
+  /* Texto "pequeño" sigue siendo legible en térmica */
+  .small { font-size: 11px; font-weight: 600; }
+  .lbl   { font-size: 11px; font-weight: 700; }
+
+  /* Separadores más gruesos */
+  .sep  { border-top: 1px dashed #000; margin: 5px 0; }
+  .sep2 { border-top: 2px solid #000;  margin: 5px 0; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td    { padding: 2px 0; vertical-align: top; }
+  .td-r { text-align: right; white-space: nowrap; }
+
+  /* Fila de total — máximo contraste */
+  .total-row td {
+    font-size: 15px;
+    font-weight: 900;
+    padding-top: 5px;
+    border-top: 2px solid #000;
+  }
+
+  /* Badge de estado */
+  .badge-pagada {
+    display: inline-block;
+    border: 2px solid #000;
+    padding: 0 4px;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  @media print {
+    @page { margin: 0; }
+    body  { padding: 4px 6px; }
+  }
 </style>
 </head>
 <body>
 
 <div class="center bold big">AUDIOFON</div>
-<div class="center small">{{ $receipt->branch->name }}</div>
+<div class="center" style="font-size:11px;font-weight:700;">{{ $receipt->branch->name }}</div>
+@if($receipt->branch->address)
+<div class="center small">{{ $receipt->branch->address }}</div>
+@endif
+@if($receipt->branch->phone)
+<div class="center small">Tel: {{ $receipt->branch->phone }}</div>
+@endif
 <div class="sep2"></div>
 
 <table>
-  <tr><td class="lbl">Recibo</td><td class="td-r bold">{{ $receipt->receipt_number }}</td></tr>
-  <tr><td class="lbl">Fecha</td><td class="td-r">{{ $receipt->created_at->format('d/m/Y H:i') }}</td></tr>
-  <tr><td class="lbl">Factura</td><td class="td-r">{{ $receipt->invoice->invoice_number }}</td></tr>
+  <tr>
+    <td class="lbl">Factura</td>
+    <td class="td-r bold">{{ $receipt->invoice->invoice_number }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Fecha</td>
+    <td class="td-r" style="font-weight:700;">{{ $receipt->created_at->format('d/m/Y H:i') }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Estado</td>
+    <td class="td-r"><span class="badge-pagada">PAGADA</span></td>
+  </tr>
 </table>
 <div class="sep"></div>
 
 <div class="lbl">PACIENTE</div>
-<div class="bold">{{ $receipt->invoice->patient->first_name }} {{ $receipt->invoice->patient->last_name }}</div>
+<div class="bold" style="font-size:14px;margin-top:2px;">
+  {{ strtoupper($receipt->invoice->patient->first_name . ' ' . $receipt->invoice->patient->last_name) }}
+</div>
 <div class="small">Cédula: {{ $receipt->invoice->patient->cedula ?? '—' }}</div>
 @if($receipt->invoice->patient->phone)
 <div class="small">Tel: {{ $receipt->invoice->patient->phone }}</div>
@@ -463,25 +519,49 @@ function printThermal() {
 <div class="sep"></div>
 
 <table>
-  <tr><td class="lbl">Cobrado por</td><td class="td-r small">{{ $receipt->user->name }}</td></tr>
+  <tr>
+    <td class="lbl">Atendido por</td>
+    <td class="td-r" style="font-size:11px;font-weight:700;">{{ $receipt->user->name }}</td>
+  </tr>
 </table>
 <div class="sep2"></div>
 
-<div class="lbl" style="margin-bottom:3px;">SERVICIOS</div>
+<div class="lbl" style="margin-bottom:4px;">SERVICIOS</div>
 @foreach($receipt->invoice->items as $item)
-<table style="margin-bottom:4px;">
+<table style="margin-bottom:5px;">
   <tr>
-    <td class="bold">{{ $item->service->name }}</td>
-    <td class="td-r bold">RD$ {{ number_format($item->subtotal, 2) }}</td>
+    <td class="bold" style="font-size:13px;">{{ strtoupper($item->service->name) }}</td>
+    <td class="td-r bold" style="font-size:13px;">RD$ {{ number_format($item->subtotal, 2) }}</td>
   </tr>
   <tr>
-    <td class="small" style="color:#444;">Cant: {{ $item->quantity }}</td>
+    <td class="small">
+      {{ $item->quantity }} x RD$ {{ number_format($item->price, 2) }}
+      @if($item->insurance_amount > 0)
+        &nbsp; Seg: RD$ {{ number_format($item->insurance_amount, 2) }}
+      @else
+        &nbsp; Seg: RD$ 0.00
+      @endif
+    </td>
   </tr>
 </table>
 @endforeach
-<div class="sep2"></div>
+<div class="sep"></div>
 
-<div class="lbl" style="margin-bottom:3px;">MÉTODOS DE PAGO</div>
+<table>
+  <tr>
+    <td class="lbl">Subtotal</td>
+    <td class="td-r" style="font-weight:700;">RD$ {{ number_format($receipt->invoice->subtotal, 2) }}</td>
+  </tr>
+  @if($receipt->invoice->insurance_discount > 0)
+  <tr>
+    <td class="lbl">Desc. seguro</td>
+    <td class="td-r" style="font-weight:700;">- RD$ {{ number_format($receipt->invoice->insurance_discount, 2) }}</td>
+  </tr>
+  @endif
+</table>
+<div class="sep"></div>
+
+<div class="lbl" style="margin-bottom:4px;">MÉTODOS DE PAGO</div>
 @if($receipt->cash_amount > 0)
 @php
     $nonCash    = ($receipt->card_amount ?? 0) + ($receipt->transfer_amount ?? 0);
@@ -489,9 +569,15 @@ function printThermal() {
     $vuelto     = $receipt->cash_amount - $cashNeeded;
 @endphp
 <table>
-  <tr><td class="lbl">Efectivo</td><td class="td-r">RD$ {{ number_format($cashNeeded, 2) }}</td></tr>
+  <tr>
+    <td class="lbl">Efectivo</td>
+    <td class="td-r" style="font-weight:700;">RD$ {{ number_format($cashNeeded, 2) }}</td>
+  </tr>
   @if($vuelto > 0.009)
-  <tr><td class="lbl">Vuelto</td><td class="td-r">RD$ {{ number_format($vuelto, 2) }}</td></tr>
+  <tr>
+    <td class="lbl">Vuelto</td>
+    <td class="td-r" style="font-weight:700;">RD$ {{ number_format($vuelto, 2) }}</td>
+  </tr>
   @endif
 </table>
 @endif
@@ -499,7 +585,7 @@ function printThermal() {
 <table>
   <tr>
     <td class="lbl">Tarjeta{{ $receipt->card_reference ? ' ('.$receipt->card_reference.')' : '' }}</td>
-    <td class="td-r">RD$ {{ number_format($receipt->card_amount, 2) }}</td>
+    <td class="td-r" style="font-weight:700;">RD$ {{ number_format($receipt->card_amount, 2) }}</td>
   </tr>
 </table>
 @endif
@@ -507,25 +593,15 @@ function printThermal() {
 <table>
   <tr>
     <td class="lbl">Transferencia{{ $receipt->transfer_reference ? ' ('.$receipt->transfer_reference.')' : '' }}</td>
-    <td class="td-r">RD$ {{ number_format($receipt->transfer_amount, 2) }}</td>
+    <td class="td-r" style="font-weight:700;">RD$ {{ number_format($receipt->transfer_amount, 2) }}</td>
   </tr>
 </table>
 @endif
-<div class="sep"></div>
 
-<table>
-  <tr><td class="lbl">Subtotal</td><td class="td-r">RD$ {{ number_format($receipt->invoice->subtotal, 2) }}</td></tr>
-  @if($receipt->invoice->insurance_discount > 0)
-  <tr>
-    <td class="lbl">Desc. seguro</td>
-    <td class="td-r">- RD$ {{ number_format($receipt->invoice->insurance_discount, 2) }}</td>
-  </tr>
-  @endif
-</table>
-<div class="sep"></div>
+<div class="sep2" style="margin-top:6px;"></div>
 <table>
   <tr class="total-row">
-    <td>TOTAL PAGADO</td>
+    <td>TOTAL A PAGAR</td>
     <td class="td-r">RD$ {{ number_format($receipt->total_paid, 2) }}</td>
   </tr>
 </table>
@@ -533,12 +609,14 @@ function printThermal() {
 @if($receipt->notes)
 <div class="sep"></div>
 <div class="lbl">NOTAS</div>
-<div class="small">{{ $receipt->notes }}</div>
+<div class="small" style="font-weight:600;">{{ $receipt->notes }}</div>
 @endif
 
-<div class="sep2"></div>
-<div class="center small" style="margin-top:4px;">Gracias por su preferencia</div>
-<div style="margin-top:24px;"></div>
+<div class="sep2" style="margin-top:8px;"></div>
+<div class="center" style="font-size:12px;font-weight:700;margin-top:4px;">
+  Gracias por su preferencia
+</div>
+<div style="margin-top:20px;"></div>
 
 </body>
 </html>`);
