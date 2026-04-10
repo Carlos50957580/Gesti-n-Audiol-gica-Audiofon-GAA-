@@ -527,28 +527,57 @@ function printThermal() {
 <head>
 <meta charset="UTF-8">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    color: #000;
-    background: #fff;
-    padding: 8px;
+  * {
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-font-smoothing: none;
+    text-rendering: optimizeSpeed;
   }
+
+  body {
+    font-family: monospace; /* 🔥 quitar Courier New */
+    font-size: 14px;        /* 🔥 no menos de 12 */
+    font-weight: 700;       /* 🔥 todo fuerte */
+    color: #000;            /* 🔥 negro puro */
+    background: #fff;
+    padding: 6px;
+  }
+
   .center { text-align: center; }
   .right  { text-align: right; }
-  .bold   { font-weight: bold; }
-  .big    { font-size: 15px; font-weight: bold; }
-  .small  { font-size: 10px; }
-  .sep    { border-top: 1px dashed #000; margin: 6px 0; }
-  .sep2   { border-top: 2px solid #000; margin: 6px 0; }
-  table   { width: 100%; border-collapse: collapse; }
-  td      { padding: 2px 0; vertical-align: top; }
-  .td-r   { text-align: right; white-space: nowrap; }
-  .lbl    { font-size: 10px; color: #555; }
-  .status { font-size: 10px; font-weight: bold; border: 1px solid #000;
-            padding: 1px 4px; text-transform: uppercase; }
-  .total-row td { font-size: 14px; font-weight: bold; padding-top: 4px; }
+
+  .bold { font-weight: 900; }
+  .big  { font-size: 17px; font-weight: 900; }
+
+  .small { font-size: 12px; font-weight: 700; } /* 🔥 nada de 10px */
+  .lbl   { font-size: 12px; font-weight: 700; }
+
+  .sep  { border-top: 1px dashed #000; margin: 6px 0; }
+  .sep2 { border-top: 2px solid #000; margin: 6px 0; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td    { padding: 2px 0; vertical-align: top; }
+
+  .td-r {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .status {
+    font-size: 12px;
+    font-weight: 900;
+    border: 2px solid #000;
+    padding: 1px 5px;
+  }
+
+  .total-row td {
+    font-size: 16px;
+    font-weight: 900;
+    padding-top: 6px;
+    border-top: 2px solid #000;
+  }
+
   @media print {
     @page { margin: 0; }
   }
@@ -558,64 +587,95 @@ function printThermal() {
 
 <div class="center bold big">AUDIOFON</div>
 <div class="center small">{{ $invoice->branch->name ?? '' }}</div>
+
 @if($invoice->branch?->address)
 <div class="center small">{{ $invoice->branch->address }}</div>
 @endif
+
 @if($invoice->branch?->phone)
 <div class="center small">Tel: {{ $invoice->branch->phone }}</div>
 @endif
+
 <div class="sep2"></div>
 
 <table>
-  <tr><td class="lbl">Factura</td><td class="td-r bold">{{ $invoice->invoice_number }}</td></tr>
-  <tr><td class="lbl">Fecha</td><td class="td-r">{{ $invoice->created_at->format('d/m/Y H:i') }}</td></tr>
-  <tr><td class="lbl">Estado</td><td class="td-r"><span class="status">{{ strtoupper($invoice->status) }}</span></td></tr>
+  <tr>
+    <td class="lbl">Factura</td>
+    <td class="td-r bold">{{ $invoice->invoice_number }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Fecha</td>
+    <td class="td-r">{{ $invoice->created_at->format('d/m/Y H:i') }}</td>
+  </tr>
+  <tr>
+    <td class="lbl">Estado</td>
+    <td class="td-r"><span class="status">{{ strtoupper($invoice->status) }}</span></td>
+  </tr>
 </table>
+
 <div class="sep"></div>
 
 <div class="lbl">PACIENTE</div>
 <div class="bold">{{ $invoice->patient->first_name }} {{ $invoice->patient->last_name }}</div>
 <div class="small">Cédula: {{ $invoice->patient->cedula }}</div>
+
 @if($invoice->patient->phone)
 <div class="small">Tel: {{ $invoice->patient->phone }}</div>
 @endif
+
 <div class="sep"></div>
 
 <table>
-  <tr><td class="lbl">Atendido por</td><td class="td-r small">{{ $invoice->user->name }}</td></tr>
+  <tr>
+    <td class="lbl">Atendido por</td>
+    <td class="td-r">{{ $invoice->user->name }}</td>
+  </tr>
 </table>
+
 <div class="sep2"></div>
 
 <div class="lbl" style="margin-bottom:3px;">SERVICIOS</div>
+
 @foreach($invoice->items as $item)
-<table style="margin-bottom:5px;">
+<table style="margin-bottom:6px;">
   <tr>
-    <td class="bold">{{ $item->service->name }}</td>
+    <td class="bold">{{ strtoupper($item->service->name) }}</td>
     <td class="td-r bold">RD$ {{ number_format($item->subtotal, 2) }}</td>
   </tr>
   <tr>
-    <td class="small" style="color:#444;">{{ $item->quantity }} x RD$ {{ number_format($item->price, 2) }}</td>
+    <td class="small">
+      {{ $item->quantity }} x RD$ {{ number_format($item->price, 2) }}
+    </td>
     @if($invoice->insurance)
-    <td class="td-r small" style="color:#444;">Seg: RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}</td>
+    <td class="td-r small">
+      Seg: RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}
+    </td>
     @endif
   </tr>
 </table>
 @endforeach
+
 <div class="sep2"></div>
 
 <table>
-  <tr><td class="lbl">Subtotal</td><td class="td-r">RD$ {{ number_format($invoice->subtotal, 2) }}</td></tr>
+  <tr>
+    <td class="lbl">Subtotal</td>
+    <td class="td-r">RD$ {{ number_format($invoice->subtotal, 2) }}</td>
+  </tr>
+
   @if($invoice->insurance_discount > 0)
   <tr>
-    <td class="lbl">Desc. seguro ({{ $invoice->insurance->name ?? '' }})</td>
+    <td class="lbl">Desc. seguro</td>
     <td class="td-r">- RD$ {{ number_format($invoice->insurance_discount, 2) }}</td>
   </tr>
   @endif
 </table>
+
 <div class="sep"></div>
+
 <table>
   <tr class="total-row">
-    <td>TOTAL A PAGAR</td>
+    <td>TOTAL</td>
     <td class="td-r">RD$ {{ number_format($invoice->total, 2) }}</td>
   </tr>
 </table>
@@ -623,12 +683,19 @@ function printThermal() {
 @if($invoice->authorization_number)
 <div class="sep"></div>
 <table>
-  <tr><td class="lbl">N° Autorización</td><td class="td-r small bold">{{ $invoice->authorization_number }}</td></tr>
+  <tr>
+    <td class="lbl">N° Autorización</td>
+    <td class="td-r bold">{{ $invoice->authorization_number }}</td>
+  </tr>
 </table>
 @endif
 
 <div class="sep2"></div>
-<div class="center small" style="margin-top:6px;">Gracias por su preferencia</div>
+
+<div class="center small" style="margin-top:6px;">
+  Gracias por su preferencia
+</div>
+
 <div style="margin-top:24px;"></div>
 
 </body>
@@ -638,7 +705,7 @@ function printThermal() {
     setTimeout(() => {
         frame.contentWindow.focus();
         frame.contentWindow.print();
-    }, 350);
+    }, 300);
 }
 </script>
 @endpush
