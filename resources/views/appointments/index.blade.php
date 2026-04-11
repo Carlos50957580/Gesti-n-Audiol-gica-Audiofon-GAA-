@@ -578,9 +578,6 @@
                 <input class="form-check-input svc-check" type="checkbox" value="{{ $svc->id }}" id="svc-{{ $svc->id }}">
                 <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="svc-{{ $svc->id }}" style="font-size:.86rem;color:#344563;cursor:pointer;">
                     <span>{{ $svc->name }}</span>
-                    <span style="font-size:.75rem;font-weight:700;color:#0ab39c;margin-left:.5rem;white-space:nowrap;">
-                        ${{ number_format($svc->price, 2) }}
-                    </span>
                 </label>
             </div>
         </div>
