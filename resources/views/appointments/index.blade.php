@@ -241,6 +241,19 @@
 .ps-pill-x:hover { color:#e74c3c; }
 
 /* ══════════════════════════════════════
+   SERVICES CHECKLIST
+══════════════════════════════════════ */
+#services-wrap {
+    max-height:180px; overflow-y:auto;
+    border:1.5px solid #e2e8f0; border-radius:.5rem;
+    padding:.5rem .75rem;
+    scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent;
+}
+#services-wrap::-webkit-scrollbar { width:4px; }
+#services-wrap::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:4px; }
+#services-wrap .form-check-input:checked { background-color:#405189; border-color:#405189; }
+
+/* ══════════════════════════════════════
    TOAST & ANIMATIONS
 ══════════════════════════════════════ */
 #toast-container {
@@ -262,6 +275,13 @@
 .anim-row:nth-child(1){animation-delay:.03s}.anim-row:nth-child(2){animation-delay:.07s}
 .anim-row:nth-child(3){animation-delay:.11s}.anim-row:nth-child(4){animation-delay:.15s}
 .anim-row:nth-child(5){animation-delay:.19s}.anim-row:nth-child(6){animation-delay:.23s}
+
+/* Service tags in show modal */
+.svc-tag {
+    background:#e0f3fb; color:#1a7faa;
+    padding:.18rem .55rem; border-radius:2rem;
+    font-size:.75rem; font-weight:600;
+}
 </style>
 
 <div id="toast-container"></div>
@@ -485,7 +505,7 @@
                     <input type="hidden" id="f-id">
                     <input type="hidden" id="f-method" value="POST">
 
-                    {{-- Sección 1 --}}
+                    {{-- Sección 1: Paciente y Audiólogo --}}
                     <p class="section-label"><i class="ri-user-heart-line me-1"></i>Paciente y Audiólogo</p>
                     <div class="row g-3 mb-4">
 
@@ -493,18 +513,15 @@
                         <div class="col-12">
                             <input type="hidden" id="f-patient-id">
                             <div class="ps-wrap">
-                                {{-- Input box (visible cuando no hay paciente seleccionado) --}}
                                 <div class="ps-box" id="ps-box">
                                     <span class="ps-icon"><i class="ri-search-line"></i></span>
                                     <input type="text" id="ps-input"
                                            placeholder="Buscar paciente por nombre o cédula..."
                                            autocomplete="off" spellcheck="false">
                                 </div>
-                                {{-- Dropdown --}}
                                 <div class="ps-dropdown" id="ps-dropdown">
                                     <div id="ps-results"></div>
                                 </div>
-                                {{-- Pill (visible cuando hay paciente seleccionado) --}}
                                 <div class="ps-pill" id="ps-pill">
                                     <div class="ps-pill-av" id="ps-pill-av">?</div>
                                     <span class="ps-pill-name" id="ps-pill-name">—</span>
@@ -532,9 +549,9 @@
                         </div>
                     </div>
 
-                    {{-- Sección 2 --}}
+                    {{-- Sección 2: Fecha y hora --}}
                     <p class="section-label"><i class="ri-calendar-event-line me-1"></i>Fecha y hora</p>
-                    <div class="row g-3 mb-3">
+                    <div class="row g-3 mb-4">
                         <div class="col-6">
                             <div class="form-floating">
                                 <input type="date" class="form-control" id="f-date" placeholder="Fecha">
@@ -551,7 +568,30 @@
                         </div>
                     </div>
 
-                    {{-- Sección 3: Estado (solo en edición) --}}
+                    {{-- Sección 3: Servicios --}}
+                    <p class="section-label"><i class="ri-stethoscope-line me-1"></i>Servicios a realizar</p>
+                    <div class="mb-4">
+                        <div id="services-wrap" class="row">
+    @forelse(\App\Models\Service::where('active', true)->orderBy('name')->get() as $svc)
+        <div class="col-12 col-md-6">
+            <div class="form-check" style="padding:.3rem 0;">
+                <input class="form-check-input svc-check" type="checkbox" value="{{ $svc->id }}" id="svc-{{ $svc->id }}">
+                <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="svc-{{ $svc->id }}" style="font-size:.86rem;color:#344563;cursor:pointer;">
+                    <span>{{ $svc->name }}</span>
+                    <span style="font-size:.75rem;font-weight:700;color:#0ab39c;margin-left:.5rem;white-space:nowrap;">
+                        ${{ number_format($svc->price, 2) }}
+                    </span>
+                </label>
+            </div>
+        </div>
+    @empty
+        <p class="text-muted mb-0" style="font-size:.82rem;">No hay servicios activos registrados.</p>
+    @endforelse
+</div>
+
+                    </div>
+
+                    {{-- Sección 4: Estado (solo en edición) --}}
                     <div id="status-wrap" style="display:none;">
                         <p class="section-label"><i class="ri-flag-line me-1"></i>Estado</p>
                         <div class="form-floating">
@@ -563,6 +603,7 @@
                             <label>Estado de la cita</label>
                         </div>
                     </div>
+
                 </form>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3 px-4">
@@ -610,6 +651,21 @@
                 <div class="detail-row">
                     <div class="detail-icon bg-success-subtle text-success"><i class="ri-time-line"></i></div>
                     <div><div class="detail-lbl">Hora</div><div class="detail-val" id="show-time">—</div></div>
+                </div>
+                {{-- NUEVO: Teléfono del paciente --}}
+                <div class="detail-row">
+                    <div class="detail-icon" style="background:#fef3c7;color:#d97706;"><i class="ri-phone-line"></i></div>
+                    <div><div class="detail-lbl">Teléfono</div><div class="detail-val" id="show-phone">—</div></div>
+                </div>
+                {{-- NUEVO: Servicios de la cita --}}
+                <div class="detail-row">
+                    <div class="detail-icon bg-primary-subtle text-primary" style="align-self:flex-start;margin-top:.2rem;">
+                        <i class="ri-stethoscope-line"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Servicios</div>
+                        <div id="show-services" style="margin-top:.3rem;display:flex;flex-wrap:wrap;gap:.3rem;">—</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 pb-3 px-4">
@@ -698,12 +754,10 @@ const CAL_EVENTS = [
 ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Modals
-    apptModal  = new bootstrap.Modal(document.getElementById('apptModal'));
-    showModal  = new bootstrap.Modal(document.getElementById('showModal'));
-    deleteModal= new bootstrap.Modal(document.getElementById('deleteModal'));
+    apptModal   = new bootstrap.Modal(document.getElementById('apptModal'));
+    showModal   = new bootstrap.Modal(document.getElementById('showModal'));
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-    // Flash messages
     @if(session('success')) showToast("{{ session('success') }}", 'success'); @endif
     @if(session('error'))   showToast("{{ session('error') }}",   'error');   @endif
 
@@ -732,12 +786,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Patient search
     psInit();
 });
 
 /* ══════════════════════════════════════
-   PATIENT SEARCH — autónomo, sin blur race
+   PATIENT SEARCH
 ══════════════════════════════════════ */
 function psInit() {
     const inp  = document.getElementById('ps-input');
@@ -749,7 +802,6 @@ function psInit() {
         clearTimeout(timer);
         const q = this.value.trim();
         if (q.length < 2) { psCloseDrop(); return; }
-        // Loading
         document.getElementById('ps-results').innerHTML =
             '<div class="ps-msg"><span class="spinner-border spinner-border-sm me-1"></span>Buscando…</div>';
         drop.style.display = 'block';
@@ -765,15 +817,11 @@ function psInit() {
 
     inp.addEventListener('blur', function () {
         document.getElementById('ps-box').classList.remove('focused');
-        // Delay to allow mousedown on item to fire first
         setTimeout(psCloseDrop, 250);
     });
 
-    // Close when clicking outside
     document.addEventListener('mousedown', function (e) {
-        if (!e.target.closest('.ps-wrap')) {
-            psCloseDrop();
-        }
+        if (!e.target.closest('.ps-wrap')) psCloseDrop();
     });
 }
 
@@ -794,19 +842,14 @@ async function psFetch(q) {
 
 function psRender(list) {
     const box = document.getElementById('ps-results');
-
     if (!list.length) {
         box.innerHTML = '<div class="ps-msg"><i class="ri-search-line me-1"></i>Sin resultados</div>';
     } else {
-
         box.innerHTML = list.map(p => {
-
-            const name = p.full_name || '';
+            const name = p.full_name || (p.first_name + ' ' + p.last_name) || '';
             const ced  = p.cedula || '';
-
-            const parts = name.split(' ');
-            const ini = ((parts[0] || '')[0] || '') + ((parts[1] || '')[0] || '');
-
+            const parts = name.trim().split(' ');
+            const ini = ((parts[0]||'')[0]||'') + ((parts[1]||'')[0]||'');
             return `
                 <div class="ps-item"
                     data-id="${p.id}"
@@ -814,30 +857,25 @@ function psRender(list) {
                     data-ced="${ced}"
                     data-ini="${ini.toUpperCase()}"
                     onmousedown="psSelect(this)">
-
                     <div class="ps-item-av">${ini.toUpperCase()}</div>
-
                     <div>
                         <div class="ps-item-name">${name}</div>
                         <div class="ps-item-ced">${ced}</div>
                     </div>
-
                 </div>
             `;
         }).join('');
     }
-
     document.getElementById('ps-dropdown').style.display = 'block';
 }
 
-// KEY FIX: onmousedown fires BEFORE blur, so the selection always registers
 function psSelect(el) {
-    document.getElementById('f-patient-id').value  = el.dataset.id;
+    document.getElementById('f-patient-id').value       = el.dataset.id;
     document.getElementById('ps-pill-av').textContent   = el.dataset.ini;
     document.getElementById('ps-pill-name').textContent = el.dataset.name;
     document.getElementById('ps-pill-ced').textContent  = el.dataset.ced;
     document.getElementById('ps-pill').classList.add('visible');
-    document.getElementById('ps-box').style.display    = 'none';
+    document.getElementById('ps-box').style.display     = 'none';
     document.getElementById('err-patient_id').textContent = '';
     psCloseDrop();
 }
@@ -856,7 +894,6 @@ function psCloseDrop() {
 }
 
 function psSetPill(id, name, cedula) {
-    // Used when loading edit modal
     if (!id) return;
     const parts = name.trim().split(' ');
     const ini   = ((parts[0]||'')[0]||'') + ((parts[1]||'')[0]||'');
@@ -865,7 +902,7 @@ function psSetPill(id, name, cedula) {
     document.getElementById('ps-pill-name').textContent = name;
     document.getElementById('ps-pill-ced').textContent  = cedula || '';
     document.getElementById('ps-pill').classList.add('visible');
-    document.getElementById('ps-box').style.display    = 'none';
+    document.getElementById('ps-box').style.display     = 'none';
 }
 
 function psReset() {
@@ -901,11 +938,19 @@ async function openEditModal(id) {
         const r = await fetch(urlEdit(id), { headers: {'Accept':'application/json','X-CSRF-TOKEN':CSRF} });
         if (!r.ok) throw new Error();
         const d = await r.json();
+
         psSetPill(d.patient_id, d.patient_name, d.patient_cedula);
-        document.getElementById('f-audiologist').value = d.audiologist_id   || '';
+        document.getElementById('f-audiologist').value = d.audiologist_id       || '';
         document.getElementById('f-date').value        = d.appointment_date_raw || '';
         document.getElementById('f-time').value        = d.appointment_time_raw || '';
-        document.getElementById('f-status').value      = d.status           || 'programada';
+        document.getElementById('f-status').value      = d.status               || 'programada';
+
+        // Marcar los servicios que ya tiene la cita
+        const selectedIds = (d.service_ids || []).map(Number);
+        document.querySelectorAll('.svc-check').forEach(c => {
+            c.checked = selectedIds.includes(parseInt(c.value));
+        });
+
     } catch {
         showToast('Error al cargar la cita.', 'error');
     }
@@ -922,12 +967,16 @@ async function saveAppt() {
         return;
     }
 
+    // Recoger IDs de servicios marcados
+    const serviceIds = [...document.querySelectorAll('.svc-check:checked')].map(c => c.value);
+
     const payload = {
         patient_id       : patId,
         audiologist_id   : document.getElementById('f-audiologist').value,
         appointment_date : document.getElementById('f-date').value,
         appointment_time : document.getElementById('f-time').value,
         status           : document.getElementById('f-status').value || 'programada',
+        service_ids      : serviceIds,
     };
 
     clearErrors();
@@ -963,10 +1012,14 @@ async function saveAppt() {
 
 async function openShowModal(id) {
     showId = id;
-    ['show-patient','show-audiologist','show-branch','show-date','show-time']
+
+    // Resetear todos los campos mientras carga
+    ['show-patient','show-audiologist','show-branch','show-date','show-time','show-phone']
         .forEach(i => document.getElementById(i).textContent = '…');
-    document.getElementById('show-av').textContent        = '…';
+    document.getElementById('show-av').textContent         = '…';
     document.getElementById('show-status-badge').innerHTML = '';
+    document.getElementById('show-services').innerHTML     = '…';
+
     showModal.show();
 
     try {
@@ -975,23 +1028,37 @@ async function openShowModal(id) {
         const d = await r.json();
 
         const ini = d.patient_name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
-        const av = document.getElementById('show-av');
-        av.textContent  = ini;
-        av.style.width  = '50px';
-        av.style.height = '50px';
+        const av  = document.getElementById('show-av');
+        av.textContent    = ini;
+        av.style.width    = '50px';
+        av.style.height   = '50px';
         av.style.fontSize = '1.05rem';
 
-        document.getElementById('show-patient').textContent     = d.patient_name;
-        document.getElementById('show-audiologist').textContent  = d.audiologist_name;
-        document.getElementById('show-branch').textContent      = d.branch_name;
-        document.getElementById('show-date').textContent        = d.appointment_date;
-        document.getElementById('show-time').textContent        = d.appointment_time;
+        document.getElementById('show-patient').textContent    = d.patient_name;
+        document.getElementById('show-audiologist').textContent = d.audiologist_name;
+        document.getElementById('show-branch').textContent     = d.branch_name;
+        document.getElementById('show-date').textContent       = d.appointment_date;
+        document.getElementById('show-time').textContent       = d.appointment_time;
+        document.getElementById('show-phone').textContent      = d.patient_phone || 'No registrado';
 
+        // Badge de estado
         const pillCls = {programada:'pill-programada', completada:'pill-completada', cancelada:'pill-cancelada'};
         document.getElementById('show-status-badge').innerHTML =
             `<span class="status-pill ${pillCls[d.status]||''}"><span class="dot-sm"></span>${d.status.charAt(0).toUpperCase()+d.status.slice(1)}</span>`;
 
-    } catch { showToast('Error al cargar.', 'error'); }
+        // Servicios
+        const svcsEl = document.getElementById('show-services');
+        if (d.services && d.services.length) {
+            svcsEl.innerHTML = d.services.map(s =>
+                `<span class="svc-tag">${s.name}</span>`
+            ).join('');
+        } else {
+            svcsEl.innerHTML = '<span style="color:#adb5bd;font-size:.82rem;">Sin servicios asignados</span>';
+        }
+
+    } catch {
+        showToast('Error al cargar.', 'error');
+    }
 }
 
 function switchToEdit() {
@@ -1040,6 +1107,8 @@ function clearForm() {
     document.getElementById('f-date').value        = '';
     document.getElementById('f-time').value        = '';
     document.getElementById('f-status').value      = 'programada';
+    // Desmarcar todos los servicios
+    document.querySelectorAll('.svc-check').forEach(c => c.checked = false);
     clearErrors();
     document.getElementById('appt-alert').className = 'alert d-none';
 }
@@ -1054,13 +1123,21 @@ function clearErrors() {
 
 function showFieldErrors(errors) {
     const map = {
-        patient_id:'err-patient_id', audiologist_id:'err-audiologist_id',
-        appointment_date:'err-appointment_date', appointment_time:'err-appointment_time',
+        patient_id       : 'err-patient_id',
+        audiologist_id   : 'err-audiologist_id',
+        appointment_date : 'err-appointment_date',
+        appointment_time : 'err-appointment_time',
+    };
+    const inputMap = {
+        patient_id       : 'f-patient-id',
+        audiologist_id   : 'f-audiologist',
+        appointment_date : 'f-date',
+        appointment_time : 'f-time',
     };
     Object.entries(errors).forEach(([f, msgs]) => {
         const el = document.getElementById(map[f]);
         if (el) el.textContent = msgs[0];
-        const inp = document.getElementById({patient_id:'f-patient-id',audiologist_id:'f-audiologist',appointment_date:'f-date',appointment_time:'f-time'}[f]);
+        const inp = document.getElementById(inputMap[f]);
         if (inp) inp.classList.add('is-invalid');
     });
 }
@@ -1083,7 +1160,8 @@ function showToast(msg, type) {
     d.innerHTML = `<i class="ri-${type==='error'?'error-warning':'checkbox-circle'}-line fs-16"></i>${msg}`;
     document.getElementById('toast-container').appendChild(d);
     setTimeout(() => {
-        d.style.transition = 'opacity .35s'; d.style.opacity = '0';
+        d.style.transition = 'opacity .35s';
+        d.style.opacity    = '0';
         setTimeout(() => d.remove(), 380);
     }, 3400);
 }

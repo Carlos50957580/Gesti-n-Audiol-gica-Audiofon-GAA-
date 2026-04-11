@@ -26,36 +26,42 @@ class AppointmentController extends Controller
 
     /** JSON — detalle para modal show */
     public function showData(Appointment $appointment): JsonResponse
-    {
-        $appointment->load(['patient', 'audiologist', 'branch']);
+{
+    $appointment->load(['patient', 'audiologist', 'branch', 'services']);
 
-        return response()->json([
-            'id'               => $appointment->id,
-            'patient_name'     => $appointment->patient->first_name . ' ' . $appointment->patient->last_name,
-            'audiologist_name' => $appointment->audiologist->name,
-            'branch_name'      => $appointment->branch->name,
-            'appointment_date' => Carbon::parse($appointment->appointment_date)->translatedFormat('l, d \d\e F \d\e Y'),
-            'appointment_time' => Carbon::parse($appointment->appointment_time)->format('g:i A'),
-            'status'           => $appointment->status,
-        ]);
-    }
+    return response()->json([
+        'id'               => $appointment->id,
+        'patient_name'     => $appointment->patient->first_name . ' ' . $appointment->patient->last_name,
+        'patient_phone'    => $appointment->patient->phone ?? 'No registrado',
+        'audiologist_name' => $appointment->audiologist->name,
+        'branch_name'      => $appointment->branch->name,
+        'appointment_date' => Carbon::parse($appointment->appointment_date)->translatedFormat('l, d \d\e F \d\e Y'),
+        'appointment_time' => Carbon::parse($appointment->appointment_time)->format('g:i A'),
+        'status'           => $appointment->status,
+        'services'         => $appointment->services->map(fn($s) => [
+            'id'   => $s->id,
+            'name' => $s->name,
+        ]),
+    ]);
+}
 
     /** JSON — datos para modal edit */
     public function editData(Appointment $appointment): JsonResponse
-    {
-        $appointment->load('patient');
+{
+    $appointment->load(['patient', 'services']);
 
-        return response()->json([
-            'id'                   => $appointment->id,
-            'patient_id'           => $appointment->patient_id,
-            'patient_name'         => $appointment->patient->first_name . ' ' . $appointment->patient->last_name,
-            'patient_cedula'       => $appointment->patient->cedula,
-            'audiologist_id'       => $appointment->audiologist_id,
-            'appointment_date_raw' => Carbon::parse($appointment->appointment_date)->format('Y-m-d'),
-            'appointment_time_raw' => Carbon::parse($appointment->appointment_time)->format('H:i'),
-            'status'               => $appointment->status,
-        ]);
-    }
+    return response()->json([
+        'id'                   => $appointment->id,
+        'patient_id'           => $appointment->patient_id,
+        'patient_name'         => $appointment->patient->first_name . ' ' . $appointment->patient->last_name,
+        'patient_cedula'       => $appointment->patient->cedula,
+        'audiologist_id'       => $appointment->audiologist_id,
+        'appointment_date_raw' => Carbon::parse($appointment->appointment_date)->format('Y-m-d'),
+        'appointment_time_raw' => Carbon::parse($appointment->appointment_time)->format('H:i'),
+        'status'               => $appointment->status,
+        'service_ids'          => $appointment->services->pluck('id'),
+    ]);
+}
 
     /** API — búsqueda live de pacientes */
     public function searchPatients(Request $request): JsonResponse
@@ -96,42 +102,49 @@ class AppointmentController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'patient_id'       => 'required|exists:patients,id',
-            'audiologist_id'   => 'required|exists:users,id',
-            'appointment_date' => 'required|date',
-            'appointment_time' => 'required',
-        ]);
+{
+    $request->validate([
+        'patient_id'       => 'required|exists:patients,id',
+        'audiologist_id'   => 'required|exists:users,id',
+        'appointment_date' => 'required|date',
+        'appointment_time' => 'required',
+        'service_ids'      => 'nullable|array',
+        'service_ids.*'    => 'exists:services,id',
+    ]);
 
-        $exists = Appointment::where('audiologist_id', $request->audiologist_id)
-            ->where('appointment_date', $request->appointment_date)
-            ->where('appointment_time', $request->appointment_time)
-            ->exists();
+    $exists = Appointment::where('audiologist_id', $request->audiologist_id)
+        ->where('appointment_date', $request->appointment_date)
+        ->where('appointment_time', $request->appointment_time)
+        ->exists();
 
-        if ($exists) {
-            $error = ['appointment_time' => ['El audiólogo ya tiene una cita en esa hora.']];
-            if ($request->expectsJson()) {
-                return response()->json(['errors' => $error], 422);
-            }
-            return back()->withErrors($error);
-        }
-
-        $appointment = Appointment::create([
-            'patient_id'       => $request->patient_id,
-            'audiologist_id'   => $request->audiologist_id,
-            'branch_id'        => auth()->user()->branch_id,
-            'appointment_date' => $request->appointment_date,
-            'appointment_time' => $request->appointment_time,
-            'status'           => 'programada',
-        ]);
-
+    if ($exists) {
+        $error = ['appointment_time' => ['El audiólogo ya tiene una cita en esa hora.']];
         if ($request->expectsJson()) {
-            return response()->json(['message' => 'Cita creada correctamente.', 'appointment' => $appointment], 201);
+            return response()->json(['errors' => $error], 422);
         }
-
-        return redirect()->route('appointments.index')->with('success', 'Cita creada correctamente.');
+        return back()->withErrors($error);
     }
+
+    $appointment = Appointment::create([
+        'patient_id'       => $request->patient_id,
+        'audiologist_id'   => $request->audiologist_id,
+        'branch_id'        => auth()->user()->branch_id,
+        'appointment_date' => $request->appointment_date,
+        'appointment_time' => $request->appointment_time,
+        'status'           => 'programada',
+    ]);
+
+    // Sincronizar servicios
+    if ($request->filled('service_ids')) {
+        $appointment->services()->sync($request->service_ids);
+    }
+
+    if ($request->expectsJson()) {
+        return response()->json(['message' => 'Cita creada correctamente.', 'appointment' => $appointment], 201);
+    }
+
+    return redirect()->route('appointments.index')->with('success', 'Cita creada correctamente.');
+}
 
     public function show(Appointment $appointment)
     {
@@ -154,43 +167,48 @@ class AppointmentController extends Controller
     }
 
     public function update(Request $request, Appointment $appointment)
-    {
-        $request->validate([
-            'patient_id'       => 'required|exists:patients,id',
-            'audiologist_id'   => 'required|exists:users,id',
-            'appointment_date' => 'required|date',
-            'appointment_time' => 'required',
-            'status'           => 'required|in:programada,completada,cancelada',
-        ]);
+{
+    $request->validate([
+        'patient_id'       => 'required|exists:patients,id',
+        'audiologist_id'   => 'required|exists:users,id',
+        'appointment_date' => 'required|date',
+        'appointment_time' => 'required',
+        'status'           => 'required|in:programada,completada,cancelada',
+        'service_ids'      => 'nullable|array',
+        'service_ids.*'    => 'exists:services,id',
+    ]);
 
-        $exists = Appointment::where('audiologist_id', $request->audiologist_id)
-            ->where('appointment_date', $request->appointment_date)
-            ->where('appointment_time', $request->appointment_time)
-            ->where('id', '!=', $appointment->id)
-            ->exists();
+    $exists = Appointment::where('audiologist_id', $request->audiologist_id)
+        ->where('appointment_date', $request->appointment_date)
+        ->where('appointment_time', $request->appointment_time)
+        ->where('id', '!=', $appointment->id)
+        ->exists();
 
-        if ($exists) {
-            $error = ['appointment_time' => ['El audiólogo ya tiene una cita en esa hora.']];
-            if ($request->expectsJson()) {
-                return response()->json(['errors' => $error], 422);
-            }
-            return back()->withErrors($error);
-        }
-
-        $appointment->update([
-            'patient_id'       => $request->patient_id,
-            'audiologist_id'   => $request->audiologist_id,
-            'appointment_date' => $request->appointment_date,
-            'appointment_time' => $request->appointment_time,
-            'status'           => $request->status,
-        ]);
-
+    if ($exists) {
+        $error = ['appointment_time' => ['El audiólogo ya tiene una cita en esa hora.']];
         if ($request->expectsJson()) {
-            return response()->json(['message' => 'Cita actualizada correctamente.']);
+            return response()->json(['errors' => $error], 422);
         }
-
-        return redirect()->route('appointments.index')->with('success', 'Cita actualizada correctamente.');
+        return back()->withErrors($error);
     }
+
+    $appointment->update([
+        'patient_id'       => $request->patient_id,
+        'audiologist_id'   => $request->audiologist_id,
+        'appointment_date' => $request->appointment_date,
+        'appointment_time' => $request->appointment_time,
+        'status'           => $request->status,
+    ]);
+
+    // Sincronizar servicios
+    $appointment->services()->sync($request->service_ids ?? []);
+
+    if ($request->expectsJson()) {
+        return response()->json(['message' => 'Cita actualizada correctamente.']);
+    }
+
+    return redirect()->route('appointments.index')->with('success', 'Cita actualizada correctamente.');
+}
 
     public function destroy(Request $request, Appointment $appointment)
     {
