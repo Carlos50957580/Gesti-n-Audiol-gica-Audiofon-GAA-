@@ -10,14 +10,44 @@ use Illuminate\Http\JsonResponse;
 
 class PatientController extends Controller
 {
-    public function index()
-    {
-        $patients = Patient::with(['branch', 'insurance'])
-            ->latest()
-            ->paginate(10);
+    public function index(Request $request)
+{
+    $query = Patient::with(['branch', 'insurance'])->latest();
 
-        return view('patients.index', compact('patients'));
+    if ($search = $request->get('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('first_name', 'like', "%{$search}%")
+              ->orWhere('last_name',  'like', "%{$search}%")
+              ->orWhere('cedula',     'like', "%{$search}%")
+              ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+        });
     }
+
+    if ($gender = $request->get('gender')) {
+        $query->where('gender', $gender);
+    }
+
+    if ($request->filled('branch')) {
+        $branch = $request->get('branch');
+        if ($branch === '0') {
+            $query->whereNull('branch_id');
+        } else {
+            $query->where('branch_id', $branch);
+        }
+    }
+
+    $patients = $query->paginate(10)->withQueryString();
+
+    if ($request->expectsJson()) {
+        return response()->json([
+            'html'       => view('patients._table_rows', compact('patients'))->render(),
+            'pagination' => view('patients._pagination', compact('patients'))->render(),
+            'total'      => $patients->total(),
+        ]);
+    }
+
+    return view('patients.index', compact('patients'));
+}
 
     /**
      * JSON — datos para modal de detalle (show)

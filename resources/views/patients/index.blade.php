@@ -337,15 +337,14 @@
                 </table>
             </div>
 
-            <div id="no-results" class="text-center py-5 d-none">
-                <i class="ri-search-line d-block text-muted mb-3" style="font-size:3.5rem;opacity:.3;"></i>
-                <p class="text-muted mb-0">No se encontraron pacientes.</p>
-            </div>
+          
 
             @if($patients->hasPages())
-            <div class="d-flex justify-content-end px-3 py-2" style="border-top:1px solid #f0f2f7;">
-                {{ $patients->links() }}
-            </div>
+            <div id="pagination-wrap" class="d-flex justify-content-end px-3 py-2" style="border-top:1px solid #f0f2f7;">
+    @if($patients->hasPages())
+        {{ $patients->links() }}
+    @endif
+</div>
             @endif
         </div>
     </div>
@@ -622,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     patModal    = new bootstrap.Modal(document.getElementById('patModal'));
     showModal   = new bootstrap.Modal(document.getElementById('showModal'));
     deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    bindPaginationLinks();
 
     @if(session('success'))
         showToast("{{ session('success') }}", 'success');
@@ -631,27 +631,60 @@ document.addEventListener('DOMContentLoaded', () => {
     @endif
 });
 
-// ── Search & filter ───────────────────────────────────────
-document.getElementById('search-input').addEventListener('input', filterTable);
-document.getElementById('gender-filter').addEventListener('change', filterTable);
-document.getElementById('branch-filter').addEventListener('change', filterTable);
+// ── Search & filter (server-side) ─────────────────────────
+let searchTimer = null;
 
-function filterTable() {
-    const q      = document.getElementById('search-input').value.toLowerCase().trim();
-    const gender = document.getElementById('gender-filter').value;
-    const branch = document.getElementById('branch-filter').value;
-    const rows   = document.querySelectorAll('#pat-tbody tr[data-id]');
-    let visible  = 0;
-    rows.forEach(tr => {
-        const matchQ = !q      || (tr.dataset.name||'').includes(q) || (tr.dataset.cedula||'').includes(q);
-        const matchG = !gender || tr.dataset.gender === gender;
-        const matchB = !branch || tr.dataset.branch === branch;
-        const show   = matchQ && matchG && matchB;
-        tr.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-    document.getElementById('no-results').classList.toggle('d-none', visible > 0);
+function getFilters() {
+    return {
+        search : document.getElementById('search-input').value.trim(),
+        gender : document.getElementById('gender-filter').value,
+        branch : document.getElementById('branch-filter').value,
+    };
 }
+
+async function fetchPatients(page) {
+    const params = new URLSearchParams(getFilters());
+    if (page && page > 1) params.set('page', page);
+
+    window.history.replaceState(null, '', '?' + params.toString());
+
+    const tbody   = document.getElementById('pat-tbody');
+    const pagWrap = document.getElementById('pagination-wrap');
+    tbody.style.opacity = '.4';
+    tbody.style.pointerEvents = 'none';
+
+    try {
+        const res  = await fetch(window.location.pathname + '?' + params.toString(), {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+        });
+        const data = await res.json();
+        tbody.innerHTML   = data.html;
+        pagWrap.innerHTML = data.pagination;
+        bindPaginationLinks();
+    } catch {
+        showToast('Error al buscar pacientes.', 'error');
+    } finally {
+        tbody.style.opacity = '1';
+        tbody.style.pointerEvents = '';
+    }
+}
+
+function bindPaginationLinks() {
+    document.querySelectorAll('#pagination-wrap a[href]').forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const page = new URL(this.href).searchParams.get('page') || 1;
+            fetchPatients(page);
+        });
+    });
+}
+
+document.getElementById('search-input').addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => fetchPatients(1), 350);
+});
+document.getElementById('gender-filter').addEventListener('change', () => fetchPatients(1));
+document.getElementById('branch-filter').addEventListener('change', () => fetchPatients(1));
 
 // ── Gender selector ───────────────────────────────────────
 function selectGender(val) {
