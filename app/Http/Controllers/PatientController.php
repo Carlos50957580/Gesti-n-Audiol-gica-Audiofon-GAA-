@@ -76,75 +76,76 @@ class PatientController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'first_name'       => 'required|string|max:255',
-            'last_name'        => 'required|string|max:255',
-            'cedula'           => 'required|string|max:255|unique:patients,cedula',
-            'phone'            => 'nullable|string|max:50',
-            'email'            => 'nullable|email|max:255',
-            'birth_date'       => 'nullable|date',
-            'gender'           => 'nullable|in:M,F',
-            'address'          => 'nullable|string',
-            'insurance_id'     => 'nullable|exists:insurances,id',
-            'insurance_number' => 'nullable|string|max:100',
-            'branch_id'        => 'nullable|exists:branches,id',
-        ]);
+{
+    $request->validate([
+        'first_name'       => 'required|string|max:255',
+        'last_name'        => 'required|string|max:255',
+        'cedula'           => 'nullable|string|max:255|unique:patients,cedula',
+        'phone'            => 'nullable|string|max:50',
+        'email'            => 'nullable|email|max:255',
+        'birth_date'       => 'nullable|date',
+        'gender'           => 'nullable|in:M,F',
+        'address'          => 'nullable|string',
+        'insurance_id'     => 'nullable|exists:insurances,id',
+        'insurance_number' => 'nullable|string|max:100',
+        'branch_id'        => 'nullable|exists:branches,id',
+    ]);
 
-        $data = $request->all();
-        if (auth()->user()->role->name !== 'admin') {
-            $data['branch_id'] = auth()->user()->branch_id;
-        }
-
-        $patient = Patient::create($data);
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Paciente registrado correctamente.',
-                'patient' => $patient,
-            ], 201);
-        }
-
-        return redirect()->route('patients.index')
-            ->with('success', 'Paciente registrado correctamente.');
+    $data = $request->all();
+    if (auth()->user()->role->name !== 'admin') {
+        $data['branch_id'] = auth()->user()->branch_id;
     }
+
+    $patient = Patient::create($data);
+
+    if ($request->expectsJson()) {
+        return response()->json([
+            'message' => 'Paciente registrado correctamente.',
+            'patient' => $patient,
+        ], 201);
+    }
+
+    return redirect()->route('patients.index')
+        ->with('success', 'Paciente registrado correctamente.');
+}
+
 
     /**
      * AJAX store desde modal de facturación
      */
     public function storeAjax(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'first_name'       => 'required|string|max:255',
-            'last_name'        => 'required|string|max:255',
-            'cedula'           => 'required|string|max:255|unique:patients,cedula',
-            'phone'            => 'nullable|string|max:255',
-            'email'            => 'nullable|email|max:255',
-            'birth_date'       => 'nullable|date',
-            'gender'           => 'nullable|in:M,F',
-            'address'          => 'nullable|string',
-            'insurance_id'     => 'nullable|exists:insurances,id',
-            'insurance_number' => 'nullable|string|max:255',
-            'branch_id'        => 'nullable|exists:branches,id',
-        ]);
+{
+    $validated = $request->validate([
+        'first_name'       => 'required|string|max:255',
+        'last_name'        => 'required|string|max:255',
+        'cedula'           => 'nullable|string|max:255|unique:patients,cedula',
+        'phone'            => 'nullable|string|max:255',
+        'email'            => 'nullable|email|max:255',
+        'birth_date'       => 'nullable|date',
+        'gender'           => 'nullable|in:M,F',
+        'address'          => 'nullable|string',
+        'insurance_id'     => 'nullable|exists:insurances,id',
+        'insurance_number' => 'nullable|string|max:255',
+        'branch_id'        => 'nullable|exists:branches,id',
+    ]);
 
-        $patient = Patient::create($validated);
-        $patient->load('insurance');
+    $patient = Patient::create($validated);
+    $patient->load('insurance');
 
-        return response()->json([
-            'success' => true,
-            'patient' => [
-                'id'                 => $patient->id,
-                'full_name'          => $patient->first_name . ' ' . $patient->last_name,
-                'cedula'             => $patient->cedula,
-                'phone'              => $patient->phone,
-                'insurance_id'       => $patient->insurance_id,
-                'insurance_name'     => $patient->insurance?->name,
-                'insurance_coverage' => $patient->insurance?->coverage_percentage,
-            ],
-            'message' => 'Paciente creado exitosamente.',
-        ], 201);
-    }
+    return response()->json([
+        'success' => true,
+        'patient' => [
+            'id'                 => $patient->id,
+            'full_name'          => $patient->first_name . ' ' . $patient->last_name,
+            'cedula'             => $patient->cedula,
+            'phone'              => $patient->phone,
+            'insurance_id'       => $patient->insurance_id,
+            'insurance_name'     => $patient->insurance?->name,
+            'insurance_coverage' => $patient->insurance?->coverage_percentage,
+        ],
+        'message' => 'Paciente creado exitosamente.',
+    ], 201);
+}
 
     public function show(Patient $patient)
     {
@@ -159,35 +160,35 @@ class PatientController extends Controller
     }
 
     public function update(Request $request, Patient $patient)
-    {
-        $request->validate([
-            'first_name'       => 'required|string|max:255',
-            'last_name'        => 'required|string|max:255',
-            'cedula'           => 'required|string|max:255|unique:patients,cedula,' . $patient->id,
-            'phone'            => 'nullable|string|max:50',
-            'email'            => 'nullable|email|max:255',
-            'birth_date'       => 'nullable|date',
-            'gender'           => 'nullable|in:M,F',
-            'address'          => 'nullable|string',
-            'insurance_id'     => 'nullable|exists:insurances,id',
-            'insurance_number' => 'nullable|string|max:100',
-            'branch_id'        => 'nullable|exists:branches,id',
-        ]);
+{
+    $request->validate([
+        'first_name'       => 'required|string|max:255',
+        'last_name'        => 'required|string|max:255',
+        'cedula'           => 'nullable|string|max:255|unique:patients,cedula,' . $patient->id,
+        'phone'            => 'nullable|string|max:50',
+        'email'            => 'nullable|email|max:255',
+        'birth_date'       => 'nullable|date',
+        'gender'           => 'nullable|in:M,F',
+        'address'          => 'nullable|string',
+        'insurance_id'     => 'nullable|exists:insurances,id',
+        'insurance_number' => 'nullable|string|max:100',
+        'branch_id'        => 'nullable|exists:branches,id',
+    ]);
 
-        $data = $request->all();
-        if (auth()->user()->role->name !== 'admin') {
-            $data['branch_id'] = auth()->user()->branch_id;
-        }
-
-        $patient->update($data);
-
-        if ($request->expectsJson()) {
-            return response()->json(['message' => 'Paciente actualizado correctamente.']);
-        }
-
-        return redirect()->route('patients.index')
-            ->with('success', 'Paciente actualizado correctamente.');
+    $data = $request->all();
+    if (auth()->user()->role->name !== 'admin') {
+        $data['branch_id'] = auth()->user()->branch_id;
     }
+
+    $patient->update($data);
+
+    if ($request->expectsJson()) {
+        return response()->json(['message' => 'Paciente actualizado correctamente.']);
+    }
+
+    return redirect()->route('patients.index')
+        ->with('success', 'Paciente actualizado correctamente.');
+}
 
     public function destroy(Request $request, Patient $patient)
     {

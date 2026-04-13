@@ -366,7 +366,7 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             <input type="text" class="form-control" id="m_cedula" placeholder="000-0000000-0">
-                            <label>Cédula <span class="text-danger">*</span></label>
+<label>Cédula <span class="text-muted fw-normal">(opcional)</span></label>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -755,7 +755,7 @@ document.getElementById('btn-save-patient').addEventListener('click', async func
     const payload = {
         first_name      : document.getElementById('m_first_name').value.trim(),
         last_name       : document.getElementById('m_last_name').value.trim(),
-        cedula          : document.getElementById('m_cedula').value.trim(),
+cedula : document.getElementById('m_cedula').value.trim() || null,
         phone           : document.getElementById('m_phone').value.trim(),
         email           : document.getElementById('m_email').value.trim(),
         birth_date      : document.getElementById('m_birth_date').value,
@@ -764,11 +764,11 @@ document.getElementById('btn-save-patient').addEventListener('click', async func
         insurance_number: document.getElementById('m_insurance_number').value.trim(),
         address         : document.getElementById('m_address').value.trim(),
     };
-    if (!payload.first_name || !payload.last_name || !payload.cedula) {
-        alertEl.className = 'alert alert-danger';
-        alertEl.textContent = 'Nombre, apellido y cédula son obligatorios.';
-        return;
-    }
+    if (!payload.first_name || !payload.last_name) {
+    alertEl.className = 'alert alert-danger';
+    alertEl.textContent = 'Nombre y apellido son obligatorios.';
+    return;
+}
     this.disabled = true;
     document.getElementById('patient-save-spin').classList.remove('d-none');
     document.getElementById('patient-save-icon').classList.add('d-none');

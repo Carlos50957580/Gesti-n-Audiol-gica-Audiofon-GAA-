@@ -276,8 +276,11 @@
                                 </div>
                             </td>
                             <td class="col-hide-sm">
-                                <span class="cedula-chip">{{ $pat->cedula }}</span>
-                            </td>
+@if($pat->cedula)
+    <span class="cedula-chip">{{ $pat->cedula }}</span>
+@else
+    <span class="text-muted" style="font-size:.82rem;">—</span>
+@endif                            </td>
                             <td>
                                 @if($pat->phone)
                                     <span style="font-size:.85rem;"><i class="ri-phone-line me-1 text-muted"></i>{{ $pat->phone }}</span>
@@ -387,7 +390,7 @@
                         <div class="col-md-4">
                             <div class="form-floating">
                                 <input type="text" class="form-control" id="f-cedula" placeholder="Cédula">
-                                <label><i class="ri-id-card-line me-1 text-muted"></i>Cédula</label>
+<label><i class="ri-id-card-line me-1 text-muted"></i>Cédula <span class="fw-normal text-muted">(opcional)</span></label>
                                 <div class="invalid-feedback" id="err-cedula"></div>
                             </div>
                         </div>
