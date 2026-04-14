@@ -121,10 +121,38 @@ class ReceiptController extends Controller
         $card     = (float) ($request->card_amount     ?? 0);
         $transfer = (float) ($request->transfer_amount ?? 0);
         $total    = round($cash + $card + $transfer, 2);
+$invoiceTotal = (float) $invoice->total;
 
-        if ($total < 0) {
-            return back()->withErrors(['payment' => 'Debes ingresar al menos un monto de pago.'])->withInput();
-        }
+// ✅ CASO: FACTURA EN 0
+if ($invoiceTotal <= 0) {
+    $cash = $card = $transfer = 0;
+    $totalPaid = 0;
+} else {
+
+    // ❌ No permitir negativos
+    if ($total < 0) {
+        return back()->withErrors(['payment' => 'El monto no puede ser negativo.'])->withInput();
+    }
+
+    // ❌ Tarjeta + transferencia no pueden exceder
+    if (($card + $transfer) > $invoiceTotal + 0.01) {
+        return back()
+            ->withErrors(['payment' => 'Tarjeta y/o transferencia no pueden exceder el total de la factura.'])
+            ->withInput();
+    }
+
+    // ❌ Validar efectivo mínimo requerido
+    $nonCash    = $card + $transfer;
+    $cashNeeded = max(0, $invoiceTotal - $nonCash);
+
+    if ($cash < $cashNeeded - 0.01) {
+        return back()
+            ->withErrors(['payment' => 'El monto en efectivo es insuficiente para cubrir la diferencia.'])
+            ->withInput();
+    }
+
+    $totalPaid = $invoiceTotal;
+}
 
         if (($card + $transfer) > (float) $invoice->total + 0.01) {
             return back()
