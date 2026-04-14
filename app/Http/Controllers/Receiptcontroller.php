@@ -141,7 +141,6 @@ if ($invoiceTotal <= 0) {
             ->withInput();
     }
 
-    // ❌ Validar efectivo mínimo requerido
     $nonCash    = $card + $transfer;
     $cashNeeded = max(0, $invoiceTotal - $nonCash);
 
