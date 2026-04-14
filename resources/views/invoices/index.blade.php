@@ -236,58 +236,71 @@
 @endif
 
 {{-- ══ STAT CARDS ══ --}}
-@php
-    $allStatuses = $invoices->getCollection();
-    $totalAmt    = $allStatuses->sum('total');
-    $cntPending  = $allStatuses->where('status','pendiente')->count();
-    $cntPaid     = $allStatuses->where('status','pagada')->count();
-    $cntCancelled= $allStatuses->where('status','cancelada')->count();
-    $amtPending  = $allStatuses->where('status','pendiente')->sum('total');
-    $amtPaid     = $allStatuses->where('status','pagada')->sum('total');
-@endphp
 <div class="row g-3 mb-4">
+
+    {{-- TOTAL --}}
     <div class="col-sm-6 col-xl-3 anim-stat">
         <div class="inv-stat stat-total">
             <div class="inv-stat-body">
                 <div class="inv-stat-label">Total registradas</div>
-                <div class="inv-stat-value">{{ $invoices->total() }}</div>
-                <div class="inv-stat-sub">RD$ {{ number_format($totalAmt, 2) }} en esta página</div>
+                <div class="inv-stat-value">{{ $stats['total'] }}</div>
+                <div class="inv-stat-sub">
+                    RD$ {{ number_format($stats['total_amt'], 2) }}
+                </div>
             </div>
             <div class="inv-stat-icon"><i class="ri-file-list-3-line"></i></div>
         </div>
     </div>
+
+    {{-- PENDIENTES --}}
     <div class="col-sm-6 col-xl-3 anim-stat">
         <div class="inv-stat stat-pending">
             <div class="inv-stat-body">
                 <div class="inv-stat-label">Pendientes</div>
-                <div class="inv-stat-value" style="color:#b45309;">{{ $cntPending }}</div>
-                <div class="inv-stat-sub">RD$ {{ number_format($amtPending, 2) }}</div>
+                <div class="inv-stat-value" style="color:#b45309;">
+                    {{ $stats['pending'] }}
+                </div>
+                <div class="inv-stat-sub">
+                    RD$ {{ number_format($stats['pending_amt'], 2) }}
+                </div>
             </div>
             <div class="inv-stat-icon"><i class="ri-time-line"></i></div>
         </div>
     </div>
+
+    {{-- PAGADAS --}}
     <div class="col-sm-6 col-xl-3 anim-stat">
         <div class="inv-stat stat-paid">
             <div class="inv-stat-body">
                 <div class="inv-stat-label">Pagadas</div>
-                <div class="inv-stat-value" style="color:#0ab39c;">{{ $cntPaid }}</div>
-                <div class="inv-stat-sub">RD$ {{ number_format($amtPaid, 2) }}</div>
+                <div class="inv-stat-value" style="color:#0ab39c;">
+                    {{ $stats['paid'] }}
+                </div>
+                <div class="inv-stat-sub">
+                    RD$ {{ number_format($stats['paid_amt'], 2) }}
+                </div>
             </div>
             <div class="inv-stat-icon"><i class="ri-checkbox-circle-line"></i></div>
         </div>
     </div>
+
+    {{-- CANCELADAS --}}
     <div class="col-sm-6 col-xl-3 anim-stat">
         <div class="inv-stat stat-cancelled">
             <div class="inv-stat-body">
                 <div class="inv-stat-label">Canceladas</div>
-                <div class="inv-stat-value" style="color:#e74c3c;">{{ $cntCancelled }}</div>
-                <div class="inv-stat-sub">en esta página</div>
+                <div class="inv-stat-value" style="color:#e74c3c;">
+                    {{ $stats['cancelled'] }}
+                </div>
+                <div class="inv-stat-sub">
+                    Total general
+                </div>
             </div>
             <div class="inv-stat-icon"><i class="ri-close-circle-line"></i></div>
         </div>
     </div>
-</div>
 
+</div>
 {{-- ══ FILTER BAR ══ --}}
 <form method="GET" action="{{ route('invoices.index') }}" id="filter-form" class="mb-3">
     <div class="filter-bar">

@@ -15,43 +15,105 @@ use Illuminate\Support\Facades\DB;
 class InvoiceController extends Controller
 {
     public function index(Request $request)
-    {
-        $user  = auth()->user();
-        $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
-            ->orderBy('created_at', 'desc');
+{
+    $user  = auth()->user();
 
-        if ($user->role->name !== 'admin') {
-            $query->where('branch_id', $user->branch_id);
-        }
+    // ── QUERY PRINCIPAL (LISTADO) ─────────────────────
+    $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
+        ->orderBy('created_at', 'desc');
 
-        if ($request->filled('q')) {
-            $q         = $request->q;
-            $numericId = null;
-            if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
-                $numericId = (int) $m[1];
-            }
-            $query->where(function ($sq) use ($q, $numericId) {
-                if ($numericId) $sq->orWhere('id', $numericId);
-                $sq->orWhereHas('patient', function ($pq) use ($q) {
-                    $pq->where('first_name', 'like', "%{$q}%")
-                       ->orWhere('last_name',  'like', "%{$q}%")
-                       ->orWhere('cedula',     'like', "%{$q}%")
-                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
-                });
-            });
-        }
-
-        if ($request->filled('status'))    $query->where('status', $request->status);
-        if ($user->role->name === 'admin' && $request->filled('branch_id'))
-            $query->where('branch_id', $request->branch_id);
-        if ($request->filled('date_from')) $query->whereDate('created_at', '>=', $request->date_from);
-        if ($request->filled('date_to'))   $query->whereDate('created_at', '<=', $request->date_to);
-
-        $invoices = $query->paginate(15)->withQueryString();
-        $branches = $user->role->name === 'admin' ? Branch::orderBy('name')->get() : collect();
-
-        return view('invoices.index', compact('invoices', 'branches'));
+    // Restricción por sucursal si no es admin
+    if ($user->role->name !== 'admin') {
+        $query->where('branch_id', $user->branch_id);
     }
+
+    // 🔍 BÚSQUEDA
+    if ($request->filled('q')) {
+        $q         = $request->q;
+        $numericId = null;
+
+        if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
+            $numericId = (int) $m[1];
+        }
+
+        $query->where(function ($sq) use ($q, $numericId) {
+            if ($numericId) {
+                $sq->orWhere('id', $numericId);
+            }
+
+            $sq->orWhereHas('patient', function ($pq) use ($q) {
+                $pq->where('first_name', 'like', "%{$q}%")
+                   ->orWhere('last_name',  'like', "%{$q}%")
+                   ->orWhere('cedula',     'like', "%{$q}%")
+                   ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
+            });
+        });
+    }
+
+    // 🎯 FILTROS
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($user->role->name === 'admin' && $request->filled('branch_id')) {
+        $query->where('branch_id', $request->branch_id);
+    }
+
+    if ($request->filled('date_from')) {
+        $query->whereDate('created_at', '>=', $request->date_from);
+    }
+
+    if ($request->filled('date_to')) {
+        $query->whereDate('created_at', '<=', $request->date_to);
+    }
+
+    // 📄 PAGINACIÓN
+    $invoices = $query->paginate(15)->withQueryString();
+
+    // ── STATS (SIN PAGINACIÓN) ─────────────────────
+    $statsQuery = Invoice::query();
+
+    // Restricción por rol
+    if ($user->role->name !== 'admin') {
+        $statsQuery->where('branch_id', $user->branch_id);
+    }
+
+    // Aplicar mismos filtros (IMPORTANTE para consistencia)
+    if ($request->filled('status')) {
+        $statsQuery->where('status', $request->status);
+    }
+
+    if ($user->role->name === 'admin' && $request->filled('branch_id')) {
+        $statsQuery->where('branch_id', $request->branch_id);
+    }
+
+    if ($request->filled('date_from')) {
+        $statsQuery->whereDate('created_at', '>=', $request->date_from);
+    }
+
+    if ($request->filled('date_to')) {
+        $statsQuery->whereDate('created_at', '<=', $request->date_to);
+    }
+
+    // ⚡ Cálculos
+    $stats = [
+        'total'       => (clone $statsQuery)->count(),
+        'pending'     => (clone $statsQuery)->where('status', 'pendiente')->count(),
+        'paid'        => (clone $statsQuery)->where('status', 'pagada')->count(),
+        'cancelled'   => (clone $statsQuery)->where('status', 'cancelada')->count(),
+
+        'total_amt'   => (clone $statsQuery)->sum('total'),
+        'pending_amt' => (clone $statsQuery)->where('status', 'pendiente')->sum('total'),
+        'paid_amt'    => (clone $statsQuery)->where('status', 'pagada')->sum('total'),
+    ];
+
+    // ── SUCURSALES (solo admin) ─────────────────────
+    $branches = $user->role->name === 'admin'
+        ? Branch::orderBy('name')->get()
+        : collect();
+
+    return view('invoices.index', compact('invoices', 'branches', 'stats'));
+}
 
     public function create()
     {
