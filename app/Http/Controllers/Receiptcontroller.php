@@ -122,7 +122,7 @@ class ReceiptController extends Controller
         $transfer = (float) ($request->transfer_amount ?? 0);
         $total    = round($cash + $card + $transfer, 2);
 
-        if ($total <= 0) {
+        if ($total < 0) {
             return back()->withErrors(['payment' => 'Debes ingresar al menos un monto de pago.'])->withInput();
         }
 

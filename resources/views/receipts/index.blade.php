@@ -721,8 +721,13 @@ function fillModal(d) {
         }
     }
     document.getElementById('modal-total').textContent = 'RD$ ' + fmt(d.total);
+   if (d.total > 0) {
     document.getElementById('mc-cash').classList.add('selected');
     document.getElementById('i-cash').value = d.total.toFixed(2);
+} else {
+    // Factura en 0 — ningún método requerido, solo confirmar
+    document.getElementById('modal-total').textContent = 'RD$ 0.00 — Sin costo';
+}
     document.getElementById('modal-loading').style.display = 'none';
     document.getElementById('modal-content').style.display = '';
     recalcPay();
@@ -789,15 +794,15 @@ function submitPay() {
     const card     = parseFloat(document.getElementById('i-card')?.value)     || 0;
     const transfer = parseFloat(document.getElementById('i-transfer')?.value) || 0;
     const total    = cash + card + transfer;
-    if (total <= 0) { showToast('Ingresa al menos un monto de pago.', 'err'); return; }
+if (total < 0) { showToast('El monto no puede ser negativo.', 'err'); return; }
     if ((card + transfer) > invoiceTotal + 0.01) {
         showToast('Tarjeta y/o transferencia no pueden exceder el total de la factura.', 'err'); return;
     }
     const nonCash    = card + transfer;
     const cashNeeded = Math.max(0, invoiceTotal - nonCash);
-    if (cash < cashNeeded - 0.01) {
-        showToast(`Faltan RD$ ${fmt(cashNeeded - cash)} para completar el pago.`, 'err'); return;
-    }
+    if (invoiceTotal > 0 && cash < cashNeeded - 0.01) {
+    showToast(`Faltan RD$ ${fmt(cashNeeded - cash)} para completar el pago.`, 'err'); return;
+}
     document.getElementById('btn-confirm-pay').disabled = true;
     document.getElementById('pay-spin').classList.remove('d-none');
     document.getElementById('pay-icon').classList.add('d-none');
