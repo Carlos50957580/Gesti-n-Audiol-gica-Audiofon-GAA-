@@ -299,6 +299,106 @@
             </div>
         </div>
 
+        <div class="inv-card">
+    <div class="inv-card-header">
+        <div class="card-icon bg-danger-subtle text-danger">
+            <i class="ri-file-list-3-line"></i>
+        </div>
+        <h6>Datos Fiscales</h6>
+    </div>
+
+    <div class="inv-card-body">
+
+        <div class="form-check mb-3">
+            <input class="form-check-input"
+                   type="checkbox"
+                   id="with_ncf"
+                   name="with_ncf"
+                   value="1">
+
+            <label class="form-check-label">
+                Generar comprobante fiscal
+            </label>
+        </div>
+
+        <div id="ncf-area" class="d-none">
+
+            <div class="form-floating mb-3">
+                <select name="ncf_type"
+                        id="ncf_type"
+                        class="form-select">
+
+                    <option value="">Seleccione</option>
+
+                    <option value="consumidor_final">
+                        Consumidor Final
+                    </option>
+
+                    <option value="credito_fiscal">
+                        Crédito Fiscal
+                    </option>
+
+                    <option value="gubernamental">
+                        Gubernamental
+                    </option>
+
+                    <option value="regimen_especial">
+                        Régimen Especial
+                    </option>
+
+                </select>
+
+                <label>Tipo NCF</label>
+            </div>
+
+            <div class="input-group mb-3">
+
+                <input type="text"
+                       class="form-control"
+                       id="customer_rnc"
+                       name="customer_rnc"
+                       placeholder="RNC o Cédula">
+
+                <button type="button"
+                        class="btn btn-primary"
+                        id="btn-search-rnc">
+
+                    Buscar
+                </button>
+
+            </div>
+
+            <div class="form-floating mb-3">
+
+    <input type="text"
+           name="ncf"
+           id="ncf"
+           class="form-control"
+           placeholder="B0200000001">
+
+    <label>NCF</label>
+
+</div>
+
+            <div class="form-floating">
+
+                <input type="text"
+                       class="form-control"
+                       id="customer_business_name"
+                       name="customer_business_name"
+                       readonly>
+
+                <label>Razón Social</label>
+
+            </div>
+
+            <div id="rnc-status" class="mt-2"></div>
+
+        </div>
+
+    </div>
+</div>
+
         {{-- Resumen --}}
         <div class="inv-card">
             <div class="inv-card-header">
@@ -872,6 +972,87 @@ document.addEventListener('DOMContentLoaded', function () {
     const sel = document.getElementById('audiologist_id');
     if (sel.value) sel.dispatchEvent(new Event('change'));
 });
+
+document.getElementById('with_ncf')
+.addEventListener('change', function() {
+
+    document.getElementById('ncf-area')
+        .classList.toggle('d-none', !this.checked);
+
+});
+
+document.getElementById('btn-search-rnc')
+.addEventListener('click', async function () {
+
+    const rnc = document
+        .getElementById('customer_rnc')
+        .value
+        .trim();
+
+    if (!rnc) {
+        showToast('Ingrese un RNC.', 'error');
+        return;
+    }
+
+    const status = document.getElementById('rnc-status');
+
+    status.innerHTML =
+        '<span class="text-muted">Consultando...</span>';
+
+    try {
+
+        const response = await fetch(
+            '/api/rnc/' + encodeURIComponent(rnc)
+        );
+
+        const data = await response.json();
+
+        if (data.error) {
+
+            status.innerHTML =
+                `<span class="text-danger">${data.mensaje}</span>`;
+
+            document.getElementById(
+                'customer_business_name'
+            ).value = '';
+
+            return;
+        }
+
+        document.getElementById(
+            'customer_business_name'
+        ).value = data.nombre_razon_social ?? '';
+
+        status.innerHTML = `
+            <span class="text-success">
+                ✓ ${data.estado}
+            </span>
+        `;
+
+    } catch (e) {
+
+        status.innerHTML =
+            '<span class="text-danger">Error consultando RNC.</span>';
+
+    }
+
+});
+
+document.getElementById('ncf_type')
+.addEventListener('change', function(){
+
+    const prefixes = {
+        consumidor_final : 'B02',
+        credito_fiscal   : 'B01',
+        gubernamental    : 'B15',
+        regimen_especial : 'B14'
+    };
+
+    document.getElementById('ncf').value =
+        prefixes[this.value] ?? '';
+
+});
+
 </script>
 @endpush
 

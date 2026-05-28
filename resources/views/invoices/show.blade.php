@@ -299,6 +299,11 @@
                 <div class="inv-banner-right">
                     <div class="inv-label">Factura</div>
                     <div class="inv-num-big">{{ $invoice->invoice_number }}</div>
+                    @if($invoice->ncf)
+<div style="font-size:.85rem;margin-top:.35rem;">
+    <strong>NCF:</strong> {{ $invoice->ncf }}
+</div>
+@endif
                     <div class="inv-date">
                         <i class="ri-calendar-line me-1" style="opacity:.7;"></i>
                         {{ $invoice->created_at->format('d/m/Y') }} &nbsp;·&nbsp; {{ $invoice->created_at->format('H:i') }}
@@ -440,6 +445,19 @@
                             N° Autorización: <span class="auth-chip">{{ $invoice->authorization_number }}</span>
                         </div>
                         @endif
+                        @if($invoice->customer_business_name || $invoice->customer_rnc)
+<div class="auth-row">
+    <i class="ri-building-line"></i>
+
+    {{ $invoice->customer_business_name }}
+
+    @if($invoice->customer_rnc)
+        <span class="auth-chip">
+            {{ $invoice->customer_rnc }}
+        </span>
+    @endif
+</div>
+@endif
                     </div>
                 </div>
 
@@ -526,186 +544,291 @@ function printThermal() {
 <html>
 <head>
 <meta charset="UTF-8">
+<title>Ticket</title>
+
 <style>
-  * {
+*{
     margin:0;
     padding:0;
     box-sizing:border-box;
-    -webkit-font-smoothing: none;
-    text-rendering: optimizeSpeed;
-  }
+}
 
-  body {
-    font-family: monospace; /* 🔥 quitar Courier New */
-    font-size: 14px;        /* 🔥 no menos de 12 */
-    font-weight: 700;       /* 🔥 todo fuerte */
-    color: #000;            /* 🔥 negro puro */
-    background: #fff;
-    padding: 6px;
-  }
+body{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    color:#000;
+    padding:8px;
+}
 
-  .center { text-align: center; }
-  .right  { text-align: right; }
+.center{
+    text-align:center;
+}
 
-  .bold { font-weight: 900; }
-  .big  { font-size: 17px; font-weight: 900; }
+.right{
+    text-align:right;
+}
 
-  .small { font-size: 12px; font-weight: 700; } /* 🔥 nada de 10px */
-  .lbl   { font-size: 12px; font-weight: 700; }
+.bold{
+    font-weight:bold;
+}
 
-  .sep  { border-top: 1px dashed #000; margin: 6px 0; }
-  .sep2 { border-top: 2px solid #000; margin: 6px 0; }
+.big{
+    font-size:16px;
+    font-weight:bold;
+}
 
-  table { width: 100%; border-collapse: collapse; }
-  td    { padding: 2px 0; vertical-align: top; }
+.sep{
+    border-top:1px dashed #000;
+    margin:6px 0;
+}
 
-  .td-r {
-    text-align: right;
-    white-space: nowrap;
-  }
+.sep2{
+    border-top:2px solid #000;
+    margin:6px 0;
+}
 
-  .status {
-    font-size: 12px;
-    font-weight: 900;
-    border: 2px solid #000;
-    padding: 1px 5px;
-  }
+table{
+    width:100%;
+    border-collapse:collapse;
+}
 
-  .total-row td {
-    font-size: 16px;
-    font-weight: 900;
-    padding-top: 6px;
-    border-top: 2px solid #000;
-  }
+td{
+    padding:1px 0;
+    vertical-align:top;
+}
 
-  @media print {
-    @page { margin: 0; }
-  }
+.label{
+    width:78px;
+    font-weight:bold;
+    white-space:nowrap;
+}
+
+.total{
+    font-size:14px;
+    font-weight:bold;
+}
+
+thead td{
+    border:1px solid #000;
+    padding:3px;
+    font-weight:bold;
+}
+
+tbody td{
+    padding:3px;
+}
+
+@media print{
+    @page{
+        margin:0;
+    }
+}
 </style>
+
 </head>
+
 <body>
 
-<div class="center bold big">AUDIOFON</div>
-<div class="center small">{{ $invoice->branch->name ?? '' }}</div>
+<div class="center big">AUDIOFON</div>
+<div class="center bold">RNC: 132-11581-3</div>
+
+@if($invoice->branch)
+<div class="center">{{ $invoice->branch->name }}</div>
+@endif
 
 @if($invoice->branch?->address)
-<div class="center small">{{ $invoice->branch->address }}</div>
+<div class="center">{{ $invoice->branch->address }}</div>
 @endif
 
 @if($invoice->branch?->phone)
-<div class="center small">Tel: {{ $invoice->branch->phone }}</div>
+<div class="center">Tel: {{ $invoice->branch->phone }}</div>
 @endif
 
 <div class="sep2"></div>
 
+@if($invoice->ncf)
+<div class="center bold">
+{{ $invoice->ncf }}
+</div>
+@endif
+
 <table>
-  <tr>
-    <td class="lbl">Factura</td>
-    <td class="td-r bold">{{ $invoice->invoice_number }}</td>
-  </tr>
-  <tr>
-    <td class="lbl">Fecha</td>
-    <td class="td-r">{{ $invoice->created_at->format('d/m/Y H:i') }}</td>
-  </tr>
-  <tr>
-    <td class="lbl">Estado</td>
-    <td class="td-r"><span class="status">{{ strtoupper($invoice->status) }}</span></td>
-  </tr>
+<tr>
+    <td class="label">FACTURA</td>
+    <td>: {{ $invoice->invoice_number }}</td>
+</tr>
+
+<tr>
+    <td class="label">FECHA</td>
+    <td>: {{ $invoice->created_at->format('d/m/Y h:i A') }}</td>
+</tr>
+
+<tr>
+    <td class="label">ESTADO</td>
+    <td>: {{ strtoupper($invoice->status) }}</td>
+</tr>
 </table>
 
 <div class="sep"></div>
 
-<div class="lbl">PACIENTE</div>
-<div class="bold">{{ $invoice->patient->first_name }} {{ $invoice->patient->last_name }}</div>
-<div class="small">Cédula: {{ $invoice->patient->cedula }}</div>
+<table>
+
+<tr>
+    <td class="label">PACIENTE</td>
+    <td>: {{ strtoupper($invoice->patient->first_name.' '.$invoice->patient->last_name) }}</td>
+</tr>
+
+<tr>
+    <td class="label">CEDULA</td>
+    <td>: {{ $invoice->patient->cedula }}</td>
+</tr>
 
 @if($invoice->patient->phone)
-<div class="small">Tel: {{ $invoice->patient->phone }}</div>
+<tr>
+    <td class="label">TEL.</td>
+    <td>: {{ $invoice->patient->phone }}</td>
+</tr>
 @endif
 
-<div class="sep"></div>
+@if($invoice->insurance)
+<tr>
+    <td class="label">SEGURO</td>
+    <td>: {{ strtoupper($invoice->insurance->name) }}</td>
+</tr>
+@endif
 
-<table>
-  <tr>
-    <td class="lbl">Atendido por</td>
-    <td class="td-r">{{ $invoice->user->name }}</td>
-  </tr>
+@if($invoice->authorization_number)
+<tr>
+    <td class="label">AUTORIZ.</td>
+    <td>: {{ $invoice->authorization_number }}</td>
+</tr>
+@endif
+
+<tr>
+    <td class="label">USUARIO</td>
+    <td>: {{ $invoice->user->name }}</td>
+</tr>
+
+@if($invoice->customer_rnc)
+<tr>
+    <td class="label">RNC</td>
+    <td>: {{ $invoice->customer_rnc }}</td>
+</tr>
+@endif
+
+@if($invoice->customer_business_name)
+<tr>
+    <td class="label">RAZON S.</td>
+    <td>: {{ strtoupper($invoice->customer_business_name) }}</td>
+</tr>
+@endif
+
 </table>
 
 <div class="sep2"></div>
 
-<div class="lbl" style="margin-bottom:3px;">SERVICIOS</div>
+<table>
+
+<thead>
+<tr>
+    <td>Cant.</td>
+    <td>Descripción</td>
+
+    @if($invoice->insurance)
+    <td>Cob.</td>
+    @endif
+
+    <td>Valor</td>
+</tr>
+</thead>
+
+<tbody>
 
 @foreach($invoice->items as $item)
-<table style="margin-bottom:6px;">
-  <tr>
-    <td class="bold">{{ strtoupper($item->service->name) }}</td>
-    <td class="td-r bold">RD$ {{ number_format($item->subtotal, 2) }}</td>
-  </tr>
-  <tr>
-    <td class="small">
-      {{ $item->quantity }} x RD$ {{ number_format($item->price, 2) }}
-    </td>
-    @if($invoice->insurance)
-    <td class="td-r small">
-      Seg: RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}
-    </td>
-    @endif
-  </tr>
-</table>
+<tr>
+
+<td>
+{{ $item->quantity }}
+</td>
+
+<td>
+{{ strtoupper($item->service->name) }}
+</td>
+
+@if($invoice->insurance)
+<td>
+RD$ {{ number_format($item->insurance_amount ?? 0,2) }}
+</td>
+@endif
+
+<td>
+RD$ {{ number_format($item->subtotal,2) }}
+</td>
+
+</tr>
 @endforeach
 
-<div class="sep2"></div>
+</tbody>
 
-<table>
-  <tr>
-    <td class="lbl">Subtotal</td>
-    <td class="td-r">RD$ {{ number_format($invoice->subtotal, 2) }}</td>
-  </tr>
-
-  @if($invoice->insurance_discount > 0)
-  <tr>
-    <td class="lbl">Desc. seguro</td>
-    <td class="td-r">- RD$ {{ number_format($invoice->insurance_discount, 2) }}</td>
-  </tr>
-  @endif
 </table>
 
 <div class="sep"></div>
 
 <table>
-  <tr class="total-row">
-    <td>TOTAL</td>
-    <td class="td-r">RD$ {{ number_format($invoice->total, 2) }}</td>
-  </tr>
+
+<tr>
+<td>Facturado:</td>
+<td class="right">
+RD$ {{ number_format($invoice->subtotal,2) }}
+</td>
+</tr>
+
+@if($invoice->insurance_discount > 0)
+<tr>
+<td>Cobertura Seguro:</td>
+<td class="right">
+RD$ {{ number_format($invoice->insurance_discount,2) }}
+</td>
+</tr>
+@endif
+
+<tr>
+<td><strong>Diferencia Paciente:</strong></td>
+<td class="right bold">
+RD$ {{ number_format($invoice->total,2) }}
+</td>
+</tr>
+
 </table>
 
 @if($invoice->authorization_number)
 <div class="sep"></div>
+
 <table>
-  <tr>
-    <td class="lbl">N° Autorización</td>
-    <td class="td-r bold">{{ $invoice->authorization_number }}</td>
-  </tr>
+<tr>
+<td class="label">AUTORIZACION</td>
+<td>: {{ $invoice->authorization_number }}</td>
+</tr>
 </table>
 @endif
 
-<div class="sep2"></div>
+<div style="margin-top:15px;"></div>
 
-<div class="center small" style="margin-top:6px;">
-  Gracias por su preferencia
+<div class="center">
+Gracias por su preferencia
 </div>
 
-<div style="margin-top:24px;"></div>
+<div style="height:30px"></div>
 
 </body>
 </html>`);
+
     doc.close();
 
     setTimeout(() => {
         frame.contentWindow.focus();
         frame.contentWindow.print();
-    }, 300);
+    }, 500);
 }
 </script>
 @endpush

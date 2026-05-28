@@ -11,6 +11,7 @@ use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class InvoiceController extends Controller
 {
@@ -134,18 +135,24 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'patient_id'              => 'required|exists:patients,id',
-            'branch_id'               => 'required|exists:branches,id',
-            'audiologist_id'          => 'required|exists:users,id',
-            'services'                => 'required|array|min:1',
-            'services.*.id'           => 'required|exists:services,id',
-            'services.*.quantity'     => 'required|integer|min:1',
-            'services.*.custom_price' => 'nullable|numeric|min:0',
-            'services.*.cov_value'    => 'nullable|numeric|min:0',
-            'services.*.cov_type'     => 'nullable|in:pct,amt',
-            'insurance_id'            => 'nullable|exists:insurances,id',
-            'authorization_number'    => 'nullable|string|max:255',
-        ]);
+    'patient_id'              => 'required|exists:patients,id',
+    'branch_id'               => 'required|exists:branches,id',
+    'audiologist_id'          => 'required|exists:users,id',
+    'services'                => 'required|array|min:1',
+    'services.*.id'           => 'required|exists:services,id',
+    'services.*.quantity'     => 'required|integer|min:1',
+    'services.*.custom_price' => 'nullable|numeric|min:0',
+    'services.*.cov_value'    => 'nullable|numeric|min:0',
+    'services.*.cov_type'     => 'nullable|in:pct,amt',
+    'insurance_id'            => 'nullable|exists:insurances,id',
+    'authorization_number'    => 'nullable|string|max:255',
+
+    'with_ncf'               => 'nullable|boolean',
+    'ncf'                    => 'nullable|string|max:20',
+    'ncf_type'               => 'nullable|string|max:50',
+    'customer_rnc'           => 'nullable|string|max:20',
+    'customer_business_name' => 'nullable|string|max:255',
+]);
 
         DB::beginTransaction();
 
@@ -202,7 +209,6 @@ class InvoiceController extends Controller
             }
 
             $total = $subtotal - $insuranceDiscount;
-
             $invoice = Invoice::create([
                 'patient_id'           => $request->patient_id,
                 'user_id'              => Auth::id(),
@@ -214,7 +220,14 @@ class InvoiceController extends Controller
                 'total'                => $total,
                 'status'               => 'pendiente',
                 'authorization_number' => $request->authorization_number,
+                'with_ncf' => $request->boolean('with_ncf'),
+'ncf_type' => $request->ncf_type,
+'customer_rnc' => $request->customer_rnc,
+'customer_business_name' => $request->customer_business_name,
+'ncf' => $request->ncf,
+
             ]);
+            
 
             foreach ($items as $item) {
                 $item['invoice_id'] = $invoice->id;
@@ -234,10 +247,18 @@ class InvoiceController extends Controller
     }
 
     public function show(Invoice $invoice)
-    {
-        $invoice->load(['patient', 'user', 'branch', 'insurance', 'items.service']);
-        return view('invoices.show', compact('invoice'));
-    }
+{
+    $invoice->load([
+        'patient',
+        'user.role',
+        'branch',
+        'insurance',
+        'items.service',
+        'audiologist',
+    ]);
+
+    return view('invoices.show', compact('invoice'));
+}
 
     public function cancel(Invoice $invoice)
     {
@@ -278,4 +299,29 @@ class InvoiceController extends Controller
     {
         return response()->json(['id' => $service->id, 'name' => $service->name, 'price' => $service->price]);
     }
+
+    public function consultRnc($rnc)
+{
+    try {
+
+        $rnc = preg_replace('/[^0-9]/', '', $rnc);
+
+        $response = Http::timeout(15)
+            ->get('https://rnc.megaplus.com.do/api/consulta', [
+                'rnc' => $rnc
+            ]);
+
+        return response()->json(
+            $response->json(),
+            $response->status()
+        );
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'error' => true,
+            'mensaje' => $e->getMessage()
+        ], 500);
+    }
+}
 }

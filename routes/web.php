@@ -267,5 +267,10 @@ Route::middleware(['auth', 'role:audiologo'])->prefix('audiologist/reports')->na
     Route::get('clinical-records',[AudiologistReportController::class, 'clinicalRecords'])->name('clinical-records');
 });
 
+Route::get(
+    'api/rnc/{rnc}',
+    [InvoiceController::class, 'consultRnc']
+)->name('api.rnc');
+
 
 require __DIR__.'/auth.php';

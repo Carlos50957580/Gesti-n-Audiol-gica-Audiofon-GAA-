@@ -20,6 +20,11 @@ class Invoice extends Model
         'status',
         'authorization_number',
         'audiologist_id',
+        'with_ncf',
+        'ncf',
+        'ncf_type',
+        'customer_rnc',
+        'customer_business_name',
     ];
 
     protected $casts = [
