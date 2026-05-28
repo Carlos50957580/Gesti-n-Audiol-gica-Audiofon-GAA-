@@ -303,6 +303,11 @@
 <div style="font-size:.85rem;margin-top:.35rem;">
     <strong>NCF:</strong> {{ $invoice->ncf }}
 </div>
+
+<div style="font-size:.72rem;opacity:.9;line-height:1.4;margin-top:.25rem;">
+    Válido hasta 31-12-2026<br>
+    Válido para crédito fiscal
+</div>
 @endif
                     <div class="inv-date">
                         <i class="ri-calendar-line me-1" style="opacity:.7;"></i>
@@ -381,11 +386,19 @@
     </div>
 
     @if($invoice->ncf)
-    <div class="info-card-line">
-        <strong>NCF:</strong>
-        {{ $invoice->ncf }}
-    </div>
-    @endif
+<div class="info-card-line">
+    <strong>NCF:</strong>
+    {{ $invoice->ncf }}
+</div>
+
+<div class="info-card-line" style="font-size:.75rem;color:#0ab39c;">
+    Válido hasta 31-12-2026
+</div>
+
+<div class="info-card-line" style="font-size:.75rem;color:#0ab39c;">
+    Válido para crédito fiscal
+</div>
+@endif
 
     @if($invoice->customer_rnc)
     <div class="info-card-line">
@@ -725,6 +738,14 @@ tbody td{
 @if($invoice->ncf)
 <div class="center bold">
 {{ $invoice->ncf }}
+</div>
+
+<div class="center" style="font-size:11px;">
+Valido hasta 31-12-2026
+</div>
+
+<div class="center" style="font-size:11px;">
+Valido para credito fiscal
 </div>
 @endif
 
