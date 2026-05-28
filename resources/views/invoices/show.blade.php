@@ -319,27 +319,103 @@
                 <div class="info-grid">
 
                     {{-- Paciente --}}
-                    <div class="info-card">
-                        <div class="info-card-label">
-                            <i class="ri-user-heart-line text-primary"></i>Paciente
-                        </div>
-                        <div class="info-card-name">
-                            {{ $invoice->patient->first_name }} {{ $invoice->patient->last_name }}
-                        </div>
-                        <div class="info-card-line">
-                            <i class="ri-id-card-line"></i> {{ $invoice->patient->cedula }}
-                        </div>
-                        @if($invoice->patient->phone)
-                        <div class="info-card-line">
-                            <i class="ri-phone-line"></i> {{ $invoice->patient->phone }}
-                        </div>
-                        @endif
-                        @if($invoice->patient->email)
-                        <div class="info-card-line">
-                            <i class="ri-mail-line"></i> {{ $invoice->patient->email }}
-                        </div>
-                        @endif
-                    </div>
+<div class="info-card">
+    <div class="info-card-label">
+        <i class="ri-user-heart-line text-primary"></i>Paciente
+    </div>
+
+    <div class="info-card-name">
+        {{ $invoice->patient->first_name }}
+        {{ $invoice->patient->last_name }}
+    </div>
+
+    @if($invoice->patient->cedula)
+    <div class="info-card-line">
+        <strong>Cédula:</strong>
+        {{ $invoice->patient->cedula }}
+    </div>
+    @endif
+
+    @if($invoice->patient->phone)
+    <div class="info-card-line">
+        <strong>Teléfono:</strong>
+        {{ $invoice->patient->phone }}
+    </div>
+    @endif
+
+    @if($invoice->patient->address)
+    <div class="info-card-line">
+        <strong>Dirección:</strong>
+        {{ $invoice->patient->address }}
+    </div>
+    @endif
+
+    @if($invoice->patient->birth_date)
+    <div class="info-card-line">
+        <strong>Fecha Nac:</strong>
+        {{ \Carbon\Carbon::parse($invoice->patient->birth_date)->format('d/m/Y') }}
+    </div>
+    @endif
+
+    @if($invoice->patient->email)
+    <div class="info-card-line">
+        <strong>Email:</strong>
+        {{ $invoice->patient->email }}
+    </div>
+    @endif
+</div>
+
+
+{{-- Información Fiscal --}}
+@if(
+    $invoice->ncf ||
+    $invoice->customer_rnc ||
+    $invoice->customer_business_name ||
+    $invoice->insurance ||
+    $invoice->authorization_number
+)
+<div class="info-card">
+    <div class="info-card-label">
+        <i class="ri-file-list-3-line text-success"></i>
+        Información Fiscal
+    </div>
+
+    @if($invoice->ncf)
+    <div class="info-card-line">
+        <strong>NCF:</strong>
+        {{ $invoice->ncf }}
+    </div>
+    @endif
+
+    @if($invoice->customer_rnc)
+    <div class="info-card-line">
+        <strong>RNC:</strong>
+        {{ $invoice->customer_rnc }}
+    </div>
+    @endif
+
+    @if($invoice->customer_business_name)
+    <div class="info-card-line">
+        <strong>Razón Social:</strong>
+        {{ $invoice->customer_business_name }}
+    </div>
+    @endif
+
+    @if($invoice->insurance)
+    <div class="info-card-line">
+        <strong>Seguro:</strong>
+        {{ $invoice->insurance->name }}
+    </div>
+    @endif
+
+    @if($invoice->authorization_number)
+    <div class="info-card-line">
+        <strong>Autorización:</strong>
+        {{ $invoice->authorization_number }}
+    </div>
+    @endif
+</div>
+@endif
 
 
 
