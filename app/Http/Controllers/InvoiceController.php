@@ -125,16 +125,18 @@ class InvoiceController extends Controller
     $insurances = Insurance::where('active', 1)->orderBy('name')->get();
     $branches   = Branch::orderBy('name')->get();
 
-    // ✅ CORREGIDO: Obtener audiólogos por role_id
+    // ✅ CORREGIDO: Obtener audiólogos por role_id - SIN RESTRICCIÓN DE SUCURSAL
     $audiologistRole = \App\Models\Role::where('name', 'audiologist')->orWhere('name', 'audiologo')->first();
     $audiologists = collect();
     
     if ($audiologistRole) {
+        // 🔥 ELIMINAR o COMENTAR la restricción de sucursal
         $query = \App\Models\User::where('role_id', $audiologistRole->id);
         
-        if ($user->role->name !== 'admin') {
-            $query->where('branch_id', $user->branch_id);
-        }
+        // 🔥 COMENTAR ESTAS LÍNEAS PARA QUE LOS RECEPCIONISTAS VENA TODOS LOS AUDIÓLOGOS
+        // if ($user->role->name !== 'admin') {
+        //     $query->where('branch_id', $user->branch_id);
+        // }
         
         $audiologists = $query->orderBy('name')->get();
     }

@@ -265,39 +265,36 @@
             </div>
         </div>
 
-        {{-- Audiólogo --}}
-        <div class="inv-card">
-            <div class="inv-card-header">
-                <div class="card-icon bg-primary-subtle text-primary"><i class="ri-stethoscope-line"></i></div>
-                <h6>Audiólogo o medico Asignado</h6>
-            </div>
-            <div class="inv-card-body">
-                <div class="form-floating">
-                    <select name="audiologist_id" id="audiologist_id" class="form-select @error('audiologist_id') is-invalid @enderror">
-                        <option value="">— Seleccionar audiólogo/ medico —</option>
-                        @foreach($audiologists as $aud)
-                            <option value="{{ $aud->id }}" data-branch="{{ $aud->branch_id }}"
-                                    {{ old('audiologist_id') == $aud->id ? 'selected' : '' }}>
-                                {{ $aud->name }}
-                                @if(auth()->user()->role->name === 'admin')
-                                    — {{ $aud->branch->name ?? '' }}
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
-                    <label><i class="ri-user-heart-line me-1 text-muted"></i>Audiólogo</label>
-                    @error('audiologist_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div id="aud-pill" class="d-none mt-2 p-2 rounded d-flex align-items-center gap-2"
-                     style="background:linear-gradient(135deg,rgba(64,81,137,.05),rgba(10,179,156,.05));border:1px solid rgba(64,81,137,.15);">
-                    <div style="width:32px;height:32px;border-radius:.4rem;flex-shrink:0;background:linear-gradient(135deg,#405189,#0ab39c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:700;" id="aud-pill-av"></div>
-                    <div>
-                        <div style="font-size:.85rem;font-weight:700;color:#344563;" id="aud-pill-name"></div>
-                        <div style="font-size:.73rem;color:#8098bb;" id="aud-pill-branch"></div>
-                    </div>
-                </div>
+       {{-- Audiólogo --}}
+<div class="inv-card">
+    <div class="inv-card-header">
+        <div class="card-icon bg-primary-subtle text-primary"><i class="ri-stethoscope-line"></i></div>
+        <h6>Audiólogo o médico Asignado</h6>
+    </div>
+    <div class="inv-card-body">
+        <div class="form-floating">
+            <select name="audiologist_id" id="audiologist_id" class="form-select @error('audiologist_id') is-invalid @enderror">
+                <option value="">— Seleccionar audiólogo/medico —</option>
+                @foreach($audiologists as $aud)
+                    <option value="{{ $aud->id }}" data-branch="{{ $aud->branch_id }}"
+                            {{ old('audiologist_id') == $aud->id ? 'selected' : '' }}>
+                        {{ $aud->name }}
+                    </option>
+                @endforeach
+            </select>
+            <label><i class="ri-user-heart-line me-1 text-muted"></i>Audiólogo</label>
+            @error('audiologist_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div id="aud-pill" class="d-none mt-2 p-2 rounded d-flex align-items-center gap-2"
+             style="background:linear-gradient(135deg,rgba(64,81,137,.05),rgba(10,179,156,.05));border:1px solid rgba(64,81,137,.15);">
+            <div style="width:32px;height:32px;border-radius:.4rem;flex-shrink:0;background:linear-gradient(135deg,#405189,#0ab39c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:700;" id="aud-pill-av"></div>
+            <div>
+                <div style="font-size:.85rem;font-weight:700;color:#344563;" id="aud-pill-name"></div>
+                <div style="font-size:.73rem;color:#8098bb;" id="aud-pill-branch"></div>
             </div>
         </div>
+    </div>
+</div>
 
         <div class="inv-card">
     <div class="inv-card-header">
@@ -940,19 +937,28 @@ document.getElementById('invoice-form').addEventListener('submit', function (e) 
     document.getElementById('btn-submit').disabled = true;
 });
 
-/* ══ Audiólogo pill ══ */
 document.getElementById('audiologist_id').addEventListener('change', function () {
     const opt    = this.options[this.selectedIndex];
     const pill   = document.getElementById('aud-pill');
-    const name   = opt.text?.split('—')[0]?.trim() || '';
-    const branch = opt.text?.split('—')[1]?.trim() || '';
-    if (!this.value) { pill.classList.add('d-none'); return; }
+    const name   = opt.text?.trim() || '';
+    const branchName = opt.dataset.branch ? (opt.dataset.branch === 'null' ? '' : opt.dataset.branch) : '';
+    
+    if (!this.value) { 
+        pill.classList.add('d-none'); 
+        return; 
+    }
+    
     const initials = name.split(' ').slice(0,2).map(w => w[0]?.toUpperCase() || '').join('');
-    document.getElementById('aud-pill-av').textContent     = initials;
-    document.getElementById('aud-pill-name').textContent   = name;
-    document.getElementById('aud-pill-branch').textContent = branch
-        ? '📍 ' + branch
-        : '📍 ' + (document.getElementById('branch_id').options[document.getElementById('branch_id').selectedIndex]?.text || '');
+    document.getElementById('aud-pill-av').textContent = initials;
+    document.getElementById('aud-pill-name').textContent = name;
+    
+    // Opcional: Si quieres mostrar la sucursal en el pill (sin mostrarla en el select)
+    if (branchName && branchName !== 'null') {
+        document.getElementById('aud-pill-branch').textContent = '📍 ' + branchName;
+    } else {
+        document.getElementById('aud-pill-branch').textContent = '';
+    }
+    
     pill.classList.remove('d-none');
 });
 
