@@ -81,4 +81,25 @@ public function clinicalRecords()
     return $this->hasMany(ClinicalRecord::class, 'audiologist_id');
 }
 
+public function audiologistFeesSettings()
+{
+    return $this->hasOne(AudiologistFeeSetting::class, 'audiologist_id');
+}
+
+public function audiologistFees()
+{
+    return $this->hasMany(AudiologistFee::class, 'audiologist_id');
+}
+
+public function audiologistFeePayments()
+{
+    return $this->hasMany(AudiologistFeePayment::class, 'audiologist_id');
+}
+
+// Helper para verificar si es audiólogo
+public function isAudiologist()
+{
+    return $this->role === 'audiologist' || $this->hasRole('audiologist');
+}
+
 }

@@ -17,6 +17,9 @@ use App\Http\Controllers\ReceptionistReportController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AudiologistReportController;
 use App\Http\Controllers\ClinicalRecordDocumentController;
+use App\Http\Controllers\AudiologistFeeController;
+use App\Http\Controllers\AudiologistFeeSettingController;
+use App\Http\Controllers\AudiologistFeePaymentController;
 
 Route::get('/', function () {
     return view('/auth/login');
@@ -271,6 +274,30 @@ Route::get(
     'api/rnc/{rnc}',
     [InvoiceController::class, 'consultRnc']
 )->name('api.rnc');
+
+// Honorarios de audiólogos
+Route::prefix('audiologist-fees')->group(function () {
+    Route::get('/', [AudiologistFeeController::class, 'index'])->name('audiologist-fees.index');
+    Route::post('/calculate', [AudiologistFeeController::class, 'calculateFee'])->name('audiologist-fees.calculate');
+    Route::post('/', [AudiologistFeeController::class, 'store'])->name('audiologist-fees.store');
+    Route::put('/{id}', [AudiologistFeeController::class, 'update'])->name('audiologist-fees.update');
+    Route::delete('/{id}', [AudiologistFeeController::class, 'destroy'])->name('audiologist-fees.destroy');
+    Route::get('/invoice/{invoiceId}', [AudiologistFeeController::class, 'getInvoiceFees'])->name('audiologist-fees.invoice');
+    
+    // Configuración
+    Route::get('/settings', [AudiologistFeeSettingController::class, 'index'])->name('audiologist-fees.settings');
+    Route::post('/settings', [AudiologistFeeSettingController::class, 'store'])->name('audiologist-fees.settings.store');
+    Route::put('/settings/{id}', [AudiologistFeeSettingController::class, 'update'])->name('audiologist-fees.settings.update');
+    Route::delete('/settings/{id}', [AudiologistFeeSettingController::class, 'destroy'])->name('audiologist-fees.settings.destroy');
+    Route::get('/settings/{audiologistId}/get', [AudiologistFeeSettingController::class, 'getSetting'])->name('audiologist-fees.settings.get');
+    
+    // Pagos
+    Route::get('/payments', [AudiologistFeePaymentController::class, 'index'])->name('audiologist-fees.payments');
+    Route::get('/payments/pending/{audiologistId}', [AudiologistFeePaymentController::class, 'getPendingFees'])->name('audiologist-fees.payments.pending');
+    Route::post('/payments', [AudiologistFeePaymentController::class, 'store'])->name('audiologist-fees.payments.store');
+    Route::get('/payments/{id}', [AudiologistFeePaymentController::class, 'show'])->name('audiologist-fees.payments.show');
+    Route::delete('/payments/{id}', [AudiologistFeePaymentController::class, 'destroy'])->name('audiologist-fees.payments.destroy');
+});
 
 
 require __DIR__.'/auth.php';

@@ -269,12 +269,12 @@
         <div class="inv-card">
             <div class="inv-card-header">
                 <div class="card-icon bg-primary-subtle text-primary"><i class="ri-stethoscope-line"></i></div>
-                <h6>Audiólogo Asignado</h6>
+                <h6>Audiólogo o medico Asignado</h6>
             </div>
             <div class="inv-card-body">
                 <div class="form-floating">
                     <select name="audiologist_id" id="audiologist_id" class="form-select @error('audiologist_id') is-invalid @enderror">
-                        <option value="">— Seleccionar audiólogo —</option>
+                        <option value="">— Seleccionar audiólogo/ medico —</option>
                         @foreach($audiologists as $aud)
                             <option value="{{ $aud->id }}" data-branch="{{ $aud->branch_id }}"
                                     {{ old('audiologist_id') == $aud->id ? 'selected' : '' }}>

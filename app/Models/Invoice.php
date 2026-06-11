@@ -91,4 +91,9 @@ public function audiologist()
             default      => '<span class="badge bg-secondary">Desconocido</span>',
         };
     }
+
+    public function audiologistFee()
+{
+    return $this->hasOne(AudiologistFee::class);
+}
 }

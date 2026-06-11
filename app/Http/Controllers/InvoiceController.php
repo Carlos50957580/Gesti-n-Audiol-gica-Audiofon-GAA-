@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use App\Services\AudiologistFeeService;
 
 class InvoiceController extends Controller
 {
@@ -117,42 +118,50 @@ class InvoiceController extends Controller
 }
 
     public function create()
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
 
-        $services   = Service::where('active', 1)->orderBy('name')->get();
-        $insurances = Insurance::where('active', 1)->orderBy('name')->get();
-        $branches   = Branch::orderBy('name')->get();
+    $services   = Service::where('active', 1)->orderBy('name')->get();
+    $insurances = Insurance::where('active', 1)->orderBy('name')->get();
+    $branches   = Branch::orderBy('name')->get();
 
-        $audiologists = \App\Models\User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
-            ->when($user->role->name !== 'admin', fn($q) => $q->where('branch_id', $user->branch_id))
-            ->orderBy('name')
-            ->get();
-
-        return view('invoices.create', compact('services', 'insurances', 'branches', 'audiologists'));
+    // ✅ CORREGIDO: Obtener audiólogos por role_id
+    $audiologistRole = \App\Models\Role::where('name', 'audiologist')->orWhere('name', 'audiologo')->first();
+    $audiologists = collect();
+    
+    if ($audiologistRole) {
+        $query = \App\Models\User::where('role_id', $audiologistRole->id);
+        
+        if ($user->role->name !== 'admin') {
+            $query->where('branch_id', $user->branch_id);
+        }
+        
+        $audiologists = $query->orderBy('name')->get();
     }
+
+    return view('invoices.create', compact('services', 'insurances', 'branches', 'audiologists'));
+}
 
     public function store(Request $request)
     {
         $request->validate([
-    'patient_id'              => 'required|exists:patients,id',
-    'branch_id'               => 'required|exists:branches,id',
-    'audiologist_id'          => 'required|exists:users,id',
-    'services'                => 'required|array|min:1',
-    'services.*.id'           => 'required|exists:services,id',
-    'services.*.quantity'     => 'required|integer|min:1',
-    'services.*.custom_price' => 'nullable|numeric|min:0',
-    'services.*.cov_value'    => 'nullable|numeric|min:0',
-    'services.*.cov_type'     => 'nullable|in:pct,amt',
-    'insurance_id'            => 'nullable|exists:insurances,id',
-    'authorization_number'    => 'nullable|string|max:255',
-
-    'with_ncf'               => 'nullable|boolean',
-    'ncf'                    => 'nullable|string|max:20',
-    'ncf_type'               => 'nullable|string|max:50',
-    'customer_rnc'           => 'nullable|string|max:20',
-    'customer_business_name' => 'nullable|string|max:255',
-]);
+            'patient_id'              => 'required|exists:patients,id',
+            'branch_id'               => 'required|exists:branches,id',
+            'audiologist_id'          => 'required|exists:users,id',
+            'services'                => 'required|array|min:1',
+            'services.*.id'           => 'required|exists:services,id',
+            'services.*.quantity'     => 'required|integer|min:1',
+            'services.*.custom_price' => 'nullable|numeric|min:0',
+            'services.*.cov_value'    => 'nullable|numeric|min:0',
+            'services.*.cov_type'     => 'nullable|in:pct,amt',
+            'insurance_id'            => 'nullable|exists:insurances,id',
+            'authorization_number'    => 'nullable|string|max:255',
+            'with_ncf'               => 'nullable|boolean',
+            'ncf'                    => 'nullable|string|max:20',
+            'ncf_type'               => 'nullable|string|max:50',
+            'customer_rnc'           => 'nullable|string|max:20',
+            'customer_business_name' => 'nullable|string|max:255',
+        ]);
 
         DB::beginTransaction();
 
@@ -199,7 +208,7 @@ class InvoiceController extends Controller
 
                 $items[] = [
                     'service_id'          => $service->id,
-                    'price'               => $price,        // precio real cobrado
+                    'price'               => $price,
                     'quantity'            => $qty,
                     'subtotal'            => $lineSubtotal,
                     'coverage_percentage' => $coveragePct,
@@ -209,6 +218,7 @@ class InvoiceController extends Controller
             }
 
             $total = $subtotal - $insuranceDiscount;
+            
             $invoice = Invoice::create([
                 'patient_id'           => $request->patient_id,
                 'user_id'              => Auth::id(),
@@ -221,18 +231,42 @@ class InvoiceController extends Controller
                 'status'               => 'pendiente',
                 'authorization_number' => $request->authorization_number,
                 'with_ncf' => $request->boolean('with_ncf'),
-'ncf_type' => $request->ncf_type,
-'customer_rnc' => $request->customer_rnc,
-'customer_business_name' => $request->customer_business_name,
-'ncf' => $request->ncf,
-
+                'ncf_type' => $request->ncf_type,
+                'customer_rnc' => $request->customer_rnc,
+                'customer_business_name' => $request->customer_business_name,
+                'ncf' => $request->ncf,
             ]);
-            
 
             foreach ($items as $item) {
                 $item['invoice_id'] = $invoice->id;
                 InvoiceItem::create($item);
             }
+
+            // ═══════════════════════════════════════════════════════════
+            // 👇 **AQUÍ SE AGREGA EL CÁLCULO DE HONORARIOS** 👇
+            // ═══════════════════════════════════════════════════════════
+            
+            // Crear el servicio de honorarios y calcular automáticamente
+            $feeService = new AudiologistFeeService();
+            $fee = $feeService->calculateAndCreateFee($invoice);
+            
+            // Opcional: Log para verificar que se creó correctamente
+            if ($fee) {
+                \Illuminate\Support\Facades\Log::info('Honorario creado automáticamente', [
+                    'invoice_id' => $invoice->id,
+                    'audiologist_id' => $invoice->audiologist_id,
+                    'fee_amount' => $fee->fee_amount
+                ]);
+            } else {
+                \Illuminate\Support\Facades\Log::warning('No se pudo crear honorario', [
+                    'invoice_id' => $invoice->id,
+                    'audiologist_id' => $invoice->audiologist_id
+                ]);
+            }
+            
+            // ═══════════════════════════════════════════════════════════
+            // 👆 **FIN DEL CÓDIGO AGREGADO** 👆
+            // ═══════════════════════════════════════════════════════════
 
             DB::commit();
 
