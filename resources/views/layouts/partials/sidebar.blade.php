@@ -178,7 +178,7 @@
                            aria-expanded="{{ request()->routeIs('audiologist-fees.*') ? 'true' : 'false' }}" 
                            aria-controls="sidebarAudiologistFees">
                             <i class="ri-money-dollar-circle-line"></i> 
-                            <span data-key="t-honorarios-parent">Honorarios Audiólogos</span>
+                            <span data-key="t-honorarios-parent">Honorarios</span>
                         </a>
                         
                         <div class="collapse {{ request()->routeIs('audiologist-fees.*') ? 'show' : '' }}" id="sidebarAudiologistFees">
