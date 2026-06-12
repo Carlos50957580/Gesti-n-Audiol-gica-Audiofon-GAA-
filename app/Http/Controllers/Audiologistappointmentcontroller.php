@@ -110,6 +110,66 @@ class AudiologistAppointmentController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function show($id)
+{
+    $payment = AudiologistFeePayment::with([
+        'audiologist',
+        'fees.invoice.patient',
+        'fees.invoice.items.service',
+        'fees.invoice.branch',
+        'fees.invoice.user'
+    ])->findOrFail($id);
+    
+    // Procesar los datos para enviar al frontend
+    $feesData = $payment->fees->map(function($fee) {
+        $invoice = $fee->invoice;
+        $services = $invoice->items->map(function($item) {
+            return [
+                'service_name' => $item->service->name,
+                'quantity' => $item->quantity,
+                'price' => $item->price,
+                'subtotal' => $item->subtotal,
+                'insurance_amount' => $item->insurance_amount,
+                'patient_amount' => $item->patient_amount,
+            ];
+        });
+        
+        return [
+            'id' => $fee->id,
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'fee_amount' => $fee->fee_amount,
+            'amount_applied' => $fee->pivot->amount_applied,
+            'invoice_total' => $invoice->total,
+            'subtotal' => $invoice->subtotal,
+            'insurance_discount' => $invoice->insurance_discount,
+            'patient' => [
+                'name' => $invoice->patient->first_name . ' ' . $invoice->patient->last_name,
+                'cedula' => $invoice->patient->cedula,
+                'phone' => $invoice->patient->phone,
+            ],
+            'services' => $services,
+            'branch' => $invoice->branch->name ?? 'N/A',
+            'created_by' => $invoice->user->name ?? 'N/A',
+            'created_at' => $invoice->created_at->format('d/m/Y H:i'),
+        ];
+    });
+    
+    return response()->json([
+        'id' => $payment->id,
+        'amount' => $payment->amount,
+        'payment_date' => $payment->payment_date->format('d/m/Y'),
+        'payment_method' => $payment->payment_method,
+        'reference_number' => $payment->reference_number,
+        'notes' => $payment->notes,
+        'created_at' => $payment->created_at->format('d/m/Y H:i'),
+        'audiologist' => [
+            'name' => $payment->audiologist->name,
+        ],
+        'fees' => $feesData,
+    ]);
+}
+
     // ── SHOW DATA (AJAX — detalle de paciente) ────────────────────────────────
     public function showData(Appointment $appointment)
     {

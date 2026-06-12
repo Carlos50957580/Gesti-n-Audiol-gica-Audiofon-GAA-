@@ -362,9 +362,9 @@
     </div>
 </div>
 
-{{-- MODAL: Ver Detalle Pago --}}
+{{-- MODAL: Ver Detalle Pago (MEJORADO) --}}
 <div class="modal fade" id="showDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:500px;">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width:900px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius:.75rem;overflow:hidden;">
             <div class="modal-header mh-info py-3">
                 <h5 class="modal-title d-flex align-items-center gap-2">
@@ -372,7 +372,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4" id="detail-content">
+            <div class="modal-body p-4" id="detail-content" style="max-height:70vh; overflow-y:auto;">
                 <div class="text-center mb-3">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Cargando...</span>
@@ -381,10 +381,40 @@
             </div>
             <div class="modal-footer border-0 pb-3 px-4">
                 <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="printPaymentDetail()">
+                    <i class="ri-printer-line me-1"></i> Imprimir
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+{{-- ESTILOS PARA IMPRESIÓN --}}
+<style media="print">
+    @page {
+        size: letter;
+        margin: 2cm;
+    }
+    body * {
+        visibility: hidden;
+    }
+    .print-area, .print-area * {
+        visibility: visible;
+    }
+    .print-area {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+    .no-print {
+        display: none !important;
+    }
+    .modal-footer, .btn-close, .modal-header .btn-light {
+        display: none !important;
+    }
+</style>
 
 {{-- MODAL: Eliminar Pago --}}
 <div class="modal fade" id="deleteModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
@@ -763,7 +793,7 @@ async function savePayment() {
     }
 }
 
-// ── Show Payment Detail ───────────────────────────────────
+// ── Show Payment Detail (MEJORADO) ───────────────────────────────────
 async function showPaymentDetail(id) {
     showDetailModal.show();
     const detailContent = document.getElementById('detail-content');
@@ -798,93 +828,250 @@ async function showPaymentDetail(id) {
             other: 'ri-more-line'
         };
         
+        // Construir HTML de los fees y servicios
         let feesHtml = '';
+        let totalServicios = 0;
+        
         if (payment.fees && payment.fees.length > 0) {
-            payment.fees.forEach(fee => {
+            payment.fees.forEach((fee, index) => {
+                totalServicios += fee.amount_applied;
+                
                 feesHtml += `
-                    <div class="detail-row">
-                        <div class="detail-icon bg-primary-subtle text-primary">
-                            <i class="ri-receipt-line"></i>
+                    <div class="card mb-3 border shadow-sm">
+                        <div class="card-header bg-light">
+                            <strong>Factura: ${fee.invoice_number}</strong>
+                            <span class="float-end">Monto pagado: <strong class="text-success">RD$ ${parseFloat(fee.amount_applied).toLocaleString('es-DO', {minimumFractionDigits:2})}</strong></span>
                         </div>
-                        <div class="flex-grow-1">
-                            <div class="detail-lbl">Factura FAC-${String(fee.invoice_id).padStart(6, '0')}</div>
-                            <div class="detail-val">RD$ ${parseFloat(fee.pivot.amount_applied).toLocaleString('es-DO', {minimumFractionDigits:2})}</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="detail-row p-0 border-0">
+                                        <div class="detail-icon bg-warning-subtle text-warning" style="width:28px;height:28px;">
+                                            <i class="ri-user-line"></i>
+                                        </div>
+                                        <div>
+                                            <div class="detail-lbl">Paciente</div>
+                                            <div class="detail-val">${fee.patient?.name || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-row p-0 border-0">
+                                        <div class="detail-icon bg-secondary-subtle text-secondary" style="width:28px;height:28px;">
+                                            <i class="ri-id-card-line"></i>
+                                        </div>
+                                        <div>
+                                            <div class="detail-lbl">Cédula</div>
+                                            <div class="detail-val">${fee.patient?.cedula || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="detail-row p-0 border-0">
+                                        <div class="detail-icon bg-info-subtle text-info" style="width:28px;height:28px;">
+                                            <i class="ri-store-line"></i>
+                                        </div>
+                                        <div>
+                                            <div class="detail-lbl">Sucursal</div>
+                                            <div class="detail-val">${fee.branch || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-row p-0 border-0">
+                                        <div class="detail-icon bg-dark-subtle text-dark" style="width:28px;height:28px;">
+                                            <i class="ri-user-settings-line"></i>
+                                        </div>
+                                        <div>
+                                            <div class="detail-lbl">Registrado por</div>
+                                            <div class="detail-val">${fee.created_by || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section-label mt-2 mb-2">Servicios Realizados</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" style="font-size:.8rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Servicio</th>
+                                            <th class="text-center">Cant.</th>
+                                            <th class="text-end">Precio</th>
+                                            <th class="text-end">Subtotal</th>
+                                            <th class="text-end">Seguro</th>
+                                            <th class="text-end">Paciente</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${fee.services.map(service => `
+                                            <tr>
+                                                <td>${service.service_name}</td>
+                                                <td class="text-center">${service.quantity}</td>
+                                                <td class="text-end">RD$ ${parseFloat(service.price).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                                                <td class="text-end">RD$ ${parseFloat(service.subtotal).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                                                <td class="text-end">RD$ ${parseFloat(service.insurance_amount || 0).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                                                <td class="text-end">RD$ ${parseFloat(service.patient_amount || 0).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <th colspan="3" class="text-end">Totales:</th>
+                                            <th class="text-end">RD$ ${parseFloat(fee.subtotal).toLocaleString('es-DO', {minimumFractionDigits:2})}</th>
+                                            <th class="text-end">RD$ ${parseFloat(fee.insurance_discount).toLocaleString('es-DO', {minimumFractionDigits:2})}</th>
+                                            <th class="text-end">RD$ ${parseFloat(fee.invoice_total).toLocaleString('es-DO', {minimumFractionDigits:2})}</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-info mt-2 mb-0">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="ri-money-dollar-circle-line"></i> Honorario del médico:</span>
+                                    <strong>RD$ ${parseFloat(fee.fee_amount).toLocaleString('es-DO', {minimumFractionDigits:2})}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span><i class="ri-bank-card-line"></i> Monto pagado en este pago:</span>
+                                    <strong class="text-success">RD$ ${parseFloat(fee.amount_applied).toLocaleString('es-DO', {minimumFractionDigits:2})}</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
             });
         }
         
-        if (detailContent) {
-            detailContent.innerHTML = `
+        // HTML completo del modal
+        const html = `
+            <div class="print-area" id="print-area">
                 <div class="text-center mb-4">
-                    <div class="stat-icon mx-auto mb-2 bg-success-subtle text-success" style="width:60px;height:60px;font-size:1.5rem;">
-                        <i class="ri-bank-card-line"></i>
-                    </div>
-                    <h5 class="mb-1">Pago #${payment.id}</h5>
-                    <span class="method-badge method-${payment.payment_method}">
-                        <i class="${methodIcons[payment.payment_method]}"></i>
-                        ${methodNames[payment.payment_method]}
-                    </span>
+                    <img src="{{ asset('images/logo.png') }}" alt="Logo" style="max-height:60px;" onerror="this.style.display='none'">
+                    <h4 class="mt-2">Comprobante de Pago a Médico</h4>
+                    <p class="text-muted">Pago #${payment.id} - ${payment.payment_date}</p>
                 </div>
                 
-                <div class="detail-row">
-                    <div class="detail-icon bg-warning-subtle text-warning"><i class="ri-user-star-line"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="detail-lbl">Medico</div>
-                        <div class="detail-val">${payment.audiologist?.name || 'N/A'}</div>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="mb-3"><i class="ri-information-line"></i> Información del Pago</h6>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-primary-subtle text-primary" style="width:28px;height:28px;">
+                                        <i class="ri-user-star-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Médico</div>
+                                        <div class="detail-val">${payment.audiologist?.name || 'N/A'}</div>
+                                    </div>
+                                </div>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-danger-subtle text-danger" style="width:28px;height:28px;">
+                                        <i class="ri-money-dollar-circle-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Monto Total</div>
+                                        <div class="detail-val fs-5 fw-bold text-primary">RD$ ${parseFloat(payment.amount).toLocaleString('es-DO', {minimumFractionDigits:2})}</div>
+                                    </div>
+                                </div>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-info-subtle text-info" style="width:28px;height:28px;">
+                                        <i class="ri-bank-card-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Método de Pago</div>
+                                        <div class="detail-val">
+                                            <span class="method-badge method-${payment.payment_method}">
+                                                <i class="${methodIcons[payment.payment_method]}"></i>
+                                                ${methodNames[payment.payment_method]}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-secondary-subtle text-secondary" style="width:28px;height:28px;">
+                                        <i class="ri-calendar-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Fecha de Pago</div>
+                                        <div class="detail-val">${payment.payment_date}</div>
+                                    </div>
+                                </div>
+                                ${payment.reference_number ? `
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-dark-subtle text-dark" style="width:28px;height:28px;">
+                                        <i class="ri-survey-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Referencia</div>
+                                        <div class="detail-val">${escapeHtml(payment.reference_number)}</div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                ${payment.notes ? `
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-warning-subtle text-warning" style="width:28px;height:28px;">
+                                        <i class="ri-file-text-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Notas</div>
+                                        <div class="detail-val">${escapeHtml(payment.notes)}</div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="mb-3"><i class="ri-receipt-line"></i> Resumen</h6>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-success-subtle text-success" style="width:28px;height:28px;">
+                                        <i class="ri-receipt-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Facturas Pagadas</div>
+                                        <div class="detail-val">${payment.fees?.length || 0}</div>
+                                    </div>
+                                </div>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-primary-subtle text-primary" style="width:28px;height:28px;">
+                                        <i class="ri-money-dollar-circle-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Total Honorarios Pagados</div>
+                                        <div class="detail-val fw-bold text-success">RD$ ${parseFloat(payment.amount).toLocaleString('es-DO', {minimumFractionDigits:2})}</div>
+                                    </div>
+                                </div>
+                                <div class="detail-row p-0 border-0">
+                                    <div class="detail-icon bg-info-subtle text-info" style="width:28px;height:28px;">
+                                        <i class="ri-time-line"></i>
+                                    </div>
+                                    <div>
+                                        <div class="detail-lbl">Registrado</div>
+                                        <div class="detail-val">${payment.created_at}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="detail-row">
-                    <div class="detail-icon bg-danger-subtle text-danger"><i class="ri-money-dollar-circle-line"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="detail-lbl">Monto Total</div>
-                        <div class="detail-val fs-4 fw-bold text-primary">RD$ ${parseFloat(payment.amount).toLocaleString('es-DO', {minimumFractionDigits:2})}</div>
-                    </div>
-                </div>
-                
-                <div class="detail-row">
-                    <div class="detail-icon bg-info-subtle text-info"><i class="ri-calendar-line"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="detail-lbl">Fecha de Pago</div>
-                        <div class="detail-val">${new Date(payment.payment_date).toLocaleDateString('es-DO')}</div>
-                    </div>
-                </div>
-                
-                ${payment.reference_number ? `
-                <div class="detail-row">
-                    <div class="detail-icon bg-secondary-subtle text-secondary"><i class="ri-survey-line"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="detail-lbl">Referencia</div>
-                        <div class="detail-val">${escapeHtml(payment.reference_number)}</div>
-                    </div>
-                </div>
-                ` : ''}
-                
-                ${payment.notes ? `
-                <div class="detail-row">
-                    <div class="detail-icon bg-dark-subtle text-dark"><i class="ri-file-text-line"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="detail-lbl">Notas</div>
-                        <div class="detail-val">${escapeHtml(payment.notes)}</div>
-                    </div>
-                </div>
-                ` : ''}
-                
-                ${feesHtml ? `
-                <div class="section-label mt-3"><i class="ri-receipt-line me-1"></i>Honorarios Pagados</div>
+                <h6 class="mb-3"><i class="ri-receipt-line"></i> Detalle de Facturas Pagadas</h6>
                 ${feesHtml}
-                ` : ''}
                 
-                <div class="detail-row">
-                    <div class="detail-icon bg-success-subtle text-success"><i class="ri-time-line"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="detail-lbl">Registrado</div>
-                        <div class="detail-val">${new Date(payment.created_at).toLocaleString('es-DO')}</div>
-                    </div>
+                <div class="text-center mt-4 pt-3 border-top">
+                    <small class="text-muted">Documento generado el ${new Date().toLocaleString('es-DO')}</small>
                 </div>
-            `;
+            </div>
+        `;
+        
+        if (detailContent) {
+            detailContent.innerHTML = html;
         }
         
     } catch (error) {
@@ -901,6 +1088,110 @@ async function showPaymentDetail(id) {
             `;
         }
     }
+}
+
+// ── Función para imprimir ───────────────────────────────────
+function printPaymentDetail() {
+    const printContent = document.getElementById('print-area');
+    if (!printContent) return;
+    
+    const originalTitle = document.title;
+    document.title = 'Comprobante de Pago';
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Comprobante de Pago</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" rel="stylesheet">
+            <style>
+                @page {
+                    size: letter;
+                    margin: 2cm;
+                }
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    padding: 20px;
+                }
+                .detail-row {
+                    display: flex;
+                    gap: 0.75rem;
+                    align-items: flex-start;
+                    padding: 0.5rem 0;
+                    border-bottom: 1px solid #f3f5f9;
+                }
+                .detail-row:last-child {
+                    border-bottom: none;
+                }
+                .detail-icon {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 0.4rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    font-size: 0.9rem;
+                }
+                .detail-lbl {
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: #8098bb;
+                }
+                .detail-val {
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    color: #344563;
+                }
+                .method-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    padding: 0.2rem 0.6rem;
+                    border-radius: 2rem;
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                }
+                .method-cash { background: #d1fae5; color: #065f46; }
+                .method-bank_transfer { background: #e0e7ff; color: #3730a3; }
+                .method-check { background: #fef3c7; color: #92400e; }
+                .method-other { background: #e5e7eb; color: #374151; }
+                .section-label {
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    color: #8098bb;
+                    border-bottom: 1px solid #e9ecef;
+                    padding-bottom: 0.4rem;
+                    margin-bottom: 0.9rem;
+                }
+                @media print {
+                    .no-print { display: none !important; }
+                    body { padding: 0; }
+                }
+            </style>
+        </head>
+        <body>
+            ${printContent.outerHTML}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    window.onafterprint = function() {
+                        window.close();
+                    };
+                }
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    
+    document.title = originalTitle;
 }
 
 // ── Delete Payment ─────────────────────────────────────────

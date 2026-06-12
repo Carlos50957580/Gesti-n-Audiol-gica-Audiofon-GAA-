@@ -56,6 +56,50 @@ class AudiologistFeeController extends Controller
         
         return view('audiologist-fees.index', compact('fees', 'audiologists', 'stats'));
     }
+
+    public function show($id)
+{
+    $fee = AudiologistFee::with([
+        'audiologist', 
+        'payments',
+        'invoice.patient',
+        'invoice.items.service',
+        'invoice.branch',
+        'invoice.user'
+    ])->findOrFail($id);
+    
+    // Obtener los servicios de la factura
+    $services = $fee->invoice->items->map(function($item) {
+        return [
+            'service_name' => $item->service->name,
+            'quantity' => $item->quantity,
+            'price' => $item->price,
+            'subtotal' => $item->subtotal,
+            'coverage_percentage' => $item->coverage_percentage,
+            'insurance_amount' => $item->insurance_amount,
+            'patient_amount' => $item->patient_amount,
+        ];
+    });
+    
+    return response()->json([
+        'id' => $fee->id,
+        'audiologist' => $fee->audiologist,
+        'invoice' => $fee->invoice,
+        'invoice_total' => $fee->invoice_total,
+        'calculation_type' => $fee->calculation_type,
+        'calculation_value' => $fee->calculation_value,
+        'fee_amount' => $fee->fee_amount,
+        'status' => $fee->status,
+        'payment_date' => $fee->payment_date,
+        'notes' => $fee->notes,
+        'created_at' => $fee->created_at,
+        'payments' => $fee->payments,
+        'patient' => $fee->invoice->patient,
+        'services' => $services,
+        'branch' => $fee->invoice->branch,
+        'created_by' => $fee->invoice->user,
+    ]);
+}
     
     public function calculateFee(Request $request)
     {

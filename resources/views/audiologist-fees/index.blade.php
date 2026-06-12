@@ -250,17 +250,20 @@
                                 </span>
                             </td>
                             <td>{{ $fee->created_at->format('d/m/Y') }}</td>
-                            <td class="text-center">
-                                <div class="d-flex gap-1 justify-content-center">
-                                    
-                                    @if($fee->status === 'pending')
-                                    
-                                    <button type="button" class="btn btn-action bg-danger-subtle text-danger"
-                                            title="Eliminar" onclick="openDeleteModal({{ $fee->id }})">
-                                        <i class="ri-delete-bin-fill fs-13"></i>
-                                    </button>
-                                    @endif
-                                </div>
+                           <td class="text-center">
+    <div class="d-flex gap-1 justify-content-center">
+        <button type="button" class="btn btn-action bg-info-subtle text-info"
+                title="Ver detalle" onclick="openShowModal({{ $fee->id }})">
+            <i class="ri-eye-fill fs-13"></i>
+        </button>
+        @if($fee->status === 'pending')
+        <button type="button" class="btn btn-action bg-danger-subtle text-danger"
+                title="Eliminar" onclick="openDeleteModal({{ $fee->id }})">
+            <i class="ri-delete-bin-fill fs-13"></i>
+        </button>
+        @endif
+    </div>
+</td>
                             </td>
                         </tr>
                         @empty
@@ -293,9 +296,9 @@
 </div>
 </div>
 
-{{-- ══════════════════════ MODAL: Ver Detalle ══════════════════════ --}}
+{{-- ══════════════════════ MODAL: Ver Detalle (MEJORADO) ══════════════════════ --}}
 <div class="modal fade" id="showModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:450px;">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width:700px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius:.75rem;overflow:hidden;">
             <div class="modal-header mh-info py-3">
                 <h5 class="modal-title d-flex align-items-center gap-2">
@@ -303,12 +306,14 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body p-4" style="max-height:70vh; overflow-y:auto;">
                 <div class="text-center mb-4" id="show-status-container"></div>
                 
+                {{-- Información del Honorario --}}
+                <div class="section-label mb-2">Información del Honorario</div>
                 <div class="detail-row">
                     <div class="detail-icon bg-primary-subtle text-primary"><i class="ri-receipt-line"></i></div>
-                    <div>
+                    <div class="flex-grow-1">
                         <div class="detail-lbl">Factura</div>
                         <div class="detail-val fw-semibold" id="show-invoice">—</div>
                     </div>
@@ -316,62 +321,136 @@
                 
                 <div class="detail-row">
                     <div class="detail-icon bg-success-subtle text-success"><i class="ri-user-star-line"></i></div>
-                    <div>
-                        <div class="detail-lbl">Medicos</div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Audiólogo/Medico</div>
                         <div class="detail-val" id="show-audiologist">—</div>
                     </div>
                 </div>
                 
                 <div class="detail-row">
                     <div class="detail-icon bg-warning-subtle text-warning"><i class="ri-money-dollar-circle-line"></i></div>
-                    <div>
-                        <div class="detail-lbl">Total Factura</div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Total Factura (Subtotal)</div>
                         <div class="detail-val" id="show-invoice-total">—</div>
                     </div>
                 </div>
                 
                 <div class="detail-row">
                     <div class="detail-icon bg-info-subtle text-info"><i class="ri-calculator-line"></i></div>
-                    <div>
-                        <div class="detail-lbl">Cálculo</div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Cálculo del Honorario</div>
                         <div class="detail-val" id="show-calculation">—</div>
                     </div>
                 </div>
                 
                 <div class="detail-row">
                     <div class="detail-icon bg-danger-subtle text-danger"><i class="ri-wallet-line"></i></div>
-                    <div>
-                        <div class="detail-lbl">Honorario</div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Monto del Honorario</div>
                         <div class="detail-val fs-5 fw-bold text-primary" id="show-amount">—</div>
                     </div>
                 </div>
                 
-                <div class="detail-row" id="payment-details-row" style="display:none;">
-                    <div class="detail-icon bg-success-subtle text-success"><i class="ri-bank-card-line"></i></div>
-                    <div>
-                        <div class="detail-lbl">Pagos Aplicados</div>
-                        <div class="detail-val" id="show-payments">—</div>
+                {{-- Información del Paciente --}}
+                <div class="section-label mt-3 mb-2">Información del Paciente</div>
+                <div class="detail-row">
+                    <div class="detail-icon bg-primary-subtle text-primary"><i class="ri-user-line"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Paciente</div>
+                        <div class="detail-val fw-semibold" id="show-patient-name">—</div>
                     </div>
                 </div>
                 
+                <div class="detail-row">
+                    <div class="detail-icon bg-secondary-subtle text-secondary"><i class="ri-id-card-line"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Cédula</div>
+                        <div class="detail-val" id="show-patient-cedula">—</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-icon bg-info-subtle text-info"><i class="ri-phone-line"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Teléfono</div>
+                        <div class="detail-val" id="show-patient-phone">—</div>
+                    </div>
+                </div>
+                
+                {{-- Servicios Realizados --}}
+                <div class="section-label mt-3 mb-2">Servicios Realizados</div>
+                <div class="table-responsive">
+                    <table class="table table-sm" style="font-size:.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Cant.</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                                <th>Seguro</th>
+                                <th>Paciente</th>
+                            </tr>
+                        </thead>
+                        <tbody id="show-services-list">
+                            <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+                        </tbody>
+                        <tfoot id="show-services-total" style="display:none;">
+                            <tr>
+                                <th colspan="3" class="text-end">Totales:</th>
+                                <th id="services-subtotal">RD$ 0.00</th>
+                                <th id="services-insurance">RD$ 0.00</th>
+                                <th id="services-patient">RD$ 0.00</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                {{-- Pagos Aplicados --}}
+                <div class="section-label mt-3 mb-2" id="payment-section-label" style="display:none;">Pagos Aplicados</div>
+                <div id="payment-details-container" style="display:none;"></div>
+                
+                {{-- Notas --}}
                 <div class="detail-row" id="notes-row" style="display:none;">
-                    <div class="detail-icon bg-secondary-subtle text-secondary"><i class="ri-file-text-line"></i></div>
-                    <div>
+                    <div class="detail-icon bg-dark-subtle text-dark"><i class="ri-file-text-line"></i></div>
+                    <div class="flex-grow-1">
                         <div class="detail-lbl">Notas</div>
                         <div class="detail-val" id="show-notes">—</div>
                     </div>
                 </div>
                 
+                {{-- Información Adicional --}}
+                <div class="section-label mt-3 mb-2">Información Adicional</div>
                 <div class="detail-row">
-                    <div class="detail-icon bg-dark-subtle text-dark"><i class="ri-calendar-line"></i></div>
-                    <div>
-                        <div class="detail-lbl">Fecha Registro</div>
+                    <div class="detail-icon bg-secondary-subtle text-secondary"><i class="ri-store-line"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Sucursal</div>
+                        <div class="detail-val" id="show-branch">—</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-icon bg-dark-subtle text-dark"><i class="ri-user-settings-line"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Creado por</div>
+                        <div class="detail-val" id="show-created-by">—</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-icon bg-success-subtle text-success"><i class="ri-calendar-line"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="detail-lbl">Fecha de Registro</div>
                         <div class="detail-val" id="show-created">—</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-0 pb-3 px-4">
                 <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                @if(auth()->user()->role->name === 'admin')
+                <button type="button" class="btn btn-warning btn-sm" onclick="switchToEdit()">
+                    <i class="ri-pencil-line me-1"></i> Editar
+                </button>
+                @endif
             </div>
         </div>
     </div>
@@ -516,7 +595,7 @@ function filterTable() {
     document.getElementById('no-results').classList.toggle('d-none', visible > 0);
 }
 
-// ── SHOW DETAIL ───────────────────────────────────────────
+// ── SHOW DETAIL (MEJORADO) ───────────────────────────────────────────
 async function openShowModal(id) {
     currentFeeId = id;
     showModal.show();
@@ -524,27 +603,89 @@ async function openShowModal(id) {
     try {
         const res = await fetch(`${URL_BASE}/${id}`);
         if (!res.ok) throw new Error();
-        const fee = await res.json();
+        const data = await res.json();
         
-        document.getElementById('show-invoice').innerHTML = `FAC-${String(fee.invoice_id).padStart(6, '0')}`;
-        document.getElementById('show-audiologist').textContent = fee.audiologist?.name || '—';
-        document.getElementById('show-invoice-total').textContent = `RD$ ${parseFloat(fee.invoice_total).toLocaleString('es-DO', {minimumFractionDigits:2})}`;
-        document.getElementById('show-calculation').innerHTML = `${fee.calculation_type === 'percentage' ? fee.calculation_value + '%' : 'RD$ ' + parseFloat(fee.calculation_value).toLocaleString('es-DO', {minimumFractionDigits:2})} (${fee.calculation_type === 'percentage' ? 'Porcentaje' : 'Monto Fijo'})`;
-        document.getElementById('show-amount').innerHTML = `RD$ ${parseFloat(fee.fee_amount).toLocaleString('es-DO', {minimumFractionDigits:2})}`;
-        document.getElementById('show-created').textContent = new Date(fee.created_at).toLocaleDateString('es-DO');
+        // Información del Honorario
+        document.getElementById('show-invoice').innerHTML = `FAC-${String(data.invoice.id).padStart(6, '0')}`;
+        document.getElementById('show-audiologist').textContent = data.audiologist?.name || '—';
+        document.getElementById('show-invoice-total').textContent = `RD$ ${parseFloat(data.invoice_total).toLocaleString('es-DO', {minimumFractionDigits:2})}`;
+        document.getElementById('show-calculation').innerHTML = `${data.calculation_type === 'percentage' ? data.calculation_value + '%' : 'RD$ ' + parseFloat(data.calculation_value).toLocaleString('es-DO', {minimumFractionDigits:2})} (${data.calculation_type === 'percentage' ? 'Porcentaje' : 'Monto Fijo'})`;
+        document.getElementById('show-amount').innerHTML = `RD$ ${parseFloat(data.fee_amount).toLocaleString('es-DO', {minimumFractionDigits:2})}`;
+        document.getElementById('show-created').textContent = new Date(data.created_at).toLocaleDateString('es-DO');
         
-        if (fee.notes) {
-            document.getElementById('show-notes').textContent = fee.notes;
+        // Información del Paciente
+        if (data.patient) {
+            document.getElementById('show-patient-name').textContent = `${data.patient.first_name} ${data.patient.last_name}`;
+            document.getElementById('show-patient-cedula').textContent = data.patient.cedula || '—';
+            document.getElementById('show-patient-phone').textContent = data.patient.phone || '—';
+        } else {
+            document.getElementById('show-patient-name').textContent = '—';
+            document.getElementById('show-patient-cedula').textContent = '—';
+            document.getElementById('show-patient-phone').textContent = '—';
+        }
+        
+        // Servicios
+        if (data.services && data.services.length > 0) {
+            let servicesHtml = '';
+            let subtotalTotal = 0;
+            let insuranceTotal = 0;
+            let patientTotal = 0;
+            
+            data.services.forEach(service => {
+                subtotalTotal += parseFloat(service.subtotal);
+                insuranceTotal += parseFloat(service.insurance_amount || 0);
+                patientTotal += parseFloat(service.patient_amount || 0);
+                
+                servicesHtml += `
+                    <tr>
+                        <td>${service.service_name}</td>
+                        <td class="text-center">${service.quantity}</td>
+                        <td class="text-end">RD$ ${parseFloat(service.price).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                        <td class="text-end">RD$ ${parseFloat(service.subtotal).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                        <td class="text-end">RD$ ${parseFloat(service.insurance_amount || 0).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                        <td class="text-end">RD$ ${parseFloat(service.patient_amount || 0).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('show-services-list').innerHTML = servicesHtml;
+            document.getElementById('services-subtotal').innerHTML = `RD$ ${subtotalTotal.toLocaleString('es-DO', {minimumFractionDigits:2})}`;
+            document.getElementById('services-insurance').innerHTML = `RD$ ${insuranceTotal.toLocaleString('es-DO', {minimumFractionDigits:2})}`;
+            document.getElementById('services-patient').innerHTML = `RD$ ${patientTotal.toLocaleString('es-DO', {minimumFractionDigits:2})}`;
+            document.getElementById('show-services-total').style.display = 'table-footer-group';
+        } else {
+            document.getElementById('show-services-list').innerHTML = '<tr><td colspan="6" class="text-center">No hay servicios registrados</td></tr>';
+            document.getElementById('show-services-total').style.display = 'none';
+        }
+        
+        // Información de la sucursal
+        if (data.branch) {
+            document.getElementById('show-branch').textContent = data.branch.name || '—';
+        } else {
+            document.getElementById('show-branch').textContent = '—';
+        }
+        
+        // Creado por
+        if (data.created_by) {
+            document.getElementById('show-created-by').textContent = data.created_by.name || '—';
+        } else {
+            document.getElementById('show-created-by').textContent = '—';
+        }
+        
+        // Notas
+        if (data.notes) {
+            document.getElementById('show-notes').textContent = data.notes;
             document.getElementById('notes-row').style.display = 'flex';
         } else {
             document.getElementById('notes-row').style.display = 'none';
         }
         
+        // Estado
         const statusConfig = {
             pending: { class: 'status-pending', text: 'Pendiente', icon: 'ri-time-line' },
             paid: { class: 'status-paid', text: 'Pagado', icon: 'ri-checkbox-circle-line' },
             cancelled: { class: 'status-cancelled', text: 'Cancelado', icon: 'ri-close-circle-line' }
-        }[fee.status];
+        }[data.status];
         
         document.getElementById('show-status-container').innerHTML = `
             <span class="status-pill ${statusConfig.class}" style="font-size:.9rem;padding:.5rem 1rem;">
@@ -554,21 +695,42 @@ async function openShowModal(id) {
             </span>
         `;
         
-        if (fee.payments && fee.payments.length > 0) {
+        // Pagos Aplicados
+        if (data.payments && data.payments.length > 0) {
             let paymentsHtml = '';
-            fee.payments.forEach(p => {
-                paymentsHtml += `<div class="mb-1">RD$ ${parseFloat(p.pivot.amount_applied).toLocaleString('es-DO', {minimumFractionDigits:2})} - ${new Date(p.payment_date).toLocaleDateString('es-DO')}</div>`;
+            data.payments.forEach(p => {
+                paymentsHtml += `
+                    <div class="detail-row">
+                        <div class="detail-icon bg-success-subtle text-success"><i class="ri-bank-card-line"></i></div>
+                        <div class="flex-grow-1">
+                            <div class="detail-lbl">Pago #${p.id}</div>
+                            <div class="detail-val">
+                                RD$ ${parseFloat(p.pivot.amount_applied).toLocaleString('es-DO', {minimumFractionDigits:2})}
+                                <small class="text-muted"> - ${new Date(p.payment_date).toLocaleDateString('es-DO')}</small>
+                                ${p.payment_method ? `<br><small>Método: ${p.payment_method}</small>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
             });
-            document.getElementById('show-payments').innerHTML = paymentsHtml;
-            document.getElementById('payment-details-row').style.display = 'flex';
+            document.getElementById('payment-details-container').innerHTML = paymentsHtml;
+            document.getElementById('payment-details-container').style.display = 'block';
+            document.getElementById('payment-section-label').style.display = 'block';
         } else {
-            document.getElementById('payment-details-row').style.display = 'none';
+            document.getElementById('payment-details-container').style.display = 'none';
+            document.getElementById('payment-section-label').style.display = 'none';
         }
         
-    } catch {
+    } catch (error) {
+        console.error('Error:', error);
         showToast('Error al cargar los datos.', 'error');
         showModal.hide();
     }
+}
+
+function switchToEdit() {
+    showModal.hide();
+    setTimeout(() => openEditModal(currentFeeId), 300);
 }
 
 // ── EDIT ──────────────────────────────────────────────────

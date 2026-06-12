@@ -297,6 +297,8 @@ Route::prefix('audiologist-fees')->group(function () {
     Route::post('/payments', [AudiologistFeePaymentController::class, 'store'])->name('audiologist-fees.payments.store');
     Route::get('/payments/{id}', [AudiologistFeePaymentController::class, 'show'])->name('audiologist-fees.payments.show');
     Route::delete('/payments/{id}', [AudiologistFeePaymentController::class, 'destroy'])->name('audiologist-fees.payments.destroy');
+    Route::get('/{id}', [AudiologistFeeController::class, 'show'])->name('audiologist-fees.show');
+
 });
 
 
