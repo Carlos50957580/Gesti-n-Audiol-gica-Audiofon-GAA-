@@ -41,8 +41,8 @@
                     </a>
                 </li>
 
-                {{-- ADMIN --}}
-                @if(auth()->user()->role->name === 'admin')
+                {{-- ADMIN (solo admin normal, no admin2) --}}
+                @if(auth()->user()->role->name === 'admin' && auth()->user()->role_id != 4)
                     <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-administration">Administración</span></li>
 
                     <li class="nav-item">
@@ -52,7 +52,10 @@
                             <span data-key="t-usuarios">Usuarios</span>
                         </a>
                     </li>
+                @endif
 
+                {{-- Sucursales - admin normal y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('branches.*') ? 'active' : '' }}" 
                            href="{{ route('branches.index') }}">
@@ -60,7 +63,10 @@
                             <span data-key="t-sucursales">Sucursales</span>
                         </a>
                     </li>
+                @endif
 
+                {{-- Seguros Médicos - admin normal y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('insurances.*') ? 'active' : '' }}" 
                            href="{{ route('insurances.index') }}">
@@ -68,7 +74,10 @@
                             <span data-key="t-seguros">Seguros Médicos</span>
                         </a>
                     </li>
+                @endif
 
+                {{-- Servicios - solo admin normal (no admin2) --}}
+                @if(in_array(auth()->user()->role->name, ['admin']) && auth()->user()->role_id != 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('services.*') ? 'active' : '' }}" 
                            href="{{ route('services.index') }}">
@@ -78,7 +87,8 @@
                     </li> 
                 @endif
 
-                @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+                {{-- Pacientes - admin, recepcionista y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin','recepcionista']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" 
                            href="{{ route('patients.index') }}">
@@ -88,17 +98,19 @@
                     </li>
                 @endif
 
-                @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+                {{-- Facturación - admin, recepcionista y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin','recepcionista']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" 
                            href="{{ route('invoices.index') }}">
                             <i class="ri-bill-line"></i>
-                            <span data-key="t-facturacion">Facturacion</span>
+                            <span data-key="t-facturacion">Facturación</span>
                         </a>
                     </li>
                 @endif
 
-                @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+                {{-- Pagar - admin, recepcionista y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin','recepcionista']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('receipts.*') ? 'active' : '' }}" 
                            href="{{ route('receipts.index') }}">
@@ -108,17 +120,8 @@
                     </li>
                 @endif
 
-                @if(in_array(auth()->user()->role->name,['audiologo']))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('audiologist.appointments*') ? 'active' : '' }}" 
-                           href="{{ route('audiologist.appointments.index') }}">
-                            <i class="ri-calendar-check-line"></i>
-                            <span data-key="t-citas-audiologo">Citas</span>
-                        </a>
-                    </li>
-                @endif
-                
-                @if(in_array(auth()->user()->role->name,['admin','recepcionista']))
+                {{-- Citas - admin, recepcionista y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin','recepcionista']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" 
                            href="{{ route('appointments.index') }}">
@@ -128,48 +131,19 @@
                     </li>
                 @endif
 
-                @if(in_array(auth()->user()->role->name,['admin']))
+                {{-- Citas para audiólogo --}}
+                @if(in_array(auth()->user()->role->name, ['audiologo']))
                     <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
-                           href="{{ route('reports.index') }}">
-                            <i class="ri-bar-chart-line"></i>
-                            <span data-key="t-reportes-admin">Reportes</span>
+                        <a class="nav-link menu-link {{ request()->routeIs('audiologist.appointments*') ? 'active' : '' }}" 
+                           href="{{ route('audiologist.appointments.index') }}">
+                            <i class="ri-calendar-check-line"></i>
+                            <span data-key="t-citas-audiologo">Citas</span>
                         </a>
                     </li>
                 @endif
 
-                @if(in_array(auth()->user()->role->name,['audiologo']))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('clinical-records*') ? 'active' : '' }}" 
-                           href="{{ route('clinical-records.index') }}">
-                            <i class="ri-file-history-line"></i>
-                            <span data-key="t-historia">Historia Clinica</span>
-                        </a>
-                    </li>
-                @endif
-
-                @if(in_array(auth()->user()->role->name,['recepcionista']))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('receptionist.reports.*') ? 'active' : '' }}" 
-                           href="{{ route('receptionist.reports.index') }}">
-                            <i class="ri-bar-chart-line"></i>
-                            <span data-key="t-reportes-recep">Reportes</span>
-                        </a>
-                    </li>
-                @endif
-                       
-                @if(in_array(auth()->user()->role->name,['audiologo']))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('audiologist.reports*') ? 'active' : '' }}" 
-                           href="{{ route('audiologist.reports.index') }}">
-                            <i class="ri-bar-chart-line"></i>
-                            <span data-key="t-reportes-audio">Reportes</span>
-                        </a>
-                    </li>
-                @endif
-
-                {{-- MENÚ CORREGIDO DE HONORARIOS (DROPDOWN COMPATIBLE CON VELZON MINIMIZADO) --}}
-                @if(in_array(auth()->user()->role->name, ['admin']))
+                {{-- Honorarios - admin normal y admin2 --}}
+                @if(in_array(auth()->user()->role->name, ['admin']) || auth()->user()->role_id == 4)
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('audiologist-fees.*') ? '' : 'collapsed' }}" 
                            href="#sidebarAudiologistFees" 
@@ -207,6 +181,50 @@
 
                             </ul>
                         </div>
+                    </li>
+                @endif
+
+                {{-- Reportes Admin - solo admin normal (no admin2) --}}
+                @if(in_array(auth()->user()->role->name, ['admin']) && auth()->user()->role_id != 4)
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
+                           href="{{ route('reports.index') }}">
+                            <i class="ri-bar-chart-line"></i>
+                            <span data-key="t-reportes-admin">Reportes</span>
+                        </a>
+                    </li>
+                @endif
+
+                {{-- Historia Clínica - solo audiólogo --}}
+                @if(in_array(auth()->user()->role->name, ['audiologo']))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ request()->routeIs('clinical-records*') ? 'active' : '' }}" 
+                           href="{{ route('clinical-records.index') }}">
+                            <i class="ri-file-history-line"></i>
+                            <span data-key="t-historia">Historia Clinica</span>
+                        </a>
+                    </li>
+                @endif
+
+                {{-- Reportes Recepcionista - solo recepcionista --}}
+                @if(in_array(auth()->user()->role->name, ['recepcionista']))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ request()->routeIs('receptionist.reports.*') ? 'active' : '' }}" 
+                           href="{{ route('receptionist.reports.index') }}">
+                            <i class="ri-bar-chart-line"></i>
+                            <span data-key="t-reportes-recep">Reportes</span>
+                        </a>
+                    </li>
+                @endif
+                       
+                {{-- Reportes Audiólogo - solo audiólogo --}}
+                @if(in_array(auth()->user()->role->name, ['audiologo']))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ request()->routeIs('audiologist.reports*') ? 'active' : '' }}" 
+                           href="{{ route('audiologist.reports.index') }}">
+                            <i class="ri-bar-chart-line"></i>
+                            <span data-key="t-reportes-audio">Reportes</span>
+                        </a>
                     </li>
                 @endif
 

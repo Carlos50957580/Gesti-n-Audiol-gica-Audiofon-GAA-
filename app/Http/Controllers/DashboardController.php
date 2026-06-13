@@ -16,6 +16,7 @@ class DashboardController extends Controller
     {
         $user     = auth()->user();
         $isAdmin  = $user->role->name === 'admin';
+        $isAdmin2 = $user->role_id == 4; // 🔥 Verificar si es admin2
         $branchId = $user->branch_id;
 
         $today        = Carbon::today();
@@ -24,15 +25,30 @@ class DashboardController extends Controller
         $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
 
         // ── Base queries con scope de sucursal ───────────────────────────────
-        $invQ  = Invoice::query()->when(!$isAdmin, fn($q) => $q->where('branch_id', $branchId));
-        $apptQ = Appointment::query()->when(!$isAdmin, fn($q) => $q->where('branch_id', $branchId));
-        $patQ  = Patient::query()->when(!$isAdmin, fn($q) => $q->where('branch_id', $branchId));
+        $invQ  = Invoice::query()->when(!$isAdmin && !$isAdmin2, fn($q) => $q->where('branch_id', $branchId));
+        
+        // 🔥 Para admin2: solo facturas con seguro
+        if ($isAdmin2) {
+            $invQ->whereNotNull('insurance_id');
+        }
+        
+        $apptQ = Appointment::query()->when(!$isAdmin && !$isAdmin2, fn($q) => $q->where('branch_id', $branchId));
+        $patQ  = Patient::query()->when(!$isAdmin && !$isAdmin2, fn($q) => $q->where('branch_id', $branchId));
 
-        // ── KPI: Ingresos ────────────────────────────────────────────────────
-        $revenueThisMonth = (clone $invQ)->where('status', 'pagada')
-            ->whereBetween('created_at', [$thisMonth, now()])->sum('total');
-        $revenueLastMonth = (clone $invQ)->where('status', 'pagada')
-            ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->sum('total');
+        // ── KPI: Ingresos (para admin2: solo el monto del seguro) ────────────────────────────────────────────────────
+        if ($isAdmin2) {
+            // Para admin2: mostrar el total que cubre el seguro
+            $revenueThisMonth = (clone $invQ)->where('status', 'pagada')
+                ->whereBetween('created_at', [$thisMonth, now()])->sum('insurance_discount');
+            $revenueLastMonth = (clone $invQ)->where('status', 'pagada')
+                ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->sum('insurance_discount');
+        } else {
+            $revenueThisMonth = (clone $invQ)->where('status', 'pagada')
+                ->whereBetween('created_at', [$thisMonth, now()])->sum('total');
+            $revenueLastMonth = (clone $invQ)->where('status', 'pagada')
+                ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->sum('total');
+        }
+        
         $revenueGrowth    = $revenueLastMonth > 0
             ? round((($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100, 1)
             : ($revenueThisMonth > 0 ? 100 : 0);
@@ -40,7 +56,13 @@ class DashboardController extends Controller
         // ── KPI: Facturas ────────────────────────────────────────────────────
         $invoicesThisMonth = (clone $invQ)->whereBetween('created_at', [$thisMonth, now()])->count();
         $pendingInvoices   = (clone $invQ)->where('status', 'pendiente')->count();
-        $pendingAmount     = (clone $invQ)->where('status', 'pendiente')->sum('total');
+        
+        // 🔥 Para admin2: mostrar el monto pendiente del seguro
+        if ($isAdmin2) {
+            $pendingAmount = (clone $invQ)->where('status', 'pendiente')->sum('insurance_discount');
+        } else {
+            $pendingAmount = (clone $invQ)->where('status', 'pendiente')->sum('total');
+        }
 
         // ── KPI: Citas ───────────────────────────────────────────────────────
         $apptToday     = (clone $apptQ)->whereDate('appointment_date', $today)->count();
@@ -56,11 +78,20 @@ class DashboardController extends Controller
         $patientsWithIns  = (clone $patQ)->whereNotNull('insurance_id')->count();
 
         // ── Gráfico: ingresos por día (últimos 14 días) ──────────────────────
-        $rawRevenue = (clone $invQ)->where('status', 'pagada')
-            ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
-            ->selectRaw('DATE(created_at) as date, SUM(total) as total')
-            ->groupBy('date')->orderBy('date')
-            ->pluck('total', 'date')->toArray();
+        // 🔥 Para admin2: mostrar solo el monto del seguro por día
+        if ($isAdmin2) {
+            $rawRevenue = (clone $invQ)->where('status', 'pagada')
+                ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
+                ->selectRaw('DATE(created_at) as date, SUM(insurance_discount) as total')
+                ->groupBy('date')->orderBy('date')
+                ->pluck('total', 'date')->toArray();
+        } else {
+            $rawRevenue = (clone $invQ)->where('status', 'pagada')
+                ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
+                ->selectRaw('DATE(created_at) as date, SUM(total) as total')
+                ->groupBy('date')->orderBy('date')
+                ->pluck('total', 'date')->toArray();
+        }
 
         $last14Days = [];
         for ($i = 13; $i >= 0; $i--) {
@@ -79,16 +110,31 @@ class DashboardController extends Controller
             ->pluck('count', 'status')->toArray();
 
         // ── Top 5 servicios por ingresos (este mes) ──────────────────────────
-        $topServices = DB::table('invoice_items')
-            ->join('services',  'invoice_items.service_id',  '=', 'services.id')
-            ->join('invoices',  'invoice_items.invoice_id',  '=', 'invoices.id')
-            ->when(!$isAdmin, fn($q) => $q->where('invoices.branch_id', $branchId))
-            ->where('invoices.created_at', '>=', $thisMonth)
-            ->where('invoices.status', '!=', 'cancelada')
-            ->selectRaw('services.name, SUM(invoice_items.subtotal) as revenue, SUM(invoice_items.quantity) as qty')
-            ->groupBy('services.id', 'services.name')
-            ->orderByDesc('revenue')
-            ->limit(5)->get();
+        // 🔥 Para admin2: mostrar solo el monto del seguro por servicio
+        if ($isAdmin2) {
+            $topServices = DB::table('invoice_items')
+                ->join('services',  'invoice_items.service_id',  '=', 'services.id')
+                ->join('invoices',  'invoice_items.invoice_id',  '=', 'invoices.id')
+                ->when(!$isAdmin && !$isAdmin2, fn($q) => $q->where('invoices.branch_id', $branchId))
+                ->where('invoices.created_at', '>=', $thisMonth)
+                ->where('invoices.status', '!=', 'cancelada')
+                ->whereNotNull('invoices.insurance_id') // Solo facturas con seguro
+                ->selectRaw('services.name, SUM(invoice_items.insurance_amount) as revenue, SUM(invoice_items.quantity) as qty')
+                ->groupBy('services.id', 'services.name')
+                ->orderByDesc('revenue')
+                ->limit(5)->get();
+        } else {
+            $topServices = DB::table('invoice_items')
+                ->join('services',  'invoice_items.service_id',  '=', 'services.id')
+                ->join('invoices',  'invoice_items.invoice_id',  '=', 'invoices.id')
+                ->when(!$isAdmin && !$isAdmin2, fn($q) => $q->where('invoices.branch_id', $branchId))
+                ->where('invoices.created_at', '>=', $thisMonth)
+                ->where('invoices.status', '!=', 'cancelada')
+                ->selectRaw('services.name, SUM(invoice_items.subtotal) as revenue, SUM(invoice_items.quantity) as qty')
+                ->groupBy('services.id', 'services.name')
+                ->orderByDesc('revenue')
+                ->limit(5)->get();
+        }
 
         $maxServiceRevenue = $topServices->max('revenue') ?: 1;
 
@@ -100,13 +146,14 @@ class DashboardController extends Controller
             ->limit(8)->get();
 
         // ── Facturas recientes ───────────────────────────────────────────────
+        // 🔥 Para admin2: mostrar solo las facturas con seguro
         $recentInvoices = (clone $invQ)
             ->with(['patient', 'branch'])
             ->latest()->limit(7)->get();
 
         // ── Stats por sucursal (solo admin) ──────────────────────────────────
         $branchStats = collect();
-        if ($isAdmin) {
+        if ($isAdmin && !$isAdmin2) {
             $branchStats = Branch::withCount(['invoices as invoices_month' => fn($q) =>
                     $q->whereBetween('created_at', [$thisMonth, now()])
                 ])
@@ -123,7 +170,7 @@ class DashboardController extends Controller
 
         // ── Top audiólogos este mes ───────────────────────────────────────────
         $topAudiologists = User::whereHas('role', fn($q) => $q->where('name', 'audiologo'))
-            ->when(!$isAdmin, fn($q) => $q->where('branch_id', $branchId))
+            ->when(!$isAdmin && !$isAdmin2, fn($q) => $q->where('branch_id', $branchId))
             ->withCount(['appointments as appts_month' => fn($q) =>
                 $q->whereBetween('appointment_date', [$thisMonth, now()])
             ])
@@ -137,6 +184,7 @@ class DashboardController extends Controller
 
         return view('dashboard', compact(
             'isAdmin',
+            'isAdmin2', // 🔥 Pasar la variable a la vista
             'revenueThisMonth', 'revenueLastMonth', 'revenueGrowth',
             'invoicesThisMonth', 'pendingInvoices', 'pendingAmount',
             'apptToday', 'apptThisMonth', 'apptCompleted', 'apptPending',

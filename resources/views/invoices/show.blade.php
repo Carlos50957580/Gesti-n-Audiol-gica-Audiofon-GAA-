@@ -123,7 +123,7 @@
 }
 .items-table th {
     font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-    color: #8098bb; padding: .75rem 1rem; border-bottom: 2px solid #e9ecef; white-space: nowrap;
+    color: #8098bb; padding: .75rem 1rem; border-bottom: 2px solid #e9ecef;
 }
 .items-table th:not(:first-child) { text-align: right; }
 .items-table th:nth-child(1) { text-align: left; }
@@ -233,6 +233,10 @@
 
 <div id="toast-container"></div>
 
+@php
+    $isAdmin2 = auth()->user()->role_id == 4;
+@endphp
+
 {{-- ── Breadcrumb ── --}}
 <div class="row mb-3">
     <div class="col-12">
@@ -260,17 +264,18 @@
     <a href="{{ route('invoices.index') }}" class="btn-back">
         <i class="ri-arrow-left-line"></i>Volver
     </a>
+    @if(!$isAdmin2)
     <button type="button" class="btn-print" onclick="window.print()">
         <i class="ri-printer-line"></i>Imprimir
     </button>
     <button type="button" class="btn-print-thermal" onclick="printThermal()">
-    <i class="ri-receipt-line"></i>Ticket POS
-</button>
-
+        <i class="ri-receipt-line"></i>Ticket POS
+    </button>
+    @endif
     <span class="status-badge badge-{{ $invoice->status }}">
         <span class="sdot"></span>{{ ucfirst($invoice->status) }}
     </span>
-    @if($invoice->status === 'pendiente' && auth()->user()->role->name === 'admin')
+    @if($invoice->status === 'pendiente' && auth()->user()->role->name === 'admin' && !$isAdmin2)
     <button type="button" class="btn-cancel-inv" onclick="openCancelModal()">
         <i class="ri-close-circle-line"></i>Cancelar Factura
     </button>
@@ -299,21 +304,19 @@
                 <div class="inv-banner-right">
                     <div class="inv-label">Factura</div>
                     <div class="inv-num-big">{{ $invoice->invoice_number }}</div>
-                    @if($invoice->ncf)
-<div style="font-size:.85rem;margin-top:.35rem;">
-    <strong>NCF:</strong> {{ $invoice->ncf }}
-</div>
-
-<div style="font-size:.72rem;opacity:.9;line-height:1.4;margin-top:.25rem;">
-    Válido hasta 31-12-2026<br>
-    Válido para crédito fiscal
-</div>
-@endif
+                    @if($invoice->ncf && !$isAdmin2)
+                        <div style="font-size:.85rem;margin-top:.35rem;">
+                            <strong>NCF:</strong> {{ $invoice->ncf }}
+                        </div>
+                        <div style="font-size:.72rem;opacity:.9;line-height:1.4;margin-top:.25rem;">
+                            Válido hasta 31-12-2026<br>
+                            Válido para crédito fiscal
+                        </div>
+                    @endif
                     <div class="inv-date">
                         <i class="ri-calendar-line me-1" style="opacity:.7;"></i>
                         {{ $invoice->created_at->format('d/m/Y') }} &nbsp;·&nbsp; {{ $invoice->created_at->format('H:i') }}
                     </div>
-                   
                 </div>
             </div>
 
@@ -324,113 +327,106 @@
                 <div class="info-grid">
 
                     {{-- Paciente --}}
-<div class="info-card">
-    <div class="info-card-label">
-        <i class="ri-user-heart-line text-primary"></i>Paciente
-    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">
+                            <i class="ri-user-heart-line text-primary"></i>Paciente
+                        </div>
+                        <div class="info-card-name">
+                            {{ $invoice->patient->first_name }}
+                            {{ $invoice->patient->last_name }}
+                        </div>
+                        @if($invoice->patient->cedula)
+                        <div class="info-card-line">
+                            <strong>Cédula:</strong>
+                            {{ $invoice->patient->cedula }}
+                        </div>
+                        @endif
+                        @if($invoice->patient->phone)
+                        <div class="info-card-line">
+                            <strong>Teléfono:</strong>
+                            {{ $invoice->patient->phone }}
+                        </div>
+                        @endif
+                        @if($invoice->patient->address)
+                        <div class="info-card-line">
+                            <strong>Dirección:</strong>
+                            {{ $invoice->patient->address }}
+                        </div>
+                        @endif
+                        @if($invoice->patient->birth_date)
+                        <div class="info-card-line">
+                            <strong>Fecha Nac:</strong>
+                            {{ \Carbon\Carbon::parse($invoice->patient->birth_date)->format('d/m/Y') }}
+                        </div>
+                        @endif
+                        @if($invoice->patient->email)
+                        <div class="info-card-line">
+                            <strong>Email:</strong>
+                            {{ $invoice->patient->email }}
+                        </div>
+                        @endif
+                    </div>
 
-    <div class="info-card-name">
-        {{ $invoice->patient->first_name }}
-        {{ $invoice->patient->last_name }}
-    </div>
-
-    @if($invoice->patient->cedula)
-    <div class="info-card-line">
-        <strong>Cédula:</strong>
-        {{ $invoice->patient->cedula }}
-    </div>
-    @endif
-
-    @if($invoice->patient->phone)
-    <div class="info-card-line">
-        <strong>Teléfono:</strong>
-        {{ $invoice->patient->phone }}
-    </div>
-    @endif
-
-    @if($invoice->patient->address)
-    <div class="info-card-line">
-        <strong>Dirección:</strong>
-        {{ $invoice->patient->address }}
-    </div>
-    @endif
-
-    @if($invoice->patient->birth_date)
-    <div class="info-card-line">
-        <strong>Fecha Nac:</strong>
-        {{ \Carbon\Carbon::parse($invoice->patient->birth_date)->format('d/m/Y') }}
-    </div>
-    @endif
-
-    @if($invoice->patient->email)
-    <div class="info-card-line">
-        <strong>Email:</strong>
-        {{ $invoice->patient->email }}
-    </div>
-    @endif
-</div>
-
-
-{{-- Información Fiscal --}}
-@if(
-    $invoice->ncf ||
-    $invoice->customer_rnc ||
-    $invoice->customer_business_name ||
-    $invoice->insurance ||
-    $invoice->authorization_number
-)
-<div class="info-card">
-    <div class="info-card-label">
-        <i class="ri-file-list-3-line text-success"></i>
-        Información Fiscal
-    </div>
-
-    @if($invoice->ncf)
-<div class="info-card-line">
-    <strong>NCF:</strong>
-    {{ $invoice->ncf }}
-</div>
-
-<div class="info-card-line" style="font-size:.75rem;color:#0ab39c;">
-    Válido hasta 31-12-2026
-</div>
-
-<div class="info-card-line" style="font-size:.75rem;color:#0ab39c;">
-    Válido para crédito fiscal
-</div>
-@endif
-
-    @if($invoice->customer_rnc)
-    <div class="info-card-line">
-        <strong>RNC:</strong>
-        {{ $invoice->customer_rnc }}
-    </div>
-    @endif
-
-    @if($invoice->customer_business_name)
-    <div class="info-card-line">
-        <strong>Razón Social:</strong>
-        {{ $invoice->customer_business_name }}
-    </div>
-    @endif
-
-    @if($invoice->insurance)
-    <div class="info-card-line">
-        <strong>Seguro:</strong>
-        {{ $invoice->insurance->name }}
-    </div>
-    @endif
-
-    @if($invoice->authorization_number)
-    <div class="info-card-line">
-        <strong>Autorización:</strong>
-        {{ $invoice->authorization_number }}
-    </div>
-    @endif
-</div>
-@endif
-
-
+                    {{-- Información Fiscal (solo para admin) --}}
+                    @if(!$isAdmin2 && ($invoice->ncf || $invoice->customer_rnc || $invoice->customer_business_name || $invoice->insurance || $invoice->authorization_number))
+                    <div class="info-card">
+                        <div class="info-card-label">
+                            <i class="ri-file-list-3-line text-success"></i>
+                            Información Fiscal
+                        </div>
+                        @if($invoice->ncf)
+                            <div class="info-card-line">
+                                <strong>NCF:</strong>
+                                {{ $invoice->ncf }}
+                            </div>
+                        @endif
+                        @if($invoice->customer_rnc)
+                            <div class="info-card-line">
+                                <strong>RNC:</strong>
+                                {{ $invoice->customer_rnc }}
+                            </div>
+                        @endif
+                        @if($invoice->customer_business_name)
+                            <div class="info-card-line">
+                                <strong>Razón Social:</strong>
+                                {{ $invoice->customer_business_name }}
+                            </div>
+                        @endif
+                        @if($invoice->insurance)
+                            <div class="info-card-line">
+                                <strong>Seguro:</strong>
+                                {{ $invoice->insurance->name }}
+                                @if($invoice->insurance->coverage_percentage && !$isAdmin2)
+                                    ({{ $invoice->insurance->coverage_percentage }}%)
+                                @endif
+                            </div>
+                        @endif
+                        @if($invoice->authorization_number)
+                            <div class="info-card-line">
+                                <strong>Autorización:</strong>
+                                {{ $invoice->authorization_number }}
+                            </div>
+                        @endif
+                    </div>
+                    @elseif($isAdmin2 && $invoice->insurance)
+                    {{-- Para admin2: solo mostrar el nombre del seguro sin porcentaje --}}
+                    <div class="info-card">
+                        <div class="info-card-label">
+                            <i class="ri-file-list-3-line text-success"></i>
+                            Información del Seguro
+                        </div>
+                        <div class="info-card-line">
+                            <strong>Seguro:</strong>
+                            {{ $invoice->insurance->name }}
+                        </div>
+                        @if($invoice->authorization_number)
+                        <div class="info-card-line">
+                            <strong>Autorización:</strong>
+                            {{ $invoice->authorization_number }}
+                        </div>
+                        @endif
+                    </div>
+                    @endif
 
                     {{-- Sucursal y emisor --}}
                     <div class="info-card">
@@ -462,12 +458,19 @@
                             <tr>
                                 <th style="width:40px;">#</th>
                                 <th style="text-align:left;">Servicio</th>
-                                <th>Precio unit.</th>
+                                @if(!$isAdmin2)
+                                    <th>Precio unit.</th>
+                                @endif
                                 <th class="th-center">Cant.</th>
-                                <th>Subtotal</th>
-                                @if($invoice->insurance)
+                                @if(!$isAdmin2)
+                                    <th>Subtotal</th>
+                                    @if($invoice->insurance)
+                                        <th>Cubre seguro</th>
+                                        <th>Paga paciente</th>
+                                    @endif
+                                @elseif($invoice->insurance)
+                                    {{-- Para admin2: solo mostrar la columna de cobertura del seguro --}}
                                     <th>Cubre seguro</th>
-                                    <th>Paga paciente</th>
                                 @endif
                             </tr>
                         </thead>
@@ -477,31 +480,32 @@
                                 <td><span class="item-num">{{ $i + 1 }}</span></td>
                                 <td>
                                     <div class="item-name">{{ $item->service->name }}</div>
-                                    @if($item->service->description)
+                                    @if($item->service->description && !$isAdmin2)
                                     <div class="item-desc">{{ $item->service->description }}</div>
                                     @endif
                                 </td>
-                                <td>RD$ {{ number_format($item->price, 2) }}</td>
+                                @if(!$isAdmin2)
+                                    <td>RD$ {{ number_format($item->price, 2) }}</td>
+                                @endif
                                 <td class="td-center">
                                     <span class="qty-chip">{{ $item->quantity }}</span>
                                 </td>
-                                <td>RD$ {{ number_format($item->subtotal, 2) }}</td>
-                                @if($invoice->insurance)
-                                <td>
-                                    <span class="ins-cover">
-                                        RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}
-                                    </span>
-                                    @if($item->coverage_percentage)
-                                    <div style="font-size:.7rem;color:#0ab39c;opacity:.7;">
-                                        {{ number_format($item->coverage_percentage, 0) }}%
-                                    </div>
+                                @if(!$isAdmin2)
+                                    <td>RD$ {{ number_format($item->subtotal, 2) }}</td>
+                                    @if($invoice->insurance)
+                                        <td class="ins-cover">
+                                            RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}
+                                        </td>
+                                        <td class="pat-pays">
+                                            RD$ {{ number_format($item->patient_amount ?? $item->subtotal, 2) }}
+                                        </td>
                                     @endif
-                                </td>
-                                <td>
-                                    <span class="pat-pays">
-                                        RD$ {{ number_format($item->patient_amount ?? $item->subtotal, 2) }}
-                                    </span>
-                                </td>
+                                @elseif($invoice->insurance)
+                                    {{-- Para admin2: solo mostrar el monto que cubre el seguro --}}
+                                    <td class="ins-cover">
+                                        RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}
+                                       
+                                    </td>
                                 @endif
                             </tr>
                             @endforeach
@@ -509,7 +513,8 @@
                     </table>
                 </div>
 
-                {{-- Totals --}}
+                {{-- Totals - Para admin2 mostrar solo el total del seguro --}}
+                @if(!$isAdmin2)
                 <div class="totals-wrap">
                     <div class="totals-box">
                         <div class="totals-row">
@@ -535,20 +540,35 @@
                         </div>
                         @endif
                         @if($invoice->customer_business_name || $invoice->customer_rnc)
-<div class="auth-row">
-    <i class="ri-building-line"></i>
-
-    {{ $invoice->customer_business_name }}
-
-    @if($invoice->customer_rnc)
-        <span class="auth-chip">
-            {{ $invoice->customer_rnc }}
-        </span>
-    @endif
-</div>
-@endif
+                        <div class="auth-row">
+                            <i class="ri-building-line"></i>
+                            {{ $invoice->customer_business_name }}
+                            @if($invoice->customer_rnc)
+                                <span class="auth-chip">
+                                    {{ $invoice->customer_rnc }}
+                                </span>
+                            @endif
+                        </div>
+                        @endif
                     </div>
                 </div>
+                @elseif($invoice->insurance_discount > 0)
+                {{-- Para admin2: mostrar solo el total que cubre el seguro --}}
+                <div class="totals-wrap">
+                    <div class="totals-box">
+                        <div class="totals-row total-final">
+                            <span class="totals-label-final">Total cubierto por seguro</span>
+                            <span class="totals-value-final" style="color:#0ab39c;">RD$ {{ number_format($invoice->insurance_discount, 2) }}</span>
+                        </div>
+                        @if($invoice->authorization_number)
+                        <div class="auth-row">
+                            <i class="ri-file-check-line"></i>
+                            N° Autorización: <span class="auth-chip">{{ $invoice->authorization_number }}</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
 
             </div>{{-- /inv-body --}}
 
@@ -567,9 +587,9 @@
 </div><!-- page-content -->
 
 {{-- ══════════════════════════════════
-     MODAL: Cancelar
+     MODAL: Cancelar (solo para admin normal)
 ══════════════════════════════════ --}}
-@if($invoice->status === 'pendiente' && auth()->user()->role->name === 'admin')
+@if($invoice->status === 'pendiente' && auth()->user()->role->name === 'admin' && !$isAdmin2)
 <div class="modal fade" id="cancelModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius:.75rem;overflow:hidden;">
@@ -605,7 +625,9 @@
 </div>
 @endif
 
+@if(!$isAdmin2)
 <iframe id="thermal-frame" style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;"></iframe>
+@endif
 
 @push('scripts')
 <script>
@@ -623,7 +645,7 @@ function showToast(msg, type) {
     }, 3500);
 }
 
-
+@if(!$isAdmin2)
 function printThermal() {
     const frame = document.getElementById('thermal-frame');
     const doc = frame.contentDocument || frame.contentWindow.document;
@@ -634,299 +656,98 @@ function printThermal() {
 <head>
 <meta charset="UTF-8">
 <title>Ticket</title>
-
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    font-family: Arial, sans-serif;
-    font-size:12px;
-    color:#000;
-    padding:8px;
-}
-
-.center{
-    text-align:center;
-}
-
-.right{
-    text-align:right;
-}
-
-.bold{
-    font-weight:bold;
-}
-
-.big{
-    font-size:16px;
-    font-weight:bold;
-}
-
-.sep{
-    border-top:1px dashed #000;
-    margin:6px 0;
-}
-
-.sep2{
-    border-top:2px solid #000;
-    margin:6px 0;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-td{
-    padding:1px 0;
-    vertical-align:top;
-}
-
-.label{
-    width:78px;
-    font-weight:bold;
-    white-space:nowrap;
-}
-
-.total{
-    font-size:14px;
-    font-weight:bold;
-}
-
-thead td{
-    border:1px solid #000;
-    padding:3px;
-    font-weight:bold;
-}
-
-tbody td{
-    padding:3px;
-}
-
-@media print{
-    @page{
-        margin:0;
-    }
-}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family: Arial, sans-serif;font-size:12px;color:#000;padding:8px;}
+.center{text-align:center;}
+.right{text-align:right;}
+.bold{font-weight:bold;}
+.big{font-size:16px;font-weight:bold;}
+.sep{border-top:1px dashed #000;margin:6px 0;}
+.sep2{border-top:2px solid #000;margin:6px 0;}
+table{width:100%;border-collapse:collapse;}
+td{padding:1px 0;vertical-align:top;}
+.label{width:78px;font-weight:bold;white-space:nowrap;}
+.total{font-size:14px;font-weight:bold;}
+thead td{border:1px solid #000;padding:3px;font-weight:bold;}
+tbody td{padding:3px;}
+@media print{@page{margin:0;}}
 </style>
-
 </head>
-
 <body>
-
 <div class="center big">AUDIOFON</div>
 <div class="center bold">RNC: 132-11581-3</div>
-
 @if($invoice->branch)
 <div class="center">{{ $invoice->branch->name }}</div>
 @endif
-
 @if($invoice->branch?->address)
 <div class="center">{{ $invoice->branch->address }}</div>
 @endif
-
 @if($invoice->branch?->phone)
 <div class="center">Tel: {{ $invoice->branch->phone }}</div>
 @endif
-
 <div class="sep2"></div>
-
 @if($invoice->ncf)
-<div class="center bold">
-{{ $invoice->ncf }}
-</div>
-
-<div class="center" style="font-size:11px;">
-Valido hasta 31-12-2026
-</div>
-
-<div class="center" style="font-size:11px;">
-Valido para credito fiscal
-</div>
+<div class="center bold">{{ $invoice->ncf }}</div>
+<div class="center" style="font-size:11px;">Valido hasta 31-12-2026</div>
+<div class="center" style="font-size:11px;">Valido para credito fiscal</div>
 @endif
-
 <table>
-<tr>
-    <td class="label">FACTURA</td>
-    <td>: {{ $invoice->invoice_number }}</td>
-</tr>
-
-<tr>
-    <td class="label">FECHA</td>
-    <td>: {{ $invoice->created_at->format('d/m/Y h:i A') }}</td>
-</tr>
-
-<tr>
-    <td class="label">ESTADO</td>
-    <td>: {{ strtoupper($invoice->status) }}</td>
-</tr>
+<tr><td class="label">FACTURA</td><td>: {{ $invoice->invoice_number }}</td></tr>
+<tr><td class="label">FECHA</td><td>: {{ $invoice->created_at->format('d/m/Y h:i A') }}</td></tr>
+<tr><td class="label">ESTADO</td><td>: {{ strtoupper($invoice->status) }}</td></tr>
 </table>
-
 <div class="sep"></div>
-
-<table>
-
-<tr>
-    <td class="label">PACIENTE</td>
-    <td>: {{ strtoupper($invoice->patient->first_name.' '.$invoice->patient->last_name) }}</td>
-</tr>
-
-<tr>
-    <td class="label">CEDULA</td>
-    <td>: {{ $invoice->patient->cedula }}</td>
-</tr>
-
+<td>
+<tr><td class="label">PACIENTE</td><td>: {{ strtoupper($invoice->patient->first_name.' '.$invoice->patient->last_name) }}</td></tr>
+<tr><td class="label">CEDULA</td><td>: {{ $invoice->patient->cedula }}</td></tr>
 @if($invoice->patient->phone)
-<tr>
-    <td class="label">TEL.</td>
-    <td>: {{ $invoice->patient->phone }}</td>
-</tr>
+<tr><td class="label">TEL.</td><td>: {{ $invoice->patient->phone }}</td></tr>
 @endif
-
 @if($invoice->insurance)
-<tr>
-    <td class="label">SEGURO</td>
-    <td>: {{ strtoupper($invoice->insurance->name) }}</td>
-</tr>
+<tr><td class="label">SEGURO</td><td>: {{ strtoupper($invoice->insurance->name) }}</td></tr>
 @endif
-
 @if($invoice->authorization_number)
-<tr>
-    <td class="label">AUTORIZ.</td>
-    <td>: {{ $invoice->authorization_number }}</td>
-</tr>
+<tr><td class="label">AUTORIZ.</td><td>: {{ $invoice->authorization_number }}</td></tr>
 @endif
-
-<tr>
-    <td class="label">USUARIO</td>
-    <td>: {{ $invoice->user->name }}</td>
-</tr>
-
+<tr><td class="label">USUARIO</td><td>: {{ $invoice->user->name }}</td></tr>
 @if($invoice->customer_rnc)
-<tr>
-    <td class="label">RNC</td>
-    <td>: {{ $invoice->customer_rnc }}</td>
-</tr>
+<tr><td class="label">RNC</td><td>: {{ $invoice->customer_rnc }}</td></tr>
 @endif
-
 @if($invoice->customer_business_name)
-<tr>
-    <td class="label">RAZON S.</td>
-    <td>: {{ strtoupper($invoice->customer_business_name) }}</td>
-</tr>
+<tr><td class="label">RAZON S.</td><td>: {{ strtoupper($invoice->customer_business_name) }}</td></tr>
 @endif
-
 </table>
-
 <div class="sep2"></div>
-
 <table>
-
-<thead>
-<tr>
-    <td>Cant.</td>
-    <td>Descripción</td>
-
-    @if($invoice->insurance)
-    <td>Cob.</td>
-    @endif
-
-    <td>Valor</td>
-</tr>
-</thead>
-
+<thead><tr><td>Cant.</td><td>Descripción</td><td>Valor</td></tr></thead>
 <tbody>
-
 @foreach($invoice->items as $item)
-<tr>
-
-<td>
-{{ $item->quantity }}
-</td>
-
-<td>
-{{ strtoupper($item->service->name) }}
-</td>
-
-@if($invoice->insurance)
-<td>
-RD$ {{ number_format($item->insurance_amount ?? 0,2) }}
-</td>
-@endif
-
-<td>
-RD$ {{ number_format($item->subtotal,2) }}
-</td>
-
-</tr>
+<tr><td>{{ $item->quantity }}</td><td>{{ strtoupper($item->service->name) }}</td><td>RD$ {{ number_format($item->subtotal,2) }}</td></tr>
 @endforeach
-
 </tbody>
-
 </table>
-
 <div class="sep"></div>
-
-<table>
-
-<tr>
-<td>Facturado:</td>
-<td class="right">
-RD$ {{ number_format($invoice->subtotal,2) }}
 </td>
-</tr>
-
+<tr><td>Facturado:</td><td class="right">RD$ {{ number_format($invoice->subtotal,2) }}</td></tr>
 @if($invoice->insurance_discount > 0)
-<tr>
-<td>Cobertura Seguro:</td>
-<td class="right">
-RD$ {{ number_format($invoice->insurance_discount,2) }}
-</td>
-</tr>
+<tr><td>Cobertura Seguro:</td><td class="right">RD$ {{ number_format($invoice->insurance_discount,2) }}</td></tr>
 @endif
-
-<tr>
-<td><strong>Diferencia Paciente:</strong></td>
-<td class="right bold">
-RD$ {{ number_format($invoice->total,2) }}
-</td>
-</tr>
-
+<tr><td><strong>Diferencia Paciente:</strong></td><td class="right bold">RD$ {{ number_format($invoice->total,2) }}</td></tr>
 </table>
-
 @if($invoice->authorization_number)
 <div class="sep"></div>
-
-<table>
-<tr>
-<td class="label">AUTORIZACION</td>
-<td>: {{ $invoice->authorization_number }}</td>
-</tr>
-</table>
+<table><td class="label">AUTORIZACION</td><td>: {{ $invoice->authorization_number }}</td></table>
 @endif
-
 <div style="margin-top:15px;"></div>
-
-<div class="center">
-Gracias por su preferencia
-</div>
-
+<div class="center">Gracias por su preferencia</div>
 <div style="height:30px"></div>
-
 </body>
 </html>`);
-
     doc.close();
-
-    setTimeout(() => {
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-    }, 500);
+    setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 500);
 }
+@endif
 </script>
 @endpush
 

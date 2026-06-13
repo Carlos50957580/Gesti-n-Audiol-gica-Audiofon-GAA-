@@ -2,6 +2,10 @@
 <div class="page-content" style="padding-top:0;">
 <div class="container-fluid pt-3">
 
+    @php
+    $isAdmin2 = auth()->user()->role_id == 4;
+@endphp
+
 <style>
 :root {
     --rp:#405189; --rt:#0ab39c; --ra:#f7b84b; --rr:#f06548; --rv:#7066e0;
@@ -245,20 +249,20 @@
                                autocomplete="off">
                     </div>
                 </div>
-                @if($isAdmin)
-                <div class="col-md-3">
-                    <select name="branch_id" class="form-select form-select-sm"
-                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
-                            onchange="document.getElementById('filter-form').submit()">
-                        <option value="">Todas las sucursales</option>
-                        @foreach($branches as $br)
-                            <option value="{{ $br->id }}" {{ request('branch_id') == $br->id ? 'selected':'' }}>
-                                {{ $br->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
+               @if($isAdmin || $isAdmin2)
+<div class="col-md-3">
+    <select name="branch_id" class="form-select form-select-sm"
+            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
+            onchange="document.getElementById('filter-form').submit()">
+        <option value="">Todas las sucursales</option>
+        @foreach($branches as $br)
+            <option value="{{ $br->id }}" {{ request('branch_id') == $br->id ? 'selected':'' }}>
+                {{ $br->name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+@endif
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm" style="border-radius:2rem;font-size:.8rem;">
                         <i class="ri-search-line me-1"></i>Buscar
@@ -394,20 +398,20 @@
                            class="form-control form-control-sm"
                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;">
                 </div>
-                @if($isAdmin)
-                <div class="col-md-2">
-                    <select name="rbranch_id" class="form-select form-select-sm"
-                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
-                            onchange="document.getElementById('receipts-filter-form').submit()">
-                        <option value="">Todas las sucursales</option>
-                        @foreach($branches as $br)
-                            <option value="{{ $br->id }}" {{ request('rbranch_id') == $br->id ? 'selected':'' }}>
-                                {{ $br->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
+               @if($isAdmin || $isAdmin2)
+<div class="col-md-2">
+    <select name="rbranch_id" class="form-select form-select-sm"
+            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
+            onchange="document.getElementById('receipts-filter-form').submit()">
+        <option value="">Todas las sucursales</option>
+        @foreach($branches as $br)
+            <option value="{{ $br->id }}" {{ request('rbranch_id') == $br->id ? 'selected':'' }}>
+                {{ $br->name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+@endif
                 <div class="col-auto">
                     <button type="submit" class="btn btn-sm"
                             style="border-radius:2rem;font-size:.8rem;background:var(--rt);color:#fff;border:none;">

@@ -394,7 +394,10 @@
                     <th>Sucursal</th>
                     @endif
                     <th>Seguro</th>
+                    {{-- Ocultar Subtotal solo para admin2 (role_id = 4) --}}
+                    @if(auth()->user()->role_id != 4)
                     <th>Subtotal</th>
+                    @endif
                     <th>Desc. Seguro</th>
                     <th>Total</th>
                     <th>Estado</th>
@@ -437,7 +440,10 @@
                             <span class="ins-badge ins-badge-no">Privado</span>
                         @endif
                     </td>
+                    {{-- Ocultar Subtotal solo para admin2 (role_id = 4) --}}
+                    @if(auth()->user()->role_id != 4)
                     <td><span class="amt">RD$ {{ number_format($inv->subtotal, 2) }}</span></td>
+                    @endif
                     <td>
                         @if($inv->insurance_discount > 0)
                             <span class="amt-discount">

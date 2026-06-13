@@ -12,15 +12,20 @@ class ReceiptController extends Controller
 {
     public function index(Request $request)
     {
-        $user    = auth()->user();
-        $isAdmin = $user->role->name === 'admin';
-        $tab     = $request->get('tab', 'pending');
+        $user     = auth()->user();
+        $isAdmin  = $user->role->name === 'admin';
+        $isAdmin2 = $user->role_id == 4; // 🔥 Verificar si es admin2
+        $tab      = $request->get('tab', 'pending');
 
+        // ── Query de facturas pendientes ─────────────────────────────────────
         $invoicesQuery = Invoice::with(['patient', 'branch', 'insurance'])
             ->where('status', 'pendiente')
             ->orderBy('created_at', 'asc');
 
-        if (!$isAdmin) {
+        // 🔥 Para admin2: solo ver facturas de su sucursal (como recepcionista)
+        if (!$isAdmin && !$isAdmin2) {
+            $invoicesQuery->where('branch_id', $user->branch_id);
+        } elseif ($isAdmin2) {
             $invoicesQuery->where('branch_id', $user->branch_id);
         }
 
@@ -36,16 +41,22 @@ class ReceiptController extends Controller
             });
         }
 
-        if ($isAdmin && $request->filled('branch_id')) {
+        if (($isAdmin || $isAdmin2) && $request->filled('branch_id')) {
             $invoicesQuery->where('branch_id', $request->branch_id);
         }
 
         $invoices = $invoicesQuery->paginate(20, ['*'], 'ppage')->withQueryString();
 
-        $totalAmount = Invoice::where('status', 'pendiente')
-            ->when(!$isAdmin, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->sum('total');
+        // ── Total por cobrar ─────────────────────────────────────────────────
+        $totalAmountQuery = Invoice::where('status', 'pendiente');
+        if (!$isAdmin && !$isAdmin2) {
+            $totalAmountQuery->where('branch_id', $user->branch_id);
+        } elseif ($isAdmin2) {
+            $totalAmountQuery->where('branch_id', $user->branch_id);
+        }
+        $totalAmount = $totalAmountQuery->sum('total');
 
+        // ── Query de recibos pagados ─────────────────────────────────────────
         $receiptsQuery = Receipt::with([
                 'invoice.patient',
                 'invoice.insurance',
@@ -55,7 +66,9 @@ class ReceiptController extends Controller
             ->whereHas('invoice.patient')
             ->orderBy('created_at', 'desc');
 
-        if (!$isAdmin) {
+        if (!$isAdmin && !$isAdmin2) {
+            $receiptsQuery->where('branch_id', $user->branch_id);
+        } elseif ($isAdmin2) {
             $receiptsQuery->where('branch_id', $user->branch_id);
         }
 
@@ -79,22 +92,28 @@ class ReceiptController extends Controller
             $receiptsQuery->whereDate('created_at', '<=', $request->rto);
         }
 
-        if ($isAdmin && $request->filled('rbranch_id')) {
+        if (($isAdmin || $isAdmin2) && $request->filled('rbranch_id')) {
             $receiptsQuery->where('branch_id', $request->rbranch_id);
         }
 
         $receipts = $receiptsQuery->paginate(20, ['*'], 'rpage')->withQueryString();
 
-        $totalCollected = Receipt::when(!$isAdmin, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at',  now()->year)
-            ->sum('total_paid');
+        // ── Total cobrado este mes ──────────────────────────────────────────
+        $totalCollectedQuery = Receipt::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year);
+        if (!$isAdmin && !$isAdmin2) {
+            $totalCollectedQuery->where('branch_id', $user->branch_id);
+        } elseif ($isAdmin2) {
+            $totalCollectedQuery->where('branch_id', $user->branch_id);
+        }
+        $totalCollected = $totalCollectedQuery->sum('total_paid');
 
-        $branches = $isAdmin ? Branch::orderBy('name')->get() : collect();
+        // ── Sucursales (solo admin y admin2) ─────────────────────────────────
+        $branches = ($isAdmin || $isAdmin2) ? Branch::orderBy('name')->get() : collect();
 
         return view('receipts.index', compact(
             'invoices', 'receipts', 'branches',
-            'isAdmin', 'totalAmount', 'totalCollected', 'tab'
+            'isAdmin', 'isAdmin2', 'totalAmount', 'totalCollected', 'tab'
         ));
     }
 
@@ -113,7 +132,13 @@ class ReceiptController extends Controller
         $invoice = Invoice::where('status', 'pendiente')->findOrFail($request->invoice_id);
 
         $user = auth()->user();
-        if ($user->role->name !== 'admin' && $invoice->branch_id !== $user->branch_id) {
+        $isAdmin2 = $user->role_id == 4;
+        
+        // 🔥 Para admin2: solo puede cobrar facturas de su sucursal
+        if ($user->role->name !== 'admin' && !$isAdmin2 && $invoice->branch_id !== $user->branch_id) {
+            abort(403);
+        }
+        if ($isAdmin2 && $invoice->branch_id !== $user->branch_id) {
             abort(403);
         }
 
@@ -121,53 +146,34 @@ class ReceiptController extends Controller
         $card     = (float) ($request->card_amount     ?? 0);
         $transfer = (float) ($request->transfer_amount ?? 0);
         $total    = round($cash + $card + $transfer, 2);
-$invoiceTotal = (float) $invoice->total;
+        $invoiceTotal = (float) $invoice->total;
 
-// ✅ CASO: FACTURA EN 0
-if ($invoiceTotal <= 0) {
-    $cash = $card = $transfer = 0;
-    $totalPaid = 0;
-} else {
+        // ✅ CASO: FACTURA EN 0
+        if ($invoiceTotal <= 0) {
+            $cash = $card = $transfer = 0;
+            $totalPaid = 0;
+        } else {
+            if ($total < 0) {
+                return back()->withErrors(['payment' => 'El monto no puede ser negativo.'])->withInput();
+            }
 
-    // ❌ No permitir negativos
-    if ($total < 0) {
-        return back()->withErrors(['payment' => 'El monto no puede ser negativo.'])->withInput();
-    }
+            if (($card + $transfer) > $invoiceTotal + 0.01) {
+                return back()
+                    ->withErrors(['payment' => 'Tarjeta y/o transferencia no pueden exceder el total de la factura.'])
+                    ->withInput();
+            }
 
-    // ❌ Tarjeta + transferencia no pueden exceder
-    if (($card + $transfer) > $invoiceTotal + 0.01) {
-        return back()
-            ->withErrors(['payment' => 'Tarjeta y/o transferencia no pueden exceder el total de la factura.'])
-            ->withInput();
-    }
+            $nonCash    = $card + $transfer;
+            $cashNeeded = max(0, $invoiceTotal - $nonCash);
 
-    $nonCash    = $card + $transfer;
-    $cashNeeded = max(0, $invoiceTotal - $nonCash);
+            if ($cash < $cashNeeded - 0.01) {
+                return back()
+                    ->withErrors(['payment' => 'El monto en efectivo es insuficiente para cubrir la diferencia.'])
+                    ->withInput();
+            }
 
-    if ($cash < $cashNeeded - 0.01) {
-        return back()
-            ->withErrors(['payment' => 'El monto en efectivo es insuficiente para cubrir la diferencia.'])
-            ->withInput();
-    }
-
-    $totalPaid = $invoiceTotal;
-}
-
-        if (($card + $transfer) > (float) $invoice->total + 0.01) {
-            return back()
-                ->withErrors(['payment' => 'Tarjeta y/o transferencia no pueden exceder el total de la factura.'])
-                ->withInput();
+            $totalPaid = $invoiceTotal;
         }
-
-        $nonCash    = $card + $transfer;
-        $cashNeeded = max(0, (float) $invoice->total - $nonCash);
-        if ($cash < $cashNeeded - 0.01) {
-            return back()
-                ->withErrors(['payment' => 'El monto en efectivo es insuficiente para cubrir la diferencia.'])
-                ->withInput();
-        }
-
-        $totalPaid = (float) $invoice->total;
 
         DB::beginTransaction();
         try {
@@ -210,7 +216,12 @@ if ($invoiceTotal <= 0) {
         }
 
         $user = auth()->user();
-        if ($user->role->name !== 'admin' && $invoice->branch_id !== $user->branch_id) {
+        $isAdmin2 = $user->role_id == 4;
+        
+        if ($user->role->name !== 'admin' && !$isAdmin2 && $invoice->branch_id !== $user->branch_id) {
+            return response()->json(['error' => 'Sin autorización.'], 403);
+        }
+        if ($isAdmin2 && $invoice->branch_id !== $user->branch_id) {
             return response()->json(['error' => 'Sin autorización.'], 403);
         }
 

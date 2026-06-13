@@ -16,16 +16,26 @@ use App\Services\AudiologistFeeService;
 
 class InvoiceController extends Controller
 {
-    public function index(Request $request)
+
+
+public function index(Request $request)
 {
-    $user  = auth()->user();
+    $user = auth()->user();
+    
+    // Verificar si es admin2 (role_id = 4)
+    $isAdmin2 = $user->role_id == 4;
 
     // ── QUERY PRINCIPAL (LISTADO) ─────────────────────
     $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
         ->orderBy('created_at', 'desc');
 
+    // 🔥 PARA ADMIN2: Solo mostrar facturas con seguro (insurance_id no es null)
+    if ($isAdmin2) {
+        $query->whereNotNull('insurance_id');
+    }
+
     // Restricción por sucursal si no es admin
-    if ($user->role->name !== 'admin') {
+    if ($user->role->name !== 'admin' && !$isAdmin2) {
         $query->where('branch_id', $user->branch_id);
     }
 
@@ -57,7 +67,7 @@ class InvoiceController extends Controller
         $query->where('status', $request->status);
     }
 
-    if ($user->role->name === 'admin' && $request->filled('branch_id')) {
+    if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
         $query->where('branch_id', $request->branch_id);
     }
 
@@ -75,17 +85,22 @@ class InvoiceController extends Controller
     // ── STATS (SIN PAGINACIÓN) ─────────────────────
     $statsQuery = Invoice::query();
 
+    // 🔥 PARA ADMIN2: Solo contar facturas con seguro
+    if ($isAdmin2) {
+        $statsQuery->whereNotNull('insurance_id');
+    }
+
     // Restricción por rol
-    if ($user->role->name !== 'admin') {
+    if ($user->role->name !== 'admin' && !$isAdmin2) {
         $statsQuery->where('branch_id', $user->branch_id);
     }
 
-    // Aplicar mismos filtros (IMPORTANTE para consistencia)
+    // Aplicar mismos filtros
     if ($request->filled('status')) {
         $statsQuery->where('status', $request->status);
     }
 
-    if ($user->role->name === 'admin' && $request->filled('branch_id')) {
+    if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
         $statsQuery->where('branch_id', $request->branch_id);
     }
 
@@ -103,18 +118,17 @@ class InvoiceController extends Controller
         'pending'     => (clone $statsQuery)->where('status', 'pendiente')->count(),
         'paid'        => (clone $statsQuery)->where('status', 'pagada')->count(),
         'cancelled'   => (clone $statsQuery)->where('status', 'cancelada')->count(),
-
         'total_amt'   => (clone $statsQuery)->sum('total'),
         'pending_amt' => (clone $statsQuery)->where('status', 'pendiente')->sum('total'),
         'paid_amt'    => (clone $statsQuery)->where('status', 'pagada')->sum('total'),
     ];
 
-    // ── SUCURSALES (solo admin) ─────────────────────
-    $branches = $user->role->name === 'admin'
+    // ── SUCURSALES (solo admin y admin2) ─────────────────────
+    $branches = ($user->role->name === 'admin' || $isAdmin2)
         ? Branch::orderBy('name')->get()
         : collect();
 
-    return view('invoices.index', compact('invoices', 'branches', 'stats'));
+    return view('invoices.index', compact('invoices', 'branches', 'stats', 'isAdmin2'));
 }
 
     public function create()
