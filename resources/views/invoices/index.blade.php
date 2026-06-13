@@ -407,83 +407,86 @@
             </thead>
             <tbody>
                 @forelse($invoices as $inv)
-                <tr class="anim-row">
-                    <td>
-                        <a href="{{ route('invoices.show', $inv) }}" class="inv-num">
-                            {{ $inv->invoice_number }}
-                        </a>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="pat-av">{{ strtoupper(substr($inv->patient->first_name,0,1).substr($inv->patient->last_name,0,1)) }}</div>
-                            <div>
-                                <div class="fw-semibold" style="font-size:.87rem;color:#344563;">
-                                    {{ $inv->patient->first_name }} {{ $inv->patient->last_name }}
-                                </div>
-                                <div style="font-size:.73rem;color:#8098bb;font-family:monospace;">
-                                    {{ $inv->patient->cedula }}
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    @if(auth()->user()->role->name === 'admin')
-                    <td>
-                        <span class="branch-chip">{{ $inv->branch->name }}</span>
-                    </td>
-                    @endif
-                    <td>
-                        @if($inv->insurance)
-                            <span class="ins-badge ins-badge-yes">
-                                <i class="ri-shield-check-line me-1"></i>{{ $inv->insurance->name }}
-                            </span>
-                        @else
-                            <span class="ins-badge ins-badge-no">Privado</span>
-                        @endif
-                    </td>
-                    {{-- Ocultar Subtotal solo para admin2 (role_id = 4) --}}
-                    @if(auth()->user()->role_id != 4)
-                    <td><span class="amt">RD$ {{ number_format($inv->subtotal, 2) }}</span></td>
-                    @endif
-                    <td>
-                        @if($inv->insurance_discount > 0)
-                            <span class="amt-discount">
-                                <i class="ri-arrow-down-line" style="font-size:.75rem;"></i>
-                                RD$ {{ number_format($inv->insurance_discount, 2) }}
-                            </span>
-                        @else
-                            <span style="color:#cbd5e1;font-size:.83rem;">—</span>
-                        @endif
-                    </td>
-                    <td><span class="amt-total">RD$ {{ number_format($inv->total, 2) }}</span></td>
-                    <td>
-                        <span class="s-pill pill-{{ $inv->status }}">
-                            <span class="sdot"></span>{{ ucfirst($inv->status) }}
-                        </span>
-                    </td>
-                    <td>
-                        <span style="font-size:.82rem;color:#344563;font-weight:500;">
-                            {{ $inv->created_at->format('d/m/Y') }}
-                        </span>
-                        <div style="font-size:.72rem;color:#8098bb;">{{ $inv->created_at->format('H:i') }}</div>
-                    </td>
-                    <td class="text-center">
-                        <div class="d-flex gap-1 justify-content-center">
-                            <a href="{{ route('invoices.show', $inv) }}"
-                               class="btn btn-action bg-info-subtle text-info" title="Ver detalle">
-                                <i class="ri-eye-fill fs-13"></i>
-                            </a>
-                            @if($inv->status === 'pendiente' && auth()->user()->role->name === 'admin')
-                            <button type="button"
-                                    class="btn btn-action bg-danger-subtle text-danger"
-                                    title="Cancelar"
-                                    onclick="openCancelModal({{ $inv->id }}, '{{ $inv->invoice_number }}', '{{ addslashes($inv->patient->first_name.' '.$inv->patient->last_name) }}')">
-                                <i class="ri-close-circle-fill fs-13"></i>
-                            </button>
-                            @endif
-                        </div>
-                    </td>
-                </tr>
-                @empty
+<tr class="anim-row">
+    <td>
+        <a href="{{ route('invoices.show', $inv) }}" class="inv-num">
+            {{ $inv->invoice_number }}
+        </a>
+    </td>
+    <td>
+        <div class="d-flex align-items-center gap-2">
+            <div class="pat-av">{{ strtoupper(substr($inv->patient->first_name,0,1).substr($inv->patient->last_name,0,1)) }}</div>
+            <div>
+                <div class="fw-semibold" style="font-size:.87rem;color:#344563;">
+                    {{ $inv->patient->first_name }} {{ $inv->patient->last_name }}
+                </div>
+                <div style="font-size:.73rem;color:#8098bb;font-family:monospace;">
+                    {{ $inv->patient->cedula }}
+                </div>
+            </div>
+        </div>
+    </td>
+    @if(auth()->user()->role->name === 'admin')
+    <td>
+        <span class="branch-chip">{{ $inv->branch->name }}</span>
+    </td>
+    @endif
+    <td>
+        @if($inv->insurance)
+            <span class="ins-badge ins-badge-yes">
+                <i class="ri-shield-check-line me-1"></i>{{ $inv->insurance->name }}
+            </span>
+        @else
+            <span class="ins-badge ins-badge-no">Privado</span>
+        @endif
+    </td>
+    {{-- Ocultar Subtotal solo para admin2 --}}
+    @if(!$isAdmin2)
+    <td><span class="amt">RD$ {{ number_format($inv->subtotal, 2) }}</span></td>
+    @endif
+    <td>
+        @if($inv->insurance_discount > 0)
+            <span class="amt-discount">
+                <i class="ri-arrow-down-line" style="font-size:.75rem;"></i>
+                RD$ {{ number_format($inv->insurance_discount, 2) }}
+            </span>
+        @else
+            <span style="color:#cbd5e1;font-size:.83rem;">—</span>
+        @endif
+    </td>
+    {{-- Ocultar Total para admin2 --}}
+    @if(!$isAdmin2)
+    <td><span class="amt-total">RD$ {{ number_format($inv->total, 2) }}</span></td>
+    @endif
+    <td>
+        <span class="s-pill pill-{{ $inv->status }}">
+            <span class="sdot"></span>{{ ucfirst($inv->status) }}
+        </span>
+    </td>
+    <td>
+        <span style="font-size:.82rem;color:#344563;font-weight:500;">
+            {{ $inv->created_at->format('d/m/Y') }}
+        </span>
+        <div style="font-size:.72rem;color:#8098bb;">{{ $inv->created_at->format('H:i') }}</div>
+    </td>
+    <td class="text-center">
+        <div class="d-flex gap-1 justify-content-center">
+            <a href="{{ route('invoices.show', $inv) }}"
+               class="btn btn-action bg-info-subtle text-info" title="Ver detalle">
+                <i class="ri-eye-fill fs-13"></i>
+            </a>
+            @if($inv->status === 'pendiente' && auth()->user()->role->name === 'admin' && !$isAdmin2)
+            <button type="button"
+                    class="btn btn-action bg-danger-subtle text-danger"
+                    title="Cancelar"
+                    onclick="openCancelModal({{ $inv->id }}, '{{ $inv->invoice_number }}', '{{ addslashes($inv->patient->first_name.' '.$inv->patient->last_name) }}')">
+                <i class="ri-close-circle-fill fs-13"></i>
+            </button>
+            @endif
+        </div>
+    </td>
+</tr>
+@empty
                 <tr>
                     <td colspan="{{ auth()->user()->role->name === 'admin' ? 10 : 9 }}">
                         <div class="empty-state">
