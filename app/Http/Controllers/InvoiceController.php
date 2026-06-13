@@ -18,118 +18,122 @@ class InvoiceController extends Controller
 {
 
 
-public function index(Request $request)
-{
-    $user = auth()->user();
-    
-    // Verificar si es admin2 (role_id = 4)
-    $isAdmin2 = $user->role_id == 4;
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        
+        // Verificar si es admin2 (role_id = 4)
+        $isAdmin2 = $user->role_id == 4;
 
-    // ── QUERY PRINCIPAL (LISTADO) ─────────────────────
-    $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
-        ->orderBy('created_at', 'desc');
+        // ── QUERY PRINCIPAL (LISTADO) ─────────────────────
+        $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
+            ->orderBy('created_at', 'desc');
 
-    // 🔥 PARA ADMIN2: Solo mostrar facturas con seguro (insurance_id no es null)
-    if ($isAdmin2) {
-        $query->whereNotNull('insurance_id');
-    }
-
-    // Restricción por sucursal si no es admin
-    if ($user->role->name !== 'admin' && !$isAdmin2) {
-        $query->where('branch_id', $user->branch_id);
-    }
-
-    // 🔍 BÚSQUEDA
-    if ($request->filled('q')) {
-        $q         = $request->q;
-        $numericId = null;
-
-        if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
-            $numericId = (int) $m[1];
+        // 🔥 PARA ADMIN2: Solo mostrar facturas con seguro (insurance_id no es null)
+        if ($isAdmin2) {
+            $query->whereNotNull('insurance_id');
         }
 
-        $query->where(function ($sq) use ($q, $numericId) {
-            if ($numericId) {
-                $sq->orWhere('id', $numericId);
+        // 🔥 PARA ADMIN2: NO restringir por sucursal, puede ver todas
+        // Restricción por sucursal solo para usuarios normales (no admin, no admin2)
+        if ($user->role->name !== 'admin' && !$isAdmin2) {
+            $query->where('branch_id', $user->branch_id);
+        }
+
+        // 🔍 BÚSQUEDA
+        if ($request->filled('q')) {
+            $q         = $request->q;
+            $numericId = null;
+
+            if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
+                $numericId = (int) $m[1];
             }
 
-            $sq->orWhereHas('patient', function ($pq) use ($q) {
-                $pq->where('first_name', 'like', "%{$q}%")
-                   ->orWhere('last_name',  'like', "%{$q}%")
-                   ->orWhere('cedula',     'like', "%{$q}%")
-                   ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
+            $query->where(function ($sq) use ($q, $numericId) {
+                if ($numericId) {
+                    $sq->orWhere('id', $numericId);
+                }
+
+                $sq->orWhereHas('patient', function ($pq) use ($q) {
+                    $pq->where('first_name', 'like', "%{$q}%")
+                       ->orWhere('last_name',  'like', "%{$q}%")
+                       ->orWhere('cedula',     'like', "%{$q}%")
+                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
+                });
             });
-        });
+        }
+
+        // 🎯 FILTROS
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // 🔥 Admin y admin2 pueden filtrar por sucursal
+        if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // 📄 PAGINACIÓN
+        $invoices = $query->paginate(15)->withQueryString();
+
+        // ── STATS (SIN PAGINACIÓN) ─────────────────────
+        $statsQuery = Invoice::query();
+
+        // 🔥 PARA ADMIN2: Solo contar facturas con seguro
+        if ($isAdmin2) {
+            $statsQuery->whereNotNull('insurance_id');
+        }
+
+        // 🔥 PARA ADMIN2: NO restringir por sucursal en stats
+        // Restricción por sucursal solo para usuarios normales
+        if ($user->role->name !== 'admin' && !$isAdmin2) {
+            $statsQuery->where('branch_id', $user->branch_id);
+        }
+
+        // Aplicar mismos filtros
+        if ($request->filled('status')) {
+            $statsQuery->where('status', $request->status);
+        }
+
+        if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
+            $statsQuery->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $statsQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $statsQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // ⚡ Cálculos
+        $stats = [
+            'total'       => (clone $statsQuery)->count(),
+            'pending'     => (clone $statsQuery)->where('status', 'pendiente')->count(),
+            'paid'        => (clone $statsQuery)->where('status', 'pagada')->count(),
+            'cancelled'   => (clone $statsQuery)->where('status', 'cancelada')->count(),
+            'total_amt'   => (clone $statsQuery)->sum('total'),
+            'pending_amt' => (clone $statsQuery)->where('status', 'pendiente')->sum('total'),
+            'paid_amt'    => (clone $statsQuery)->where('status', 'pagada')->sum('total'),
+        ];
+
+        // ── SUCURSALES (admin y admin2 pueden ver todas) ─────────────────────
+        $branches = ($user->role->name === 'admin' || $isAdmin2)
+            ? Branch::orderBy('name')->get()
+            : collect();
+
+        return view('invoices.index', compact('invoices', 'branches', 'stats', 'isAdmin2'));
     }
 
-    // 🎯 FILTROS
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
-    }
-
-    if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
-        $query->where('branch_id', $request->branch_id);
-    }
-
-    if ($request->filled('date_from')) {
-        $query->whereDate('created_at', '>=', $request->date_from);
-    }
-
-    if ($request->filled('date_to')) {
-        $query->whereDate('created_at', '<=', $request->date_to);
-    }
-
-    // 📄 PAGINACIÓN
-    $invoices = $query->paginate(15)->withQueryString();
-
-    // ── STATS (SIN PAGINACIÓN) ─────────────────────
-    $statsQuery = Invoice::query();
-
-    // 🔥 PARA ADMIN2: Solo contar facturas con seguro
-    if ($isAdmin2) {
-        $statsQuery->whereNotNull('insurance_id');
-    }
-
-    // Restricción por rol
-    if ($user->role->name !== 'admin' && !$isAdmin2) {
-        $statsQuery->where('branch_id', $user->branch_id);
-    }
-
-    // Aplicar mismos filtros
-    if ($request->filled('status')) {
-        $statsQuery->where('status', $request->status);
-    }
-
-    if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
-        $statsQuery->where('branch_id', $request->branch_id);
-    }
-
-    if ($request->filled('date_from')) {
-        $statsQuery->whereDate('created_at', '>=', $request->date_from);
-    }
-
-    if ($request->filled('date_to')) {
-        $statsQuery->whereDate('created_at', '<=', $request->date_to);
-    }
-
-    // ⚡ Cálculos
-    $stats = [
-        'total'       => (clone $statsQuery)->count(),
-        'pending'     => (clone $statsQuery)->where('status', 'pendiente')->count(),
-        'paid'        => (clone $statsQuery)->where('status', 'pagada')->count(),
-        'cancelled'   => (clone $statsQuery)->where('status', 'cancelada')->count(),
-        'total_amt'   => (clone $statsQuery)->sum('total'),
-        'pending_amt' => (clone $statsQuery)->where('status', 'pendiente')->sum('total'),
-        'paid_amt'    => (clone $statsQuery)->where('status', 'pagada')->sum('total'),
-    ];
-
-    // ── SUCURSALES (solo admin y admin2) ─────────────────────
-    $branches = ($user->role->name === 'admin' || $isAdmin2)
-        ? Branch::orderBy('name')->get()
-        : collect();
-
-    return view('invoices.index', compact('invoices', 'branches', 'stats', 'isAdmin2'));
-}
 
     public function create()
 {
