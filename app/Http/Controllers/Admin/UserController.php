@@ -33,6 +33,7 @@ class UserController extends Controller
             'email'     => $usuario->email,
             'role_id'   => $usuario->role_id,
             'branch_id' => $usuario->branch_id,
+            'is_doctor' => (bool) $usuario->is_doctor,
         ]);
     }
 
@@ -51,14 +52,25 @@ class UserController extends Controller
             'password'  => ['required', 'confirmed', Password::min(6)],
             'role_id'   => 'required|exists:roles,id',
             'branch_id' => 'nullable|exists:branches,id',
+            'is_doctor' => 'sometimes|boolean',
         ]);
 
-        User::create([
+        // ✅ Manejar el campo is_doctor (checkbox)
+        $isDoctor = $request->has('is_doctor') ? 1 : 0;
+
+        // ✅ Si el usuario es médico, permitir que tenga rol de médico o admin
+        if ($isDoctor && !in_array($validated['role_id'], [1, 4])) {
+            // Si el rol no es admin ni médico, forzar a médico
+            $validated['role_id'] = 4; // Asumiendo que el rol médico tiene ID 4
+        }
+
+        $user = User::create([
             'name'      => $validated['name'],
             'email'     => $validated['email'],
             'password'  => Hash::make($validated['password']),
             'role_id'   => $validated['role_id'],
             'branch_id' => $validated['branch_id'],
+            'is_doctor' => $isDoctor,
         ]);
 
         if ($request->expectsJson()) {
@@ -82,6 +94,7 @@ class UserController extends Controller
             'email'     => "required|email|unique:users,email,{$usuario->id}",
             'role_id'   => 'required|exists:roles,id',
             'branch_id' => 'nullable|exists:branches,id',
+            'is_doctor' => 'sometimes|boolean',
         ];
 
         if ($request->filled('password')) {
@@ -90,11 +103,21 @@ class UserController extends Controller
 
         $validated = $request->validate($rules);
 
+        // ✅ Manejar el campo is_doctor (checkbox)
+        $isDoctor = $request->has('is_doctor') ? 1 : 0;
+
+        // ✅ Si el usuario es médico, permitir que tenga rol de médico o admin
+        if ($isDoctor && !in_array($validated['role_id'], [1, 4])) {
+            // Si el rol no es admin ni médico, forzar a médico
+            $validated['role_id'] = 4; // Asumiendo que el rol médico tiene ID 4
+        }
+
         $data = [
             'name'      => $validated['name'],
             'email'     => $validated['email'],
             'role_id'   => $validated['role_id'],
             'branch_id' => $validated['branch_id'],
+            'is_doctor' => $isDoctor,
         ];
 
         if ($request->filled('password')) {
@@ -126,5 +149,45 @@ class UserController extends Controller
         }
 
         return redirect()->route('admin.usuarios.index')->with('success', 'Usuario eliminado correctamente.');
+    }
+
+    // ✅ NUEVO: Obtener solo médicos para selects
+    public function getDoctors(Request $request)
+    {
+        $query = User::where('is_doctor', 1)
+            ->with('role')
+            ->orderBy('name');
+
+        // Filtro por rol específico (ej: solo médicos con rol "medico")
+        if ($request->filled('role_id')) {
+            $query->where('role_id', $request->role_id);
+        }
+
+        // Filtro por sucursal
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        $doctors = $query->get(['id', 'name', 'email', 'role_id', 'branch_id']);
+
+        if ($request->expectsJson()) {
+            return response()->json($doctors);
+        }
+
+        return $doctors;
+    }
+
+    // ✅ NUEVO: Verificar si un usuario puede ser médico (para validación en frontend)
+    public function canBeDoctor(Request $request)
+    {
+        $roleId = $request->role_id;
+        $allowedRoles = [1, 4]; // Admin y Médico
+
+        $canBeDoctor = in_array($roleId, $allowedRoles);
+
+        return response()->json([
+            'can_be_doctor' => $canBeDoctor,
+            'message' => $canBeDoctor ? 'Este rol puede ser médico' : 'Este rol no puede ser médico'
+        ]);
     }
 }

@@ -4,9 +4,9 @@
 <div class="row">
     <div class="col-12">
         <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Nuevo Servicio / Estudio</h4>
+            <h4 class="mb-sm-0">Nueva Categoría de Servicio</h4>
             <div class="page-title-right">
-                <a href="{{ route('services.index') }}" class="btn btn-secondary">
+                <a href="{{ route('service-categories.index') }}" class="btn btn-secondary">
                     <i class="ri-arrow-left-line"></i> Volver
                 </a>
             </div>
@@ -15,116 +15,68 @@
 </div>
 
 <div class="row">
-    <div class="col-12">
+    <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('services.store') }}" method="POST" id="serviceForm">
+                <form action="{{ route('service-categories.store') }}" method="POST">
                     @csrf
 
                     <div class="row g-3">
-                        <!-- Categoría -->
-                        <div class="col-md-4">
-                            <label class="form-label">Categoría <span class="text-danger">*</span></label>
-                            <select name="category_id" class="form-select @error('category_id') is-invalid @enderror" id="categorySelect">
-                                <option value="">Seleccionar categoría</option>
-                                @foreach($categories as $category)
-                                <option value="{{ $category->id }}" 
-                                        data-requires-hc="{{ $category->requires_clinical_record ? '1' : '0' }}"
-                                        {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                    @if($category->requires_clinical_record) 🔬 @endif
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('category_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Código -->
-                        <div class="col-md-2">
-                            <label class="form-label">Código</label>
-                            <input type="text" name="code" class="form-control @error('code') is-invalid @enderror" 
-                                   value="{{ old('code') }}" placeholder="Ej: CON-001">
-                            @error('code')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
                         <!-- Nombre -->
                         <div class="col-md-6">
                             <label class="form-label">Nombre <span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" 
-                                   value="{{ old('name') }}" placeholder="Ej: Consulta General" required>
+                                   value="{{ old('name') }}" placeholder="Ej: Consultas Médicas" required>
                             @error('name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <!-- Descripción -->
-                        <div class="col-12">
-                            <label class="form-label">Descripción</label>
-                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" 
-                                      rows="2" placeholder="Descripción del servicio">{{ old('description') }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Precio -->
-                        <div class="col-md-3">
-                            <label class="form-label">Precio <span class="text-danger">*</span></label>
+                        <!-- Icono -->
+                        <div class="col-md-6">
+                            <label class="form-label">Icono</label>
                             <div class="input-group">
-                                <span class="input-group-text">RD$</span>
-                                <input type="number" name="price" class="form-control @error('price') is-invalid @enderror" 
-                                       value="{{ old('price') }}" step="0.01" min="0" placeholder="0.00" required>
+                                <span class="input-group-text"><i class="ri-search-line"></i></span>
+                                <input type="text" name="icon" class="form-control @error('icon') is-invalid @enderror" 
+                                       value="{{ old('icon', 'ri-folder-line') }}" placeholder="ri-folder-line">
                             </div>
-                            @error('price')
+                            <small class="text-muted">Usa iconos de <a href="https://remixicon.com/" target="_blank">Remix Icon</a></small>
+                            @error('icon')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <!-- Duración -->
-                        <div class="col-md-3">
-                            <label class="form-label">Duración (minutos)</label>
-                            <input type="number" name="duration_minutes" class="form-control @error('duration_minutes') is-invalid @enderror" 
-                                   value="{{ old('duration_minutes') }}" min="0" placeholder="30">
-                            @error('duration_minutes')
+                        <!-- Color -->
+                        <div class="col-md-6">
+                            <label class="form-label">Color</label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="colorPreview" style="background-color: {{ old('color', '#405189') }}; width: 40px;"></span>
+                                <input type="color" name="color" class="form-control form-control-color" 
+                                       value="{{ old('color', '#405189') }}" style="padding: 3px; max-width: 60px;">
+                                <input type="text" id="colorText" class="form-control" 
+                                       value="{{ old('color', '#405189') }}" placeholder="#405189">
+                            </div>
+                            @error('color')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <!-- Requiere Autorización -->
-                        <div class="col-md-3">
-                            <label class="form-label">Autorización</label>
-                            <div class="form-check form-switch mt-2">
-                                <input type="hidden" name="requires_authorization" value="0">
-                                <input type="checkbox" name="requires_authorization" class="form-check-input" id="requiresAuth" 
-                                       value="1" {{ old('requires_authorization') ? 'checked' : '' }}>
-                                <label class="form-check-label" for="requiresAuth">
-                                    Requiere autorización
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Requiere Historia Clínica -->
-                        <div class="col-md-3">
-                            <label class="form-label">Historia Clínica</label>
+                        <!-- Historia Clínica -->
+                        <div class="col-md-6">
+                            <label class="form-label">Requisitos</label>
                             <div class="form-check form-switch mt-2">
                                 <input type="hidden" name="requires_clinical_record" value="0">
-                                <input type="checkbox" name="requires_clinical_record" class="form-check-input" id="requiresHC" 
-                                       value="1" {{ old('requires_clinical_record') ? 'checked' : '' }}>
-                                <label class="form-check-label" for="requiresHC">
+                                <input type="checkbox" name="requires_clinical_record" class="form-check-input" id="requiresClinicalRecord" 
+                                       value="1" {{ old('requires_clinical_record', 0) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="requiresClinicalRecord">
                                     Requiere Historia Clínica
                                 </label>
+                                <small class="d-block text-muted">Los servicios de esta categoría requerirán historia clínica</small>
                             </div>
-                            <small class="text-muted" id="hcInheritInfo">
-                                <i class="ri-information-line"></i> Hereda de la categoría si no se especifica
-                            </small>
                         </div>
 
                         <!-- Estado -->
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="form-label">Estado</label>
                             <div class="form-check form-switch mt-2">
                                 <input type="hidden" name="is_active" value="0">
@@ -136,69 +88,23 @@
                             </div>
                         </div>
 
-                        <!-- Cobertura por Seguro -->
+                        <!-- Descripción -->
                         <div class="col-12">
-                            <hr>
-                            <h5 class="mb-3">Cobertura por Seguro Médico</h5>
-                            <div id="insuranceCoverageContainer">
-                                @if(old('insurance_coverage'))
-                                    @foreach(old('insurance_coverage') as $index => $coverage)
-                                    <div class="row g-2 mb-2 coverage-row">
-                                        <div class="col-md-3">
-                                            <select name="insurance_coverage[{{ $index }}][insurance_id]" class="form-select">
-                                                <option value="">Seleccionar seguro</option>
-                                                @foreach($insurances as $insurance)
-                                                <option value="{{ $insurance->id }}" {{ ($coverage['insurance_id'] ?? '') == $insurance->id ? 'selected' : '' }}>
-                                                    {{ $insurance->name }}
-                                                </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <input type="number" name="insurance_coverage[{{ $index }}][coverage_percentage]" 
-                                                   class="form-control" placeholder="% Cobertura" step="0.01" min="0" max="100"
-                                                   value="{{ $coverage['coverage_percentage'] ?? '' }}">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="input-group">
-                                                <span class="input-group-text">RD$</span>
-                                                <input type="number" name="insurance_coverage[{{ $index }}][fixed_amount]" 
-                                                       class="form-control" placeholder="Monto fijo" step="0.01" min="0"
-                                                       value="{{ $coverage['fixed_amount'] ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-check form-switch mt-2">
-                                                <input type="hidden" name="insurance_coverage[{{ $index }}][requires_authorization]" value="0">
-                                                <input type="checkbox" name="insurance_coverage[{{ $index }}][requires_authorization]" 
-                                                       class="form-check-input" id="authCoverage{{ $index }}"
-                                                       value="1" {{ isset($coverage['requires_authorization']) && $coverage['requires_authorization'] ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="authCoverage{{ $index }}">
-                                                    Requiere Auth
-                                                </label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <button type="button" class="btn btn-danger btn-sm remove-coverage">
-                                                <i class="ri-delete-bin-line"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    @endforeach
-                                @endif
-                            </div>
-                            <button type="button" class="btn btn-secondary btn-sm" id="addCoverage">
-                                <i class="ri-add-line"></i> Agregar Cobertura
-                            </button>
+                            <label class="form-label">Descripción</label>
+                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" 
+                                      rows="3" placeholder="Descripción de la categoría">{{ old('description') }}</textarea>
+                            @error('description')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <!-- Botones -->
                         <div class="col-12">
                             <hr>
                             <button type="submit" class="btn btn-primary">
-                                <i class="ri-save-line"></i> Guardar Servicio
+                                <i class="ri-save-line"></i> Guardar Categoría
                             </button>
-                            <a href="{{ route('services.index') }}" class="btn btn-secondary">
+                            <a href="{{ route('service-categories.index') }}" class="btn btn-secondary">
                                 Cancelar
                             </a>
                         </div>
@@ -207,97 +113,142 @@
             </div>
         </div>
     </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Vista Previa</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="card d-inline-block" style="min-width: 200px;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="avatar-sm">
+                                    <span class="avatar-title rounded-circle fs-16" id="previewBadge"
+                                          style="background-color: {{ old('color', '#405189') }}20; color: {{ old('color', '#405189') }}">
+                                        <i class="{{ old('icon', 'ri-folder-line') }}" id="previewIcon"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 text-start">
+                                <h5 class="mb-1" id="previewName">{{ old('name', 'Nombre') }}</h5>
+                                <p class="text-muted mb-0" id="previewDescription">{{ old('description', 'Descripción') }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-top">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Historia Clínica:</span>
+                                <span class="badge {{ old('requires_clinical_record', 0) ? 'bg-success' : 'bg-secondary' }}" id="previewHc">
+                                    {{ old('requires_clinical_record', 0) ? 'Sí' : 'No' }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span class="text-muted">Estado:</span>
+                                <span class="badge {{ old('is_active', 1) ? 'bg-success' : 'bg-danger' }}" id="previewStatus">
+                                    {{ old('is_active', 1) ? 'Activo' : 'Inactivo' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Cuando cambia la categoría, actualizar el estado de Historia Clínica
-        const categorySelect = document.getElementById('categorySelect');
-        const hcCheckbox = document.getElementById('requiresHC');
-        const hcInfo = document.getElementById('hcInheritInfo');
+        // Vista previa en tiempo real
+        const nameInput = document.querySelector('input[name="name"]');
+        const descInput = document.querySelector('textarea[name="description"]');
+        const iconInput = document.querySelector('input[name="icon"]');
+        const colorInput = document.querySelector('input[name="color"]');
+        const colorText = document.getElementById('colorText');
+        const previewName = document.getElementById('previewName');
+        const previewDesc = document.getElementById('previewDescription');
+        const previewIcon = document.getElementById('previewIcon');
+        const previewBadge = document.getElementById('previewBadge');
+        const previewColor = document.getElementById('colorPreview');
+        const hcCheckbox = document.getElementById('requiresClinicalRecord');
+        const previewHc = document.getElementById('previewHc');
+        const activeCheckbox = document.getElementById('isActive');
+        const previewStatus = document.getElementById('previewStatus');
 
-        if (categorySelect) {
-            categorySelect.addEventListener('change', function() {
-                const selected = this.options[this.selectedIndex];
-                const requiresHC = selected.dataset.requiresHc === '1';
-                
-                if (requiresHC) {
-                    hcCheckbox.checked = true;
-                    hcCheckbox.disabled = true;
-                    hcInfo.innerHTML = '<i class="ri-information-line"></i> Hereda de la categoría (requiere HC)';
-                } else if (this.value === '') {
-                    hcCheckbox.disabled = false;
-                    hcInfo.innerHTML = '<i class="ri-information-line"></i> Hereda de la categoría si no se especifica';
+        // Nombre
+        if (nameInput) {
+            nameInput.addEventListener('input', function() {
+                previewName.textContent = this.value || 'Nombre';
+            });
+        }
+
+        // Descripción
+        if (descInput) {
+            descInput.addEventListener('input', function() {
+                previewDesc.textContent = this.value || 'Descripción';
+            });
+        }
+
+        // Icono
+        if (iconInput) {
+            iconInput.addEventListener('input', function() {
+                previewIcon.className = this.value || 'ri-folder-line';
+            });
+        }
+
+        // Color
+        if (colorInput && colorText && previewBadge && previewColor) {
+            colorInput.addEventListener('input', function() {
+                const color = this.value || '#405189';
+                previewBadge.style.backgroundColor = color + '20';
+                previewBadge.style.color = color;
+                previewColor.style.backgroundColor = color;
+                colorText.value = color;
+            });
+
+            colorText.addEventListener('input', function() {
+                const color = this.value || '#405189';
+                colorInput.value = color;
+                previewBadge.style.backgroundColor = color + '20';
+                previewBadge.style.color = color;
+                previewColor.style.backgroundColor = color;
+            });
+        }
+
+        // Historia Clínica
+        if (hcCheckbox && previewHc) {
+            hcCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    previewHc.textContent = 'Sí';
+                    previewHc.className = 'badge bg-success';
                 } else {
-                    hcCheckbox.disabled = false;
-                    hcInfo.innerHTML = '<i class="ri-information-line"></i> La categoría no requiere HC, pero puede activarse individualmente';
+                    previewHc.textContent = 'No';
+                    previewHc.className = 'badge bg-secondary';
                 }
             });
-
-            // Inicializar el estado de la categoría
-            categorySelect.dispatchEvent(new Event('change'));
         }
 
-        // Agregar cobertura de seguro
-        let coverageIndex = {{ count(old('insurance_coverage', [])) }};
-        const addCoverageBtn = document.getElementById('addCoverage');
-        const container = document.getElementById('insuranceCoverageContainer');
-
-        if (addCoverageBtn && container) {
-            addCoverageBtn.addEventListener('click', function() {
-                const row = document.createElement('div');
-                row.className = 'row g-2 mb-2 coverage-row';
-                row.innerHTML = `
-                    <div class="col-md-3">
-                        <select name="insurance_coverage[${coverageIndex}][insurance_id]" class="form-select">
-                            <option value="">Seleccionar seguro</option>
-                            @foreach($insurances as $insurance)
-                            <option value="{{ $insurance->id }}">{{ $insurance->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="number" name="insurance_coverage[${coverageIndex}][coverage_percentage]" 
-                               class="form-control" placeholder="% Cobertura" step="0.01" min="0" max="100">
-                    </div>
-                    <div class="col-md-2">
-                        <div class="input-group">
-                            <span class="input-group-text">RD$</span>
-                            <input type="number" name="insurance_coverage[${coverageIndex}][fixed_amount]" 
-                                   class="form-control" placeholder="Monto fijo" step="0.01" min="0">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check form-switch mt-2">
-                            <input type="hidden" name="insurance_coverage[${coverageIndex}][requires_authorization]" value="0">
-                            <input type="checkbox" name="insurance_coverage[${coverageIndex}][requires_authorization]" 
-                                   class="form-check-input" id="authCoverage${coverageIndex}"
-                                   value="1">
-                            <label class="form-check-label" for="authCoverage${coverageIndex}">Requiere Auth</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-danger btn-sm remove-coverage">
-                            <i class="ri-delete-bin-line"></i>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(row);
-                coverageIndex++;
-                
-                row.querySelector('.remove-coverage').addEventListener('click', function() {
-                    row.remove();
-                });
+        // Estado
+        if (activeCheckbox && previewStatus) {
+            activeCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    previewStatus.textContent = 'Activo';
+                    previewStatus.className = 'badge bg-success';
+                } else {
+                    previewStatus.textContent = 'Inactivo';
+                    previewStatus.className = 'badge bg-danger';
+                }
             });
         }
 
-        // Evento para eliminar filas existentes
-        document.querySelectorAll('.remove-coverage').forEach(btn => {
-            btn.addEventListener('click', function() {
-                this.closest('.coverage-row').remove();
-            });
-        });
+        // Inicializar valores
+        if (hcCheckbox) {
+            hcCheckbox.dispatchEvent(new Event('change'));
+        }
+        if (activeCheckbox) {
+            activeCheckbox.dispatchEvent(new Event('change'));
+        }
     });
 </script>
 @endpush

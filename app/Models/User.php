@@ -2,104 +2,70 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'role_id',
-        'university_id',
         'branch_id',
-
-
+        'is_doctor',
+        'profile_photo',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_doctor' => 'boolean',
         ];
     }
 
+    // Relaciones
     public function role()
-{
-    return $this->belongsTo(Role::class);
-}
+    {
+        return $this->belongsTo(Role::class);
+    }
 
-public function isRole($roleName)
-{
-    return $this->role && $this->role->name === $roleName;
-}
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
-public function appointments()
-{
-    return $this->hasMany(Appointment::class,'audiologist_id');
-}
+    // ✅ NUEVO: Scope para filtrar médicos
+    public function scopeDoctors($query)
+    {
+        return $query->where('is_doctor', 1);
+    }
 
-public function branch()
-{
-    return $this->belongsTo(Branch::class);
-}
+    // ✅ NUEVO: Scope para filtrar no médicos
+    public function scopeNonDoctors($query)
+    {
+        return $query->where('is_doctor', 0);
+    }
 
-public function invoices()
-{
-    return $this->hasMany(Invoice::class);
-}
+    // ✅ NUEVO: Verificar si el usuario es médico
+    public function isDoctor(): bool
+    {
+        return (bool) $this->is_doctor;
+    }
 
-public function clinicalRecords()
-{
-    return $this->hasMany(ClinicalRecord::class, 'audiologist_id');
-}
-
-public function audiologistFeesSettings()
-{
-    return $this->hasOne(AudiologistFeeSetting::class, 'audiologist_id');
-}
-
-public function audiologistFees()
-{
-    return $this->hasMany(AudiologistFee::class, 'audiologist_id');
-}
-
-public function audiologistFeePayments()
-{
-    return $this->hasMany(AudiologistFeePayment::class, 'audiologist_id');
-}
-
-// Helper para verificar si es audiólogo
-public function isAudiologist()
-{
-    return $this->role === 'audiologist' || $this->hasRole('audiologist');
-}
-
+    // ✅ NUEVO: Verificar si es administrador
+    public function isAdmin(): bool
+    {
+        return $this->role_id == 1; // Asumiendo que el rol admin tiene ID 1
+    }
 }

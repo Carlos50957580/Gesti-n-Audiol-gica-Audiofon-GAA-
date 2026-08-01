@@ -16,9 +16,10 @@ class ServiceCategory extends Model
         'is_active'
     ];
 
+    // ✅ CAMBIAR DE 'boolean' a 'integer'
     protected $casts = [
-        'requires_clinical_record' => 'boolean',
-        'is_active' => 'boolean'
+        'requires_clinical_record' => 'integer',
+        'is_active' => 'integer'
     ];
 
     // Relación con servicios (estudios)
@@ -30,18 +31,18 @@ class ServiceCategory extends Model
     // Servicios activos
     public function activeServices(): HasMany
     {
-        return $this->services()->where('is_active', true);
+        return $this->services()->where('is_active', 1);
     }
 
     // Scope para categorías activas
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('is_active', 1);
     }
 
     // Scope para categorías que requieren historia clínica
     public function scopeRequiresClinicalRecord($query)
     {
-        return $query->where('requires_clinical_record', true);
+        return $query->where('requires_clinical_record', 1);
     }
 }
