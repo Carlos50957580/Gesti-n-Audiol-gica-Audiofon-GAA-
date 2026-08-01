@@ -98,8 +98,9 @@
                         <div class="col-md-3">
                             <label class="form-label">Autorización</label>
                             <div class="form-check form-switch mt-2">
+                                <input type="hidden" name="requires_authorization" value="0">
                                 <input type="checkbox" name="requires_authorization" class="form-check-input" id="requiresAuth" 
-                                       {{ old('requires_authorization') ? 'checked' : '' }}>
+                                       value="1" {{ old('requires_authorization') ? 'checked' : '' }}>
                                 <label class="form-check-label" for="requiresAuth">
                                     Requiere autorización
                                 </label>
@@ -110,8 +111,9 @@
                         <div class="col-md-3">
                             <label class="form-label">Historia Clínica</label>
                             <div class="form-check form-switch mt-2">
+                                <input type="hidden" name="requires_clinical_record" value="0">
                                 <input type="checkbox" name="requires_clinical_record" class="form-check-input" id="requiresHC" 
-                                       {{ old('requires_clinical_record') ? 'checked' : '' }}>
+                                       value="1" {{ old('requires_clinical_record') ? 'checked' : '' }}>
                                 <label class="form-check-label" for="requiresHC">
                                     Requiere Historia Clínica
                                 </label>
@@ -125,8 +127,9 @@
                         <div class="col-md-3">
                             <label class="form-label">Estado</label>
                             <div class="form-check form-switch mt-2">
+                                <input type="hidden" name="is_active" value="0">
                                 <input type="checkbox" name="is_active" class="form-check-input" id="isActive" 
-                                       {{ old('is_active', true) ? 'checked' : '' }}>
+                                       value="1" {{ old('is_active', 1) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="isActive">
                                     Activo
                                 </label>
@@ -145,7 +148,7 @@
                                             <select name="insurance_coverage[{{ $index }}][insurance_id]" class="form-select">
                                                 <option value="">Seleccionar seguro</option>
                                                 @foreach($insurances as $insurance)
-                                                <option value="{{ $insurance->id }}" {{ $coverage['insurance_id'] == $insurance->id ? 'selected' : '' }}>
+                                                <option value="{{ $insurance->id }}" {{ ($coverage['insurance_id'] ?? '') == $insurance->id ? 'selected' : '' }}>
                                                     {{ $insurance->name }}
                                                 </option>
                                                 @endforeach
@@ -166,9 +169,10 @@
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-check form-switch mt-2">
+                                                <input type="hidden" name="insurance_coverage[{{ $index }}][requires_authorization]" value="0">
                                                 <input type="checkbox" name="insurance_coverage[{{ $index }}][requires_authorization]" 
                                                        class="form-check-input" id="authCoverage{{ $index }}"
-                                                       {{ ($coverage['requires_authorization'] ?? false) ? 'checked' : '' }}>
+                                                       value="1" {{ isset($coverage['requires_authorization']) && $coverage['requires_authorization'] ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="authCoverage{{ $index }}">
                                                     Requiere Auth
                                                 </label>
@@ -187,41 +191,6 @@
                                 <i class="ri-add-line"></i> Agregar Cobertura
                             </button>
                         </div>
-
-                        <!-- ✅ NUEVO: Impuestos -->
-<div class="col-12">
-    <hr>
-    <h5 class="mb-3">Impuestos Aplicables</h5>
-    <div class="row">
-        <div class="col-12">
-            @if($taxes->count() > 0)
-                <div class="row">
-                    @foreach($taxes as $tax)
-                    <div class="col-md-3">
-                        <div class="form-check">
-                            <input type="checkbox" name="taxes[]" class="form-check-input" id="tax_{{ $tax->id }}" 
-                                   value="{{ $tax->id }}"
-                                   {{ (old('taxes') && in_array($tax->id, old('taxes'))) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="tax_{{ $tax->id }}">
-                                {{ $tax->name }} 
-                                <span class="badge bg-info">{{ $tax->rate }}%</span>
-                                @if($tax->is_default)
-                                    <span class="badge bg-success"><i class="ri-star-fill"></i></span>
-                                @endif
-                            </label>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="alert alert-warning">
-                    <i class="ri-alert-line me-1"></i> No hay impuestos disponibles. 
-                    <a href="{{ route('taxes.create') }}" class="alert-link">Crear un impuesto</a>
-                </div>
-            @endif
-        </div>
-    </div>
-</div>
 
                         <!-- Botones -->
                         <div class="col-12">
@@ -242,81 +211,92 @@
 
 @push('scripts')
 <script>
-    // Cuando cambia la categoría, actualizar el estado de Historia Clínica
-    document.getElementById('categorySelect').addEventListener('change', function() {
-        const selected = this.options[this.selectedIndex];
-        const requiresHC = selected.dataset.requiresHc === '1';
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cuando cambia la categoría, actualizar el estado de Historia Clínica
+        const categorySelect = document.getElementById('categorySelect');
         const hcCheckbox = document.getElementById('requiresHC');
         const hcInfo = document.getElementById('hcInheritInfo');
-        
-        if (requiresHC) {
-            hcCheckbox.checked = true;
-            hcCheckbox.disabled = true;
-            hcInfo.innerHTML = '<i class="ri-information-line"></i> Hereda de la categoría (requiere HC)';
-        } else if (this.value === '') {
-            hcCheckbox.disabled = false;
-            hcInfo.innerHTML = '<i class="ri-information-line"></i> Hereda de la categoría si no se especifica';
-        } else {
-            hcCheckbox.disabled = false;
-            hcInfo.innerHTML = '<i class="ri-information-line"></i> La categoría no requiere HC, pero puede activarse individualmente';
+
+        if (categorySelect) {
+            categorySelect.addEventListener('change', function() {
+                const selected = this.options[this.selectedIndex];
+                const requiresHC = selected.dataset.requiresHc === '1';
+                
+                if (requiresHC) {
+                    hcCheckbox.checked = true;
+                    hcCheckbox.disabled = true;
+                    hcInfo.innerHTML = '<i class="ri-information-line"></i> Hereda de la categoría (requiere HC)';
+                } else if (this.value === '') {
+                    hcCheckbox.disabled = false;
+                    hcInfo.innerHTML = '<i class="ri-information-line"></i> Hereda de la categoría si no se especifica';
+                } else {
+                    hcCheckbox.disabled = false;
+                    hcInfo.innerHTML = '<i class="ri-information-line"></i> La categoría no requiere HC, pero puede activarse individualmente';
+                }
+            });
+
+            // Inicializar el estado de la categoría
+            categorySelect.dispatchEvent(new Event('change'));
         }
-    });
 
-    // Inicializar el estado de la categoría
-    document.getElementById('categorySelect').dispatchEvent(new Event('change'));
-
-    // Agregar cobertura de seguro
-    let coverageIndex = {{ count(old('insurance_coverage', [])) }};
-    document.getElementById('addCoverage').addEventListener('click', function() {
+        // Agregar cobertura de seguro
+        let coverageIndex = {{ count(old('insurance_coverage', [])) }};
+        const addCoverageBtn = document.getElementById('addCoverage');
         const container = document.getElementById('insuranceCoverageContainer');
-        const row = document.createElement('div');
-        row.className = 'row g-2 mb-2 coverage-row';
-        row.innerHTML = `
-            <div class="col-md-3">
-                <select name="insurance_coverage[${coverageIndex}][insurance_id]" class="form-select">
-                    <option value="">Seleccionar seguro</option>
-                    @foreach($insurances as $insurance)
-                    <option value="{{ $insurance->id }}">{{ $insurance->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="number" name="insurance_coverage[${coverageIndex}][coverage_percentage]" 
-                       class="form-control" placeholder="% Cobertura" step="0.01" min="0" max="100">
-            </div>
-            <div class="col-md-2">
-                <div class="input-group">
-                    <span class="input-group-text">RD$</span>
-                    <input type="number" name="insurance_coverage[${coverageIndex}][fixed_amount]" 
-                           class="form-control" placeholder="Monto fijo" step="0.01" min="0">
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-check form-switch mt-2">
-                    <input type="checkbox" name="insurance_coverage[${coverageIndex}][requires_authorization]" 
-                           class="form-check-input" id="authCoverage${coverageIndex}">
-                    <label class="form-check-label" for="authCoverage${coverageIndex}">Requiere Auth</label>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-danger btn-sm remove-coverage">
-                    <i class="ri-delete-bin-line"></i>
-                </button>
-            </div>
-        `;
-        container.appendChild(row);
-        coverageIndex++;
-        
-        // Evento para eliminar fila
-        row.querySelector('.remove-coverage').addEventListener('click', function() {
-            row.remove();
-        });
-    });
 
-    // Evento para eliminar filas existentes
-    document.querySelectorAll('.remove-coverage').forEach(btn => {
-        btn.addEventListener('click', function() {
-            this.closest('.coverage-row').remove();
+        if (addCoverageBtn && container) {
+            addCoverageBtn.addEventListener('click', function() {
+                const row = document.createElement('div');
+                row.className = 'row g-2 mb-2 coverage-row';
+                row.innerHTML = `
+                    <div class="col-md-3">
+                        <select name="insurance_coverage[${coverageIndex}][insurance_id]" class="form-select">
+                            <option value="">Seleccionar seguro</option>
+                            @foreach($insurances as $insurance)
+                            <option value="{{ $insurance->id }}">{{ $insurance->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" name="insurance_coverage[${coverageIndex}][coverage_percentage]" 
+                               class="form-control" placeholder="% Cobertura" step="0.01" min="0" max="100">
+                    </div>
+                    <div class="col-md-2">
+                        <div class="input-group">
+                            <span class="input-group-text">RD$</span>
+                            <input type="number" name="insurance_coverage[${coverageIndex}][fixed_amount]" 
+                                   class="form-control" placeholder="Monto fijo" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check form-switch mt-2">
+                            <input type="hidden" name="insurance_coverage[${coverageIndex}][requires_authorization]" value="0">
+                            <input type="checkbox" name="insurance_coverage[${coverageIndex}][requires_authorization]" 
+                                   class="form-check-input" id="authCoverage${coverageIndex}"
+                                   value="1">
+                            <label class="form-check-label" for="authCoverage${coverageIndex}">Requiere Auth</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger btn-sm remove-coverage">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+                coverageIndex++;
+                
+                row.querySelector('.remove-coverage').addEventListener('click', function() {
+                    row.remove();
+                });
+            });
+        }
+
+        // Evento para eliminar filas existentes
+        document.querySelectorAll('.remove-coverage').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.coverage-row').remove();
+            });
         });
     });
 </script>

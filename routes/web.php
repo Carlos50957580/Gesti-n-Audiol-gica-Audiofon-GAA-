@@ -289,5 +289,31 @@ Route::prefix('audiologist-fees')->group(function () {
 
 })->middleware(['auth', 'role:admin,admin2']);
 
+use App\Http\Controllers\ServiceCategoryController;
+
+// Categorías de Servicios
+
+Route::get('/service-categories', [ServiceCategoryController::class, 'index'])->name('service-categories.index');
+Route::get('/service-categories/create', [ServiceCategoryController::class, 'create'])->name('service-categories.create');
+Route::post('/service-categories', [ServiceCategoryController::class, 'store'])->name('service-categories.store');
+Route::get('/service-categories/{serviceCategory}/edit', [ServiceCategoryController::class, 'edit'])->name('service-categories.edit');
+Route::put('/service-categories/{serviceCategory}', [ServiceCategoryController::class, 'update'])->name('service-categories.update');
+Route::delete('/service-categories/{serviceCategory}', [ServiceCategoryController::class, 'destroy'])->name('service-categories.destroy');
+
+// Servicios (Estudios)
+Route::resource('services', ServiceController::class);
+
+// Rutas API para servicios (usar en AJAX)
+Route::get('api/services/by-category/{categoryId}', [ServiceController::class, 'getByCategory'])->name('api.services.by-category');
+Route::get('api/services/detail/{id}', [ServiceController::class, 'getDetail'])->name('api.services.detail');
+Route::get('api/services/coverage/{serviceId}/{insuranceId}', [ServiceController::class, 'getCoverage'])->name('api.services.coverage');
+
+use App\Http\Controllers\TaxController;
+
+// Impuestos
+Route::resource('taxes', TaxController::class);
+
+// API para obtener impuestos activos
+Route::get('/api/taxes/active', [TaxController::class, 'getActiveTaxes'])->name('api.taxes.active');
 
 require __DIR__.'/auth.php';

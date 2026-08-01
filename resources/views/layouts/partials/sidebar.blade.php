@@ -76,16 +76,48 @@
                     </li>
                 @endif
 
-                {{-- Servicios - solo admin normal (no admin2) --}}
-                @if(in_array(auth()->user()->role->name, ['admin']) && auth()->user()->role_id != 4)
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('services.*') ? 'active' : '' }}" 
-                           href="{{ route('services.index') }}">
-                            <i class="ri-tools-line"></i>
-                            <span data-key="t-servicios">Servicios</span>
-                        </a>
-                    </li> 
-                @endif
+                {{-- Menú Desplegable de Servicios - Solo admin (no role_id 4) --}}
+@if(in_array(auth()->user()->role->name, ['admin']) && auth()->user()->role_id != 4)
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('service-categories.*', 'services.*', 'taxes.*') ? '' : 'collapsed' }}" 
+           href="#sidebarServicios" 
+           data-bs-toggle="collapse" 
+           role="button" 
+           aria-expanded="{{ request()->routeIs('service-categories.*', 'services.*', 'taxes.*') ? 'true' : 'false' }}" 
+           aria-controls="sidebarServicios">
+            <i class="ri-tools-line"></i> 
+            <span data-key="t-servicios">Servicios</span>
+        </a>
+        <div class="collapse menu-dropdown {{ request()->routeIs('service-categories.*', 'services.*', 'taxes.*') ? 'show' : '' }}" id="sidebarServicios">
+            <ul class="nav nav-sm flex-column">
+                {{-- Submenú 1: Categorías --}}
+                <li class="nav-item">
+                    <a href="{{ route('service-categories.index') }}" 
+                       class="nav-link {{ request()->routeIs('service-categories.*') ? 'active' : '' }}" 
+                       data-key="t-categorias">
+                        Categorías
+                    </a>
+                </li>
+                {{-- Submenú 2: Estudios --}}
+                <li class="nav-item">
+                    <a href="{{ route('services.index') }}" 
+                       class="nav-link {{ request()->routeIs('services.*') ? 'active' : '' }}" 
+                       data-key="t-estudios">
+                        Estudios
+                    </a>
+                </li>
+                {{-- Submenú 3: Impuestos --}}
+                <li class="nav-item">
+                    <a href="{{ route('taxes.index') }}" 
+                       class="nav-link {{ request()->routeIs('taxes.*') ? 'active' : '' }}" 
+                       data-key="t-impuestos">
+                        Impuestos
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </li>
+@endif
 
                 {{-- Pacientes - admin, recepcionista y admin2 --}}
                 @if(in_array(auth()->user()->role->name, ['admin','recepcionista']) || auth()->user()->role_id == 4)
