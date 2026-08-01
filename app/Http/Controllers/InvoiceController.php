@@ -5,71 +5,45 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Patient;
+use App\Models\User;
 use App\Models\Service;
-use App\Models\Insurance;
+use App\Models\ServiceCategory;
 use App\Models\Branch;
+use App\Models\Insurance;
+use App\Models\Setting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use App\Services\AudiologistFeeService;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
-
-
     public function index(Request $request)
     {
-        $user = auth()->user();
-        
-        // Verificar si es admin2 (role_id = 4)
-        $isAdmin2 = $user->role_id == 4;
+        $query = Invoice::with(['patient', 'user', 'doctor', 'branch', 'insurance']);
 
-        // ── QUERY PRINCIPAL (LISTADO) ─────────────────────
-        $query = Invoice::with(['patient', 'user', 'branch', 'insurance'])
-            ->orderBy('created_at', 'desc');
-
-        // 🔥 PARA ADMIN2: Solo mostrar facturas con seguro (insurance_id no es null)
-        if ($isAdmin2) {
-            $query->whereNotNull('insurance_id');
+        // Filtrar por sucursal si es recepcionista
+        if (auth()->user()->role->name === 'recepcionista') {
+            $query->where('branch_id', auth()->user()->branch_id);
         }
 
-        // 🔥 PARA ADMIN2: NO restringir por sucursal, puede ver todas
-        // Restricción por sucursal solo para usuarios normales (no admin, no admin2)
-        if ($user->role->name !== 'admin' && !$isAdmin2) {
-            $query->where('branch_id', $user->branch_id);
-        }
-
-        // 🔍 BÚSQUEDA
-        if ($request->filled('q')) {
-            $q         = $request->q;
-            $numericId = null;
-
-            if (preg_match('/(?:FAC-?)?(\d+)/i', $q, $m)) {
-                $numericId = (int) $m[1];
-            }
-
-            $query->where(function ($sq) use ($q, $numericId) {
-                if ($numericId) {
-                    $sq->orWhere('id', $numericId);
-                }
-
-                $sq->orWhereHas('patient', function ($pq) use ($q) {
-                    $pq->where('first_name', 'like', "%{$q}%")
-                       ->orWhere('last_name',  'like', "%{$q}%")
-                       ->orWhere('cedula',     'like', "%{$q}%")
-                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
-                });
+        // Filtros
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'LIKE', "%{$search}%")
+                  ->orWhereHas('patient', function($q2) use ($search) {
+                      $q2->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('cedula', 'LIKE', "%{$search}%");
+                  });
             });
         }
 
-        // 🎯 FILTROS
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // 🔥 Admin y admin2 pueden filtrar por sucursal
-        if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
+        if ($request->filled('branch_id') && auth()->user()->role->name === 'admin') {
             $query->where('branch_id', $request->branch_id);
         }
 
@@ -81,301 +55,382 @@ class InvoiceController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // 📄 PAGINACIÓN
-        $invoices = $query->paginate(15)->withQueryString();
+        $invoices = $query->latest()->paginate(15);
 
-        // ── STATS (SIN PAGINACIÓN) ─────────────────────
-        $statsQuery = Invoice::query();
+        // Para el filtro, solo admin ve todas las sucursales
+        $branches = Branch::all();
 
-        // 🔥 PARA ADMIN2: Solo contar facturas con seguro
-        if ($isAdmin2) {
-            $statsQuery->whereNotNull('insurance_id');
+        if (auth()->user()->role->name === 'recepcionista') {
+            $branches = Branch::where('id', auth()->user()->branch_id)->get();
         }
 
-        // 🔥 PARA ADMIN2: NO restringir por sucursal en stats
-        // Restricción por sucursal solo para usuarios normales
-        if ($user->role->name !== 'admin' && !$isAdmin2) {
-            $statsQuery->where('branch_id', $user->branch_id);
-        }
-
-        // Aplicar mismos filtros
-        if ($request->filled('status')) {
-            $statsQuery->where('status', $request->status);
-        }
-
-        if (($user->role->name === 'admin' || $isAdmin2) && $request->filled('branch_id')) {
-            $statsQuery->where('branch_id', $request->branch_id);
-        }
-
-        if ($request->filled('date_from')) {
-            $statsQuery->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $statsQuery->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // ⚡ Cálculos
-        $stats = [
-            'total'       => (clone $statsQuery)->count(),
-            'pending'     => (clone $statsQuery)->where('status', 'pendiente')->count(),
-            'paid'        => (clone $statsQuery)->where('status', 'pagada')->count(),
-            'cancelled'   => (clone $statsQuery)->where('status', 'cancelada')->count(),
-            'total_amt'   => (clone $statsQuery)->sum('total'),
-            'pending_amt' => (clone $statsQuery)->where('status', 'pendiente')->sum('total'),
-            'paid_amt'    => (clone $statsQuery)->where('status', 'pagada')->sum('total'),
-        ];
-
-        // ── SUCURSALES (admin y admin2 pueden ver todas) ─────────────────────
-        $branches = ($user->role->name === 'admin' || $isAdmin2)
-            ? Branch::orderBy('name')->get()
-            : collect();
-
-        return view('invoices.index', compact('invoices', 'branches', 'stats', 'isAdmin2'));
+        return view('invoices.index', compact('invoices', 'branches'));
     }
-
 
     public function create()
-{
-    $user = auth()->user();
+    {
+        // Obtener sucursales según rol
+        if (auth()->user()->role->name === 'admin') {
+            $branches = Branch::all();
+        } else {
+            $branches = Branch::where('id', auth()->user()->branch_id)->get();
+        }
 
-    $services   = Service::where('active', 1)->orderBy('name')->get();
-    $insurances = Insurance::where('active', 1)->orderBy('name')->get();
-    $branches   = Branch::orderBy('name')->get();
+        // Obtener médicos (solo los que están en la sucursal del usuario si es recepcionista)
+        $doctors = User::where(function($q) {
+            $q->where('role_id', 4)
+              ->orWhere(function($q2) {
+                  $q2->where('role_id', 1)
+                    ->where('is_doctor', 1);
+              });
+        });
 
-    // ✅ CORREGIDO: Obtener audiólogos por role_id - SIN RESTRICCIÓN DE SUCURSAL
-    $audiologistRole = \App\Models\Role::where('name', 'audiologist')->orWhere('name', 'audiologo')->first();
-    $audiologists = collect();
-    
-    if ($audiologistRole) {
-        // 🔥 ELIMINAR o COMENTAR la restricción de sucursal
-        $query = \App\Models\User::where('role_id', $audiologistRole->id);
-        
-        // 🔥 COMENTAR ESTAS LÍNEAS PARA QUE LOS RECEPCIONISTAS VENA TODOS LOS AUDIÓLOGOS
-        // if ($user->role->name !== 'admin') {
-        //     $query->where('branch_id', $user->branch_id);
-        // }
-        
-        $audiologists = $query->orderBy('name')->get();
+        if (auth()->user()->role->name === 'recepcionista') {
+            $doctors->where('branch_id', auth()->user()->branch_id);
+        }
+
+        $doctors = $doctors->with('branch')->orderBy('name')->get();
+
+        $insurances = Insurance::where('active', 1)->get();
+        $categories = ServiceCategory::where('is_active', 1)->with('services')->get();
+        $services = Service::where('is_active', 1)->with(['category', 'taxes'])->get();
+
+        return view('invoices.create', compact('doctors', 'branches', 'insurances', 'categories', 'services'));
     }
-
-    return view('invoices.create', compact('services', 'insurances', 'branches', 'audiologists'));
-}
 
     public function store(Request $request)
     {
-        $request->validate([
-            'patient_id'              => 'required|exists:patients,id',
-            'branch_id'               => 'required|exists:branches,id',
-            'audiologist_id'          => 'required|exists:users,id',
-            'services'                => 'required|array|min:1',
-            'services.*.id'           => 'required|exists:services,id',
-            'services.*.quantity'     => 'required|integer|min:1',
-            'services.*.custom_price' => 'nullable|numeric|min:0',
-            'services.*.cov_value'    => 'nullable|numeric|min:0',
-            'services.*.cov_type'     => 'nullable|in:pct,amt',
-            'insurance_id'            => 'nullable|exists:insurances,id',
-            'authorization_number'    => 'nullable|string|max:255',
-            'with_ncf'               => 'nullable|boolean',
-            'ncf'                    => 'nullable|string|max:20',
-            'ncf_type'               => 'nullable|string|max:50',
-            'customer_rnc'           => 'nullable|string|max:20',
+        $validated = $request->validate([
+            'patient_id' => 'required|exists:patients,id',
+            'doctor_id' => 'required|exists:users,id',
+            'branch_id' => 'required|exists:branches,id',
+            'insurance_id' => 'nullable|exists:insurances,id',
+            'authorization_number' => 'nullable|string|max:255',
+            'with_ncf' => 'nullable|boolean',
+            'ncf' => 'nullable|string|max:255',
+            'ncf_type' => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+            'customer_rnc' => 'nullable|string|max:255',
             'customer_business_name' => 'nullable|string|max:255',
+            'services' => 'required|array|min:1',
+            'services.*.id' => 'required|exists:services,id',
+            'services.*.quantity' => 'required|integer|min:1',
+            'services.*.custom_price' => 'nullable|numeric|min:0',
+            'services.*.cov_value' => 'nullable|numeric|min:0',
+            'services.*.cov_type' => 'nullable|in:pct,amt',
         ]);
+
+        // Validar que la sucursal sea correcta según el rol
+        if (auth()->user()->role->name === 'recepcionista') {
+            if ($request->branch_id != auth()->user()->branch_id) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'No puedes facturar en otra sucursal.');
+            }
+        }
 
         DB::beginTransaction();
 
         try {
-            $insurance         = $request->insurance_id ? Insurance::find($request->insurance_id) : null;
-            $subtotal          = 0;
+            $subtotal = 0;
+            $totalTax = 0;
             $insuranceDiscount = 0;
-            $items             = [];
+            $items = [];
 
-            foreach ($request->services as $svc) {
-                $service = Service::findOrFail($svc['id']);
-                $qty     = (int) $svc['quantity'];
+            foreach ($request->services as $serviceData) {
+                $service = Service::with('taxes')->find($serviceData['id']);
+                $quantity = $serviceData['quantity'];
+                $price = $serviceData['custom_price'] ?? $service->price;
+                $subtotalItem = $price * $quantity;
 
-                // ── Precio personalizado o precio del catálogo ──────────
-                $price = isset($svc['custom_price']) && (float) $svc['custom_price'] > 0
-                    ? (float) $svc['custom_price']
-                    : (float) $service->price;
+                // Calcular impuestos del servicio
+                $taxCalculation = $service->calculateTaxes($subtotalItem);
+                $taxAmount = $taxCalculation['total_tax'];
+                $totalTax += $taxAmount;
 
-                $lineSubtotal    = $price * $qty;
-                $coveragePct     = null;
+                // Calcular cobertura
+                $coveragePercentage = 0;
                 $insuranceAmount = 0;
-                $patientAmount   = $lineSubtotal;
+                $patientAmount = $subtotalItem;
 
-                if ($insurance) {
-                    $covValue = isset($svc['cov_value']) ? (float) $svc['cov_value'] : 0;
-                    $covType  = $svc['cov_type'] ?? 'pct';
+                if ($request->filled('insurance_id')) {
+                    $coverage = $service->getCoverageForInsurance(Insurance::find($request->insurance_id));
+                    if ($coverage) {
+                        $covValue = $serviceData['cov_value'] ?? 0;
+                        $covType = $serviceData['cov_type'] ?? 'pct';
 
-                    if ($covType === 'pct') {
-                        $pct             = min($covValue, 100);
-                        $insuranceAmount = round($lineSubtotal * ($pct / 100), 2);
-                        $coveragePct     = $pct;
-                    } else {
-                        $insuranceAmount = min($covValue, $lineSubtotal);
-                        $coveragePct     = $lineSubtotal > 0
-                            ? round(($insuranceAmount / $lineSubtotal) * 100, 2)
-                            : 0;
+                        if ($covType === 'pct') {
+                            $coveragePercentage = min($covValue, 100);
+                            $insuranceAmount = $subtotalItem * ($coveragePercentage / 100);
+                        } else {
+                            $insuranceAmount = min($covValue, $subtotalItem);
+                            $coveragePercentage = ($subtotalItem > 0) ? ($insuranceAmount / $subtotalItem) * 100 : 0;
+                        }
+                        $patientAmount = $subtotalItem - $insuranceAmount;
+                        $insuranceDiscount += $insuranceAmount;
                     }
-
-                    $patientAmount = $lineSubtotal - $insuranceAmount;
                 }
 
-                $subtotal          += $lineSubtotal;
-                $insuranceDiscount += $insuranceAmount;
-
                 $items[] = [
-                    'service_id'          => $service->id,
-                    'price'               => $price,
-                    'quantity'            => $qty,
-                    'subtotal'            => $lineSubtotal,
-                    'coverage_percentage' => $coveragePct,
-                    'insurance_amount'    => $insuranceAmount ?: null,
-                    'patient_amount'      => $patientAmount,
+                    'service_id' => $service->id,
+                    'price' => $price,
+                    'quantity' => $quantity,
+                    'subtotal' => $subtotalItem,
+                    'coverage_percentage' => $coveragePercentage,
+                    'insurance_amount' => $insuranceAmount,
+                    'patient_amount' => $patientAmount,
+                    'tax_amount' => $taxAmount,
+                    'tax_details' => $taxCalculation['taxes'],
+                    'total_with_tax' => $patientAmount + $taxAmount,
                 ];
+
+                $subtotal += $subtotalItem;
             }
 
-            $total = $subtotal - $insuranceDiscount;
-            
+            $totalWithTax = $subtotal + $totalTax;
+            $total = $totalWithTax - $insuranceDiscount;
+
+            // Crear factura
             $invoice = Invoice::create([
-                'patient_id'           => $request->patient_id,
-                'user_id'              => Auth::id(),
-                'audiologist_id'       => $request->audiologist_id,
-                'branch_id'            => $request->branch_id,
-                'insurance_id'         => $insurance?->id,
-                'subtotal'             => $subtotal,
-                'insurance_discount'   => $insuranceDiscount,
-                'total'                => $total,
-                'status'               => 'pendiente',
+                'patient_id' => $request->patient_id,
+                'user_id' => auth()->id(),
+                'doctor_id' => $request->doctor_id,
+                'branch_id' => $request->branch_id,
+                'insurance_id' => $request->insurance_id,
+                'subtotal' => $subtotal,
+                'tax_amount' => $totalTax,
+                'total_with_tax' => $totalWithTax,
+                'insurance_discount' => $insuranceDiscount,
+                'total' => $total,
+                'status' => 'pendiente',
                 'authorization_number' => $request->authorization_number,
-                'with_ncf' => $request->boolean('with_ncf'),
+                'with_ncf' => $request->has('with_ncf'),
+                'ncf' => $request->ncf,
                 'ncf_type' => $request->ncf_type,
                 'customer_rnc' => $request->customer_rnc,
                 'customer_business_name' => $request->customer_business_name,
-                'ncf' => $request->ncf,
+                'tax_details' => [
+                    'total_tax' => $totalTax,
+                    'items' => collect($items)->map(fn($item) => $item['tax_details'])->flatten(1)->toArray()
+                ]
             ]);
 
+            // Crear items
             foreach ($items as $item) {
-                $item['invoice_id'] = $invoice->id;
-                InvoiceItem::create($item);
+                $invoice->items()->create($item);
             }
-
-            // ═══════════════════════════════════════════════════════════
-            // 👇 **AQUÍ SE AGREGA EL CÁLCULO DE HONORARIOS** 👇
-            // ═══════════════════════════════════════════════════════════
-            
-            // Crear el servicio de honorarios y calcular automáticamente
-            $feeService = new AudiologistFeeService();
-            $fee = $feeService->calculateAndCreateFee($invoice);
-            
-            // Opcional: Log para verificar que se creó correctamente
-            if ($fee) {
-                \Illuminate\Support\Facades\Log::info('Honorario creado automáticamente', [
-                    'invoice_id' => $invoice->id,
-                    'audiologist_id' => $invoice->audiologist_id,
-                    'fee_amount' => $fee->fee_amount
-                ]);
-            } else {
-                \Illuminate\Support\Facades\Log::warning('No se pudo crear honorario', [
-                    'invoice_id' => $invoice->id,
-                    'audiologist_id' => $invoice->audiologist_id
-                ]);
-            }
-            
-            // ═══════════════════════════════════════════════════════════
-            // 👆 **FIN DEL CÓDIGO AGREGADO** 👆
-            // ═══════════════════════════════════════════════════════════
 
             DB::commit();
 
+            // ✅ REDIRIGIR A SHOW
             return redirect()
-                ->route('invoices.show', $invoice)
-                ->with('success', 'Factura ' . $invoice->invoice_number . ' creada exitosamente.');
+                ->route('invoices.show', $invoice->id)
+                ->with('success', "Factura #{$invoice->id} creada exitosamente.");
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->with('error', 'Error al crear la factura: ' . $e->getMessage());
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Error al crear la factura: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Display the specified invoice.
+     */
     public function show(Invoice $invoice)
-{
-    $invoice->load([
-        'patient',
-        'user.role',
-        'branch',
-        'insurance',
-        'items.service',
-        'audiologist',
-    ]);
+    {
+        // Validar acceso
+        if (auth()->user()->role->name === 'recepcionista') {
+            if ($invoice->branch_id != auth()->user()->branch_id) {
+                abort(403, 'No tienes acceso a esta factura.');
+            }
+        }
 
-    return view('invoices.show', compact('invoice'));
-}
+        $invoice->load(['patient', 'user', 'doctor', 'branch', 'insurance', 'items.service.category']);
 
+        // Obtener settings de la base de datos
+        $settings = Setting::getAll();
+
+        return view('invoices.show', compact('invoice', 'settings'));
+    }
+
+    /**
+     * Print the specified invoice.
+     */
+    public function print(Invoice $invoice)
+    {
+        // Validar acceso
+        if (auth()->user()->role->name === 'recepcionista') {
+            if ($invoice->branch_id != auth()->user()->branch_id) {
+                abort(403);
+            }
+        }
+
+        $invoice->load(['patient', 'doctor', 'branch', 'insurance', 'items.service.category']);
+        $settings = Setting::getAll();
+
+        return view('invoices.print', compact('invoice', 'settings'));
+    }
+
+    /**
+     * Cancel the specified invoice.
+     */
     public function cancel(Invoice $invoice)
     {
-        if ($invoice->status !== 'pendiente') {
-            return back()->with('error', 'Solo se pueden cancelar facturas pendientes.');
+        // Validar acceso
+        if (auth()->user()->role->name === 'recepcionista') {
+            if ($invoice->branch_id != auth()->user()->branch_id) {
+                abort(403);
+            }
         }
+
+        if ($invoice->status !== 'pendiente') {
+            return redirect()
+                ->back()
+                ->with('error', 'Solo se pueden cancelar facturas pendientes.');
+        }
+
         $invoice->update(['status' => 'cancelada']);
-        return back()->with('success', 'Factura ' . $invoice->invoice_number . ' cancelada correctamente.');
+
+        return redirect()
+            ->route('invoices.show', $invoice)
+            ->with('success', "Factura #{$invoice->id} cancelada exitosamente.");
     }
+
+    public function destroy(Invoice $invoice)
+    {
+        if (auth()->user()->role->name === 'recepcionista') {
+            if ($invoice->branch_id != auth()->user()->branch_id) {
+                abort(403, 'No tienes acceso a esta factura.');
+            }
+        }
+
+        if ($invoice->status !== 'pendiente') {
+            return redirect()
+                ->back()
+                ->with('error', 'No se puede eliminar una factura pagada o cancelada.');
+        }
+
+        $invoice->delete();
+
+        return redirect()
+            ->route('invoices.index')
+            ->with('success', "Factura #{$invoice->id} eliminada.");
+    }
+
+    // ============================================
+    // API METHODS
+    // ============================================
 
     public function searchPatients(Request $request)
     {
-        $q = $request->get('q', '');
+        $query = $request->get('q', '');
 
-        $patients = Patient::with('insurance')
-            ->where(function ($query) use ($q) {
-                $query->where('first_name', 'like', "%{$q}%")
-                      ->orWhere('last_name',  'like', "%{$q}%")
-                      ->orWhere('cedula',     'like', "%{$q}%")
-                      ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
-            })
-            ->limit(10)
-            ->get()
-            ->map(fn($p) => [
-                'id'                 => $p->id,
-                'full_name'          => $p->first_name . ' ' . $p->last_name,
-                'cedula'             => $p->cedula,
-                'phone'              => $p->phone,
-                'insurance_id'       => $p->insurance_id,
-                'insurance_name'     => $p->insurance?->name,
-                'insurance_coverage' => $p->insurance?->coverage_percentage,
-            ]);
+        $patientsQuery = Patient::where(function($q) use ($query) {
+            $q->where('first_name', 'LIKE', "%{$query}%")
+              ->orWhere('last_name', 'LIKE', "%{$query}%")
+              ->orWhere('cedula', 'LIKE', "%{$query}%")
+              ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
+        });
 
-        return response()->json($patients);
+        if (auth()->user()->role->name === 'recepcionista') {
+            $patientsQuery->where('branch_id', auth()->user()->branch_id);
+        }
+
+        $patients = $patientsQuery->with('insurance')->limit(20)->get();
+
+        return response()->json($patients->map(function($patient) {
+            return [
+                'id' => $patient->id,
+                'full_name' => $patient->full_name,
+                'cedula' => $patient->cedula,
+                'phone' => $patient->phone,
+                'insurance_id' => $patient->insurance_id,
+                'insurance_name' => $patient->insurance?->name,
+                'insurance_coverage' => $patient->insurance?->coverage_percentage,
+            ];
+        }));
     }
 
-    public function getServicePrice(Service $service)
+    public function storePatient(Request $request)
     {
-        return response()->json(['id' => $service->id, 'name' => $service->name, 'price' => $service->price]);
-    }
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'cedula' => 'nullable|string|max:255|unique:patients,cedula',
+            'phone' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'birth_date' => 'nullable|date',
+            'gender' => 'nullable|in:M,F',
+            'address' => 'nullable|string',
+            'insurance_id' => 'nullable|exists:insurances,id',
+            'insurance_number' => 'nullable|string|max:255',
+        ]);
 
-    public function consultRnc($rnc)
-{
-    try {
+        $validated['branch_id'] = auth()->user()->branch_id;
 
-        $rnc = preg_replace('/[^0-9]/', '', $rnc);
-
-        $response = Http::timeout(15)
-            ->get('https://rnc.megaplus.com.do/api/consulta', [
-                'rnc' => $rnc
-            ]);
-
-        return response()->json(
-            $response->json(),
-            $response->status()
-        );
-
-    } catch (\Exception $e) {
+        $patient = Patient::create($validated);
 
         return response()->json([
-            'error' => true,
-            'mensaje' => $e->getMessage()
-        ], 500);
+            'message' => 'Paciente creado exitosamente.',
+            'patient' => [
+                'id' => $patient->id,
+                'full_name' => $patient->full_name,
+                'cedula' => $patient->cedula,
+                'phone' => $patient->phone,
+                'insurance_id' => $patient->insurance_id,
+                'insurance_name' => $patient->insurance?->name,
+                'insurance_coverage' => $patient->insurance?->coverage_percentage,
+            ]
+        ], 201);
     }
-}
+
+    public function getServicesByCategory($categoryId)
+    {
+        $services = Service::where('category_id', $categoryId)
+            ->where('is_active', 1)
+            ->with('taxes')
+            ->get(['id', 'name', 'price', 'requires_clinical_record']);
+
+        return response()->json($services);
+    }
+
+    public function getDoctors(Request $request)
+    {
+        $query = User::where(function($q) {
+            $q->where('role_id', 4)
+              ->orWhere(function($q2) {
+                  $q2->where('role_id', 1)
+                    ->where('is_doctor', 1);
+              });
+        });
+
+        if (auth()->user()->role->name === 'recepcionista') {
+            $query->where('branch_id', auth()->user()->branch_id);
+        } elseif ($request->filled('branch_id') && auth()->user()->role->name === 'admin') {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        $doctors = $query->with('branch')->orderBy('name')->get();
+
+        return response()->json($doctors->map(fn($doctor) => [
+            'id' => $doctor->id,
+            'name' => $doctor->name,
+            'branch_id' => $doctor->branch_id,
+            'branch_name' => $doctor->branch?->name,
+        ]));
+    }
+
+    public function getBranches()
+    {
+        if (auth()->user()->role->name === 'admin') {
+            $branches = Branch::all();
+        } else {
+            $branches = Branch::where('id', auth()->user()->branch_id)->get();
+        }
+
+        return response()->json($branches);
+    }
 }

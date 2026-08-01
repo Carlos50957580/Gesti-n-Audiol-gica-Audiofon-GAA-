@@ -23,6 +23,13 @@ class Patient extends Model
         'insurance_number'  
     ];
 
+    // ✅ Accessor para nombre completo
+    public function getFullNameAttribute()
+    {
+        return $this->first_name . ' ' . $this->last_name;
+    }
+
+    // Relaciones
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
@@ -39,12 +46,12 @@ class Patient extends Model
     }
 
     public function invoices()
-{
-    return $this->hasMany(Invoice::class);
-}
+    {
+        return $this->hasMany(Invoice::class);
+    }
 
-public function clinicalRecords()
-{
-    return $this->hasMany(ClinicalRecord::class);
-}
+    public function clinicalRecords()
+    {
+        return $this->hasMany(ClinicalRecord::class);
+    }
 }

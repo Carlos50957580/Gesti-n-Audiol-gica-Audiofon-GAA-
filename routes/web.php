@@ -10,7 +10,6 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\ClinicalRecordController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\InsuranceController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReceptionistReportController;
@@ -129,26 +128,6 @@ Route::resource('insurances', InsuranceController::class)
     ->middleware(['auth', 'role:admin,admin2']);
 
 
-// ── Facturación (admin, recepcionista, admin2) ─────────────────────────────────────
-Route::middleware(['auth', 'role:admin,recepcionista,admin2'])->group(function () {
-
-    // CRUD principal de facturas
-    Route::resource('invoices', InvoiceController::class)
-        ->only(['index', 'create', 'store', 'show']);
-
-    // Cancelar factura (solo admin normal)
-    Route::patch('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])
-        ->name('invoices.cancel')
-        ->middleware('role:admin');
-
-    // AJAX: buscar pacientes
-    Route::get('api/patients/search', [InvoiceController::class, 'searchPatients'])
-        ->name('api.patients.search');
-
-    // AJAX: precio de servicio
-    Route::get('api/services/{service}/price', [InvoiceController::class, 'getServicePrice'])
-        ->name('api.services.price');
-});
 
 
 // ── Pagos (admin, recepcionista, admin2) ─────────────────────────────────────
@@ -315,5 +294,23 @@ Route::resource('taxes', TaxController::class);
 
 // API para obtener impuestos activos
 Route::get('/api/taxes/active', [TaxController::class, 'getActiveTaxes'])->name('api.taxes.active');
+
+
+
+use App\Http\Controllers\InvoiceController;
+
+Route::middleware(['auth'])->group(function () {
+    // Facturación
+    Route::resource('invoices', InvoiceController::class);
+    Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
+    Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
+
+    // APIs para facturación
+    Route::get('/api/patients/search', [InvoiceController::class, 'searchPatients'])->name('api.patients.search');
+    Route::post('/api/patients', [InvoiceController::class, 'storePatient'])->name('api.patients.store');
+    Route::get('/api/services/by-category/{categoryId}', [InvoiceController::class, 'getServicesByCategory'])->name('api.services.by-category');
+    Route::get('/api/doctors', [InvoiceController::class, 'getDoctors'])->name('api.doctors');
+    Route::get('/api/branches', [InvoiceController::class, 'getBranches'])->name('api.branches');
+});
 
 require __DIR__.'/auth.php';

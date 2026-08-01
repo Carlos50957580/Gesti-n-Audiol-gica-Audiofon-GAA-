@@ -2,98 +2,80 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'patient_id',
         'user_id',
+        'doctor_id',
         'branch_id',
         'insurance_id',
         'subtotal',
+        'tax_amount',
+        'total_with_tax',
         'insurance_discount',
         'total',
         'status',
         'authorization_number',
-        'audiologist_id',
         'with_ncf',
         'ncf',
         'ncf_type',
         'customer_rnc',
         'customer_business_name',
+        'tax_details'
     ];
 
     protected $casts = [
-        'subtotal'           => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'total_with_tax' => 'decimal:2',
         'insurance_discount' => 'decimal:2',
-        'total'              => 'decimal:2',
+        'total' => 'decimal:2',
+        'with_ncf' => 'boolean',
+        'tax_details' => 'array'
     ];
 
-    // ── Relations ────────────────────────────────────────────────────────────
-
-
-    public function receipt()
-    {
-        return $this->hasOne(Receipt::class);
-    }
-
-    public function patient()
+    public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function branch()
+    public function doctor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'doctor_id');
+    }
+
+    public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function insurance()
+    public function insurance(): BelongsTo
     {
         return $this->belongsTo(Insurance::class);
     }
 
-    public function items()
+    public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
     }
 
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
     public function clinicalRecord()
-{
-    return $this->hasOne(ClinicalRecord::class);
-}
-
-public function audiologist()
-{
-    return $this->belongsTo(User::class, 'audiologist_id');
-}
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    public function getInvoiceNumberAttribute(): string
     {
-        return 'FAC-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+        return $this->hasOne(ClinicalRecord::class);
     }
-
-    public function getStatusBadgeAttribute(): string
-    {
-        return match ($this->status) {
-            'pendiente'  => '<span class="badge bg-warning-subtle text-warning">Pendiente</span>',
-            'pagada'     => '<span class="badge bg-success-subtle text-success">Pagada</span>',
-            'cancelada'  => '<span class="badge bg-danger-subtle text-danger">Cancelada</span>',
-            default      => '<span class="badge bg-secondary">Desconocido</span>',
-        };
-    }
-
-    public function audiologistFee()
-{
-    return $this->hasOne(AudiologistFee::class);
-}
 }

@@ -35,6 +35,12 @@
 .patient-pill-x { margin-left:auto; background:none; border:none; color:#94a3b8; padding:.2rem .4rem; cursor:pointer; border-radius:.35rem; transition:all .15s; font-size:1.1rem; line-height:1; }
 .patient-pill-x:hover { color:#e74c3c; background:#fee2e2; }
 
+/* ── Category / Service selection ── */
+.cat-selector { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+.cat-btn { padding:.35rem 1rem; border:1.5px solid #e2e8f0; border-radius:2rem; background:#f8faff; color:#6b7a99; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .18s; }
+.cat-btn:hover { background:#f0f4ff; border-color:#405189; color:#405189; }
+.cat-btn.active { background:#405189; border-color:#405189; color:#fff; }
+
 /* ── Services table ── */
 .svc-table { width:100%; border-collapse:collapse; }
 .svc-table th { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8098bb; padding:.75rem 1rem; border-bottom:2px solid #e9ecef; background:#fafbff; white-space:nowrap; }
@@ -151,7 +157,7 @@
             </div>
         </div>
 
-        {{-- Servicios --}}
+        {{-- Categorías y Servicios --}}
         <div class="inv-card">
             <div class="inv-card-header">
                 <div class="card-icon bg-success-subtle text-success"><i class="ri-stethoscope-line"></i></div>
@@ -161,26 +167,41 @@
                     <i class="ri-add-line"></i>Agregar
                 </button>
             </div>
-            <div class="table-responsive">
-                <table class="svc-table">
-                    <thead>
-                        <tr>
-                            <th style="min-width:190px;">Servicio</th>
-                            <th style="width:130px;">Precio</th>
-                            <th style="width:70px;" class="text-center">Cant.</th>
-                            <th style="width:110px;">Subtotal</th>
-                            <th style="width:160px;" id="th-cov" class="d-none">Cobertura</th>
-                            <th style="width:115px;" id="th-ins" class="d-none">Cubre seguro</th>
-                            <th style="width:115px;" id="th-pat" class="d-none">Paga paciente</th>
-                            <th style="width:42px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="svc-body"></tbody>
-                </table>
-            </div>
-            <div id="svc-empty" class="svc-empty">
-                <i class="ri-stethoscope-line"></i>
-                <p>Agrega al menos un servicio para continuar.</p>
+            <div class="inv-card-body">
+                {{-- Selector de categorías --}}
+                <div class="cat-selector" id="category-selector">
+                    <button type="button" class="cat-btn active" data-category="all">Todos</button>
+                    @foreach($categories as $category)
+                        <button type="button" class="cat-btn" data-category="{{ $category->id }}"
+                                style="border-color: {{ $category->color ?? '#405189' }}40; color: {{ $category->color ?? '#405189' }}">
+                            <i class="{{ $category->icon ?? 'ri-folder-line' }}"></i>
+                            {{ $category->name }}
+                        </button>
+                    @endforeach
+                </div>
+                
+                {{-- Tabla de servicios --}}
+                <div class="table-responsive">
+                    <table class="svc-table">
+                        <thead>
+                            <tr>
+                                <th style="min-width:190px;">Servicio</th>
+                                <th style="width:130px;">Precio</th>
+                                <th style="width:70px;" class="text-center">Cant.</th>
+                                <th style="width:110px;">Subtotal</th>
+                                <th style="width:160px;" id="th-cov" class="d-none">Cobertura</th>
+                                <th style="width:115px;" id="th-ins" class="d-none">Cubre seguro</th>
+                                <th style="width:115px;" id="th-pat" class="d-none">Paga paciente</th>
+                                <th style="width:42px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="svc-body"></tbody>
+                    </table>
+                </div>
+                <div id="svc-empty" class="svc-empty">
+                    <i class="ri-stethoscope-line"></i>
+                    <p>Agrega al menos un servicio para continuar.</p>
+                </div>
             </div>
         </div>
 
@@ -251,13 +272,21 @@
             <div class="inv-card-body">
                 <div class="form-floating">
                     <select name="branch_id" id="branch_id" class="form-select @error('branch_id') is-invalid @enderror">
-                        <option value="">— Seleccionar —</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}"
-                                    {{ old('branch_id', auth()->user()->branch_id) == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
+                        @if(auth()->user()->role->name === 'admin')
+                            <option value="">— Seleccionar —</option>
+                            @foreach($branches as $branch)
+                                <option value="{{ $branch->id }}"
+                                        {{ old('branch_id', auth()->user()->branch_id) == $branch->id ? 'selected' : '' }}>
+                                    {{ $branch->name }}
+                                </option>
+                            @endforeach
+                        @else
+                            @foreach($branches as $branch)
+                                <option value="{{ $branch->id }}" selected>
+                                    {{ $branch->name }}
+                                </option>
+                            @endforeach
+                        @endif
                     </select>
                     <label>Sucursal</label>
                     @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -265,136 +294,82 @@
             </div>
         </div>
 
-       {{-- Audiólogo --}}
-<div class="inv-card">
-    <div class="inv-card-header">
-        <div class="card-icon bg-primary-subtle text-primary"><i class="ri-stethoscope-line"></i></div>
-        <h6>Audiólogo o médico Asignado</h6>
-    </div>
-    <div class="inv-card-body">
-        <div class="form-floating">
-            <select name="audiologist_id" id="audiologist_id" class="form-select @error('audiologist_id') is-invalid @enderror">
-                <option value="">— Seleccionar audiólogo/medico —</option>
-                @foreach($audiologists as $aud)
-                    <option value="{{ $aud->id }}" data-branch="{{ $aud->branch_id }}"
-                            {{ old('audiologist_id') == $aud->id ? 'selected' : '' }}>
-                        {{ $aud->name }}
-                    </option>
-                @endforeach
-            </select>
-            <label><i class="ri-user-heart-line me-1 text-muted"></i>Audiólogo</label>
-            @error('audiologist_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-        <div id="aud-pill" class="d-none mt-2 p-2 rounded d-flex align-items-center gap-2"
-             style="background:linear-gradient(135deg,rgba(64,81,137,.05),rgba(10,179,156,.05));border:1px solid rgba(64,81,137,.15);">
-            <div style="width:32px;height:32px;border-radius:.4rem;flex-shrink:0;background:linear-gradient(135deg,#405189,#0ab39c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:700;" id="aud-pill-av"></div>
-            <div>
-                <div style="font-size:.85rem;font-weight:700;color:#344563;" id="aud-pill-name"></div>
-                <div style="font-size:.73rem;color:#8098bb;" id="aud-pill-branch"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
+        {{-- Médico Asignado --}}
         <div class="inv-card">
-    <div class="inv-card-header">
-        <div class="card-icon bg-danger-subtle text-danger">
-            <i class="ri-file-list-3-line"></i>
-        </div>
-        <h6>Datos Fiscales</h6>
-    </div>
-
-    <div class="inv-card-body">
-
-        <div class="form-check mb-3">
-            <input class="form-check-input"
-                   type="checkbox"
-                   id="with_ncf"
-                   name="with_ncf"
-                   value="1">
-
-            <label class="form-check-label">
-                Generar comprobante fiscal
-            </label>
-        </div>
-
-        <div id="ncf-area" class="d-none">
-
-            <div class="form-floating mb-3">
-                <select name="ncf_type"
-                        id="ncf_type"
-                        class="form-select">
-
-                    <option value="">Seleccione</option>
-
-                    <option value="consumidor_final">
-                        Consumidor Final
-                    </option>
-
-                    <option value="credito_fiscal">
-                        Crédito Fiscal
-                    </option>
-
-                    <option value="gubernamental">
-                        Gubernamental
-                    </option>
-
-                    <option value="regimen_especial">
-                        Régimen Especial
-                    </option>
-
-                </select>
-
-                <label>Tipo NCF</label>
+            <div class="inv-card-header">
+                <div class="card-icon bg-primary-subtle text-primary"><i class="ri-stethoscope-line"></i></div>
+                <h6>Médico Asignado</h6>
             </div>
-
-            <div class="input-group mb-3">
-
-                <input type="text"
-                       class="form-control"
-                       id="customer_rnc"
-                       name="customer_rnc"
-                       placeholder="RNC o Cédula">
-
-                <button type="button"
-                        class="btn btn-primary"
-                        id="btn-search-rnc">
-
-                    Buscar
-                </button>
-
+            <div class="inv-card-body">
+                <div class="form-floating">
+                    <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror">
+                        <option value="">— Seleccionar médico —</option>
+                        @foreach($doctors as $doctor)
+                            <option value="{{ $doctor->id }}" data-branch="{{ $doctor->branch_id }}"
+                                    {{ old('doctor_id') == $doctor->id ? 'selected' : '' }}>
+                                {{ $doctor->name }} 
+                                @if($doctor->branch)
+                                    ({{ $doctor->branch->name }})
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    <label><i class="ri-user-heart-line me-1 text-muted"></i>Médico</label>
+                    @error('doctor_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div id="doctor-pill" class="d-none mt-2 p-2 rounded d-flex align-items-center gap-2"
+                     style="background:linear-gradient(135deg,rgba(64,81,137,.05),rgba(10,179,156,.05));border:1px solid rgba(64,81,137,.15);">
+                    <div style="width:32px;height:32px;border-radius:.4rem;flex-shrink:0;background:linear-gradient(135deg,#405189,#0ab39c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:700;" id="doctor-pill-av"></div>
+                    <div>
+                        <div style="font-size:.85rem;font-weight:700;color:#344563;" id="doctor-pill-name"></div>
+                        <div style="font-size:.73rem;color:#8098bb;" id="doctor-pill-branch"></div>
+                    </div>
+                </div>
             </div>
-
-            <div class="form-floating mb-3">
-
-    <input type="text"
-           name="ncf"
-           id="ncf"
-           class="form-control"
-           placeholder="B0200000001">
-
-    <label>NCF</label>
-
-</div>
-
-            <div class="form-floating">
-
-                <input type="text"
-                       class="form-control"
-                       id="customer_business_name"
-                       name="customer_business_name"
-                       readonly>
-
-                <label>Razón Social</label>
-
-            </div>
-
-            <div id="rnc-status" class="mt-2"></div>
-
         </div>
 
-    </div>
-</div>
+        {{-- Datos Fiscales --}}
+        <div class="inv-card">
+            <div class="inv-card-header">
+                <div class="card-icon bg-danger-subtle text-danger"><i class="ri-file-list-3-line"></i></div>
+                <h6>Datos Fiscales</h6>
+            </div>
+            <div class="inv-card-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="with_ncf" name="with_ncf" value="1">
+                    <label class="form-check-label">Generar comprobante fiscal</label>
+                </div>
+
+                <div id="ncf-area" class="d-none">
+                    <div class="form-floating mb-3">
+                        <select name="ncf_type" id="ncf_type" class="form-select">
+                            <option value="">Seleccione</option>
+                            <option value="consumidor_final">Consumidor Final</option>
+                            <option value="credito_fiscal">Crédito Fiscal</option>
+                            <option value="gubernamental">Gubernamental</option>
+                            <option value="regimen_especial">Régimen Especial</option>
+                        </select>
+                        <label>Tipo NCF</label>
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="customer_rnc" name="customer_rnc" placeholder="RNC o Cédula">
+                        <button type="button" class="btn btn-primary" id="btn-search-rnc">Buscar</button>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input type="text" name="ncf" id="ncf" class="form-control" placeholder="B0200000001">
+                        <label>NCF</label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="customer_business_name" name="customer_business_name" readonly>
+                        <label>Razón Social</label>
+                    </div>
+                    <div id="rnc-status" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
 
         {{-- Resumen --}}
         <div class="inv-card">
@@ -407,6 +382,10 @@
                     <div class="totals-row">
                         <span class="totals-label">Subtotal servicios</span>
                         <span class="totals-value" id="disp-subtotal">RD$ 0.00</span>
+                    </div>
+                    <div class="totals-row" id="tax-row" style="display:none;">
+                        <span class="totals-label">Impuestos</span>
+                        <span class="totals-value" id="disp-tax">RD$ 0.00</span>
                     </div>
                     <div class="totals-row" id="discount-row" style="display:none;">
                         <span class="totals-label">Descuento seguro</span>
@@ -463,7 +442,7 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             <input type="text" class="form-control" id="m_cedula" placeholder="000-0000000-0">
-<label>Cédula <span class="text-muted fw-normal">(opcional)</span></label>
+                            <label>Cédula <span class="text-muted fw-normal">(opcional)</span></label>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -534,16 +513,35 @@
 
 @push('scripts')
 <script>
-const SERVICES_DATA = {{ Js::from($services->map(fn($s) => ['id' => $s->id, 'name' => $s->name, 'price' => (float)$s->price])) }};
+// ============================================
+// DATOS INICIALES
+// ============================================
+const SERVICES_DATA = {!! $services->map(fn($s) => [
+    'id' => $s->id,
+    'name' => $s->name,
+    'price' => (float)$s->price,
+    'category_id' => $s->category_id,
+    'requires_clinical_record' => $s->requires_clinical_record,
+    'taxes' => $s->taxes->map(fn($t) => [
+        'id' => $t->id,
+        'name' => $t->name,
+        'code' => $t->code,
+        'rate' => (float)$t->rate,
+    ])
+]) !!};
+
 const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
-const URL_SEARCH = '/api/patients/search';
-const URL_STORE  = '/api/patients';
+const URL_SEARCH = '{{ route("api.patients.search") }}';
+const URL_STORE  = '{{ route("api.patients.store") }}';
+const URL_DOCTORS = '{{ route("api.doctors") }}';
 
 let rowIndex     = 0;
 let covType      = 'pct';
 let hasInsurance = false;
 
-/* ══ Patient search ══ */
+// ============================================
+// PATIENT SEARCH
+// ============================================
 let psTimer = null, psMouseInDrop = false;
 
 function psInit() {
@@ -624,7 +622,67 @@ function clearPatient() {
 
 function openNewPatientModal() { new bootstrap.Modal(document.getElementById('newPatientModal')).show(); }
 
-/* ══ Insurance ══ */
+// ============================================
+// CATEGORY FILTER
+// ============================================
+document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const catId = this.dataset.category;
+        filterServices(catId);
+    });
+});
+
+function filterServices(categoryId) {
+    const rows = document.querySelectorAll('.svc-row');
+    rows.forEach(row => {
+        const select = row.querySelector('.svc-select');
+        const options = select.querySelectorAll('option');
+        let hasVisible = false;
+        let firstVisibleValue = null;
+        let firstVisiblePrice = 0;
+        
+        options.forEach(opt => {
+            const serviceId = opt.value;
+            const service = SERVICES_DATA.find(s => s.id == parseInt(serviceId));
+            if (!service) return;
+            const show = categoryId === 'all' || service.category_id == categoryId;
+            opt.style.display = show ? '' : 'none';
+            if (show) {
+                hasVisible = true;
+                if (firstVisibleValue === null) {
+                    firstVisibleValue = serviceId;
+                    firstVisiblePrice = service.price;
+                }
+            }
+        });
+        
+        // Si hay opciones visibles y el valor actual no es visible o está vacío
+        if (hasVisible) {
+            const currentValue = select.value;
+            const currentOption = select.querySelector(`option[value="${currentValue}"]`);
+            if (!currentOption || currentOption.style.display === 'none' || !currentValue) {
+                select.value = firstVisibleValue;
+                // ✅ ACTUALIZAR EL PRECIO MANUALMENTE
+                const priceInp = row.querySelector('.price-input');
+                if (priceInp && firstVisiblePrice) {
+                    priceInp.value = firstVisiblePrice.toFixed(2);
+                    priceInp.classList.remove('modified');
+                }
+                recalcRow(row);
+            }
+        }
+        
+        row.style.display = hasVisible ? '' : 'none';
+        recalcRow(row);
+    });
+    recalculate();
+}
+
+// ============================================
+// INSURANCE
+// ============================================
 document.getElementById('insurance_id').addEventListener('change', function () {
     const opt = this.options[this.selectedIndex];
     hasInsurance = !!this.value;
@@ -666,12 +724,14 @@ function applyGlobalCoverage() {
     recalculate();
 }
 
-/* ══ Services table ══ */
+// ============================================
+// SERVICES TABLE
+// ============================================
 document.getElementById('btn-add-svc').addEventListener('click', () => addSvcRow());
 
 function buildOptions(selId) {
     return SERVICES_DATA.map(s =>
-        `<option value="${s.id}" data-price="${s.price}" ${s.id == selId ? 'selected' : ''}>
+        `<option value="${s.id}" data-price="${s.price}" data-category="${s.category_id}" ${s.id == selId ? 'selected' : ''}>
             ${s.name}
         </option>`
     ).join('');
@@ -679,22 +739,26 @@ function buildOptions(selId) {
 
 function addSvcRow(selId, qty) {
     document.getElementById('svc-empty').style.display = 'none';
-    selId = selId || (SERVICES_DATA[0]?.id || '');
-    qty   = qty || 1;
+    
+    // ✅ Si no se especifica selId, usar el primer servicio disponible
+    if (!selId) {
+        const firstService = SERVICES_DATA[0];
+        selId = firstService?.id || '';
+    }
+    qty = qty || 1;
 
-    const insOpt   = document.getElementById('insurance_id');
-    const basePct  = hasInsurance ? (parseFloat(insOpt.options[insOpt.selectedIndex].dataset.coverage) || 0) : 0;
-    const initCov  = hasInsurance ? (parseFloat(document.getElementById('global-cov-input').value) || basePct) : 0;
+    const insOpt = document.getElementById('insurance_id');
+    const basePct = hasInsurance ? (parseFloat(insOpt.options[insOpt.selectedIndex].dataset.coverage) || 0) : 0;
+    const initCov = hasInsurance ? (parseFloat(document.getElementById('global-cov-input').value) || basePct) : 0;
     const initType = covType;
-    const hidden   = hasInsurance ? '' : 'd-none';
-    const ri       = rowIndex++;
+    const hidden = hasInsurance ? '' : 'd-none';
+    const ri = rowIndex++;
 
-    // Precio base del servicio seleccionado por defecto
     const defaultService = SERVICES_DATA.find(s => s.id == selId);
-    const defaultPrice   = defaultService ? defaultService.price.toFixed(2) : '';
+    const defaultPrice = defaultService ? defaultService.price : 0;
 
     const tr = document.createElement('tr');
-    tr.className       = 'svc-row';
+    tr.className = 'svc-row';
     tr.dataset.covType = initType;
     tr.innerHTML = `
         <td>
@@ -703,11 +767,11 @@ function addSvcRow(selId, qty) {
             </select>
         </td>
         <td>
-            {{-- ── Precio editable ── --}}
             <div class="input-group input-group-sm price-group">
                 <span class="input-group-text">RD$</span>
                 <input type="number" class="form-control price-input text-end"
-                       value="${defaultPrice}" min="0" step="0.01" placeholder="0.00"
+                       value="${defaultPrice > 0 ? defaultPrice.toFixed(2) : '0.00'}" 
+                       min="0" step="0.01" placeholder="0.00"
                        title="Puedes modificar el precio">
             </div>
         </td>
@@ -736,38 +800,46 @@ function addSvcRow(selId, qty) {
         <td class="td-pat pat-cell ${hidden}">RD$ 0.00</td>
         <td class="text-center">
             <button type="button" class="btn-remove-row"><i class="ri-delete-bin-line"></i></button>
-        </td>`;
+        </td>
+    `;
 
     document.getElementById('svc-body').appendChild(tr);
 
     const priceInp = tr.querySelector('.price-input');
 
-    // Al cambiar servicio → actualizar precio base
-    tr.querySelector('.svc-select').addEventListener('change', () => {
-        const sel       = tr.querySelector('.svc-select');
-        const basePrice = parseFloat(sel.options[sel.selectedIndex]?.dataset.price || 0);
-        priceInp.value  = basePrice > 0 ? basePrice.toFixed(2) : '';
+    // ✅ Al cambiar servicio - ACTUALIZAR PRECIO CORRECTAMENTE
+    tr.querySelector('.svc-select').addEventListener('change', function() {
+        const sel = this;
+        const selectedOpt = sel.options[sel.selectedIndex];
+        const basePrice = parseFloat(selectedOpt?.dataset?.price || 0);
+        priceInp.value = basePrice > 0 ? basePrice.toFixed(2) : '0.00';
         priceInp.classList.remove('modified');
         recalcRow(tr);
     });
 
-    // Al editar precio manualmente → marcar visualmente
-    priceInp.addEventListener('input', () => {
-        const sel       = tr.querySelector('.svc-select');
+    // Al editar precio
+    priceInp.addEventListener('input', function() {
+        const sel = tr.querySelector('.svc-select');
         const basePrice = parseFloat(sel.options[sel.selectedIndex]?.dataset.price || 0);
-        const current   = parseFloat(priceInp.value || 0);
-        priceInp.classList.toggle('modified', current !== basePrice);
+        const current = parseFloat(this.value || 0);
+        this.classList.toggle('modified', current !== basePrice);
         recalcRow(tr);
     });
 
     tr.querySelector('.qty-input').addEventListener('input', () => recalcRow(tr));
     tr.querySelector('.cov-input')?.addEventListener('input', () => recalcRow(tr));
-    tr.querySelector('.btn-remove-row').addEventListener('click', () => {
+    tr.querySelector('.btn-remove-row').addEventListener('click', function() {
         tr.remove();
         if (!document.querySelectorAll('.svc-row').length)
             document.getElementById('svc-empty').style.display = '';
         recalculate();
     });
+
+    // Aplicar filtro de categoría actual
+    const activeCat = document.querySelector('.cat-btn.active');
+    if (activeCat && activeCat.dataset.category !== 'all') {
+        filterServices(activeCat.dataset.category);
+    }
 
     recalcRow(tr);
     recalculate();
@@ -785,6 +857,9 @@ function updateRowCovLabel(tr) {
     if (lbl) lbl.textContent = (tr.dataset.covType === 'pct') ? '%' : 'RD$';
 }
 
+// ============================================
+// CALCULATIONS
+// ============================================
 function recalcRow(tr) {
     const sel        = tr.querySelector('.svc-select');
     const priceInp   = tr.querySelector('.price-input');
@@ -795,15 +870,32 @@ function recalcRow(tr) {
     const covVal     = parseFloat(tr.querySelector('.cov-input')?.value || 0);
     const type       = tr.dataset.covType || 'pct';
 
-    let insAmt = 0, patAmt = subtotal;
+    // Calcular impuestos
+    const serviceId = parseInt(sel.value);
+    const service = SERVICES_DATA.find(s => s.id === serviceId);
+    let taxAmount = 0;
+    if (service && service.taxes) {
+        service.taxes.forEach(tax => {
+            taxAmount += subtotal * (tax.rate / 100);
+        });
+    }
+
+    let insAmt = 0, patAmt = subtotal + taxAmount;
     if (hasInsurance && covVal > 0) {
         insAmt = type === 'pct'
             ? subtotal * (Math.min(covVal, 100) / 100)
             : Math.min(covVal, subtotal);
-        patAmt = subtotal - insAmt;
+        patAmt = (subtotal + taxAmount) - insAmt;
     }
 
-    tr.querySelector('.subtotal-cell').textContent = 'RD$ ' + fmt(subtotal);
+    const subtotalCell = tr.querySelector('.subtotal-cell');
+    subtotalCell.textContent = 'RD$ ' + fmt(subtotal);
+    
+    // Mostrar impuestos en el subtotal
+    if (taxAmount > 0) {
+        subtotalCell.title = `Subtotal: RD$ ${fmt(subtotal)}\nImpuestos: RD$ ${fmt(taxAmount)}\nTotal con impuestos: RD$ ${fmt(subtotal + taxAmount)}`;
+    }
+
     const insCell = tr.querySelector('.ins-cell');
     const patCell = tr.querySelector('.pat-cell');
     if (insCell) insCell.textContent = 'RD$ ' + fmt(insAmt);
@@ -813,7 +905,7 @@ function recalcRow(tr) {
 }
 
 function recalculate() {
-    let subtotal = 0, totalIns = 0;
+    let subtotal = 0, totalTax = 0, totalIns = 0;
     document.querySelectorAll('.svc-row').forEach(tr => {
         const sel       = tr.querySelector('.svc-select');
         const priceInp  = tr.querySelector('.price-input');
@@ -821,6 +913,17 @@ function recalculate() {
         const price     = parseFloat(priceInp?.value) > 0 ? parseFloat(priceInp.value) : basePrice;
         const qty       = parseInt(tr.querySelector('.qty-input')?.value) || 1;
         const sub       = price * qty;
+        
+        // Calcular impuestos
+        const serviceId = parseInt(sel.value);
+        const service = SERVICES_DATA.find(s => s.id === serviceId);
+        let taxAmount = 0;
+        if (service && service.taxes) {
+            service.taxes.forEach(tax => {
+                taxAmount += sub * (tax.rate / 100);
+            });
+        }
+        
         let ins = 0;
         if (hasInsurance) {
             const cov  = parseFloat(tr.querySelector('.cov-input')?.value || 0);
@@ -828,12 +931,17 @@ function recalculate() {
             ins = type === 'pct' ? sub * (Math.min(cov, 100) / 100) : Math.min(cov, sub);
         }
         subtotal += sub;
+        totalTax += taxAmount;
         totalIns += ins;
     });
-    const total = subtotal - totalIns;
+    const totalWithTax = subtotal + totalTax;
+    const total = totalWithTax - totalIns;
+    
     document.getElementById('disp-subtotal').textContent = 'RD$ ' + fmt(subtotal);
+    document.getElementById('disp-tax').textContent = 'RD$ ' + fmt(totalTax);
     document.getElementById('disp-discount').textContent = '− RD$ ' + fmt(totalIns);
     document.getElementById('disp-total').textContent    = 'RD$ ' + fmt(total);
+    document.getElementById('tax-row').style.display = totalTax > 0 ? 'flex' : 'none';
     document.getElementById('discount-row').style.display = totalIns > 0 ? 'flex' : 'none';
 }
 
@@ -841,7 +949,36 @@ function fmt(n) {
     return parseFloat(n || 0).toLocaleString('es-DO', { minimumFractionDigits:2, maximumFractionDigits:2 });
 }
 
-/* ══ Modal nuevo paciente ══ */
+// ============================================
+// DOCTOR SELECT
+// ============================================
+document.getElementById('doctor_id').addEventListener('change', function () {
+    const opt    = this.options[this.selectedIndex];
+    const pill   = document.getElementById('doctor-pill');
+    const name   = opt.text?.trim() || '';
+    const branchName = opt.dataset.branch ? (opt.dataset.branch === 'null' ? '' : opt.dataset.branch) : '';
+    
+    if (!this.value) { 
+        pill.classList.add('d-none'); 
+        return; 
+    }
+    
+    const initials = name.split(' ').slice(0,2).map(w => w[0]?.toUpperCase() || '').join('');
+    document.getElementById('doctor-pill-av').textContent = initials;
+    document.getElementById('doctor-pill-name').textContent = name;
+    
+    if (branchName && branchName !== 'null') {
+        document.getElementById('doctor-pill-branch').textContent = '📍 ' + branchName;
+    } else {
+        document.getElementById('doctor-pill-branch').textContent = '';
+    }
+    
+    pill.classList.remove('d-none');
+});
+
+// ============================================
+// MODAL: NUEVO PACIENTE
+// ============================================
 document.getElementById('m_insurance_id').addEventListener('change', function () {
     document.getElementById('m_ins_num_wrap').classList.toggle('d-none', !this.value);
 });
@@ -852,7 +989,7 @@ document.getElementById('btn-save-patient').addEventListener('click', async func
     const payload = {
         first_name      : document.getElementById('m_first_name').value.trim(),
         last_name       : document.getElementById('m_last_name').value.trim(),
-cedula : document.getElementById('m_cedula').value.trim() || null,
+        cedula : document.getElementById('m_cedula').value.trim() || null,
         phone           : document.getElementById('m_phone').value.trim(),
         email           : document.getElementById('m_email').value.trim(),
         birth_date      : document.getElementById('m_birth_date').value,
@@ -862,10 +999,10 @@ cedula : document.getElementById('m_cedula').value.trim() || null,
         address         : document.getElementById('m_address').value.trim(),
     };
     if (!payload.first_name || !payload.last_name) {
-    alertEl.className = 'alert alert-danger';
-    alertEl.textContent = 'Nombre y apellido son obligatorios.';
-    return;
-}
+        alertEl.className = 'alert alert-danger';
+        alertEl.textContent = 'Nombre y apellido son obligatorios.';
+        return;
+    }
     this.disabled = true;
     document.getElementById('patient-save-spin').classList.remove('d-none');
     document.getElementById('patient-save-icon').classList.add('d-none');
@@ -891,7 +1028,9 @@ cedula : document.getElementById('m_cedula').value.trim() || null,
     }
 });
 
-/* ══ Submit ══ */
+// ============================================
+// SUBMIT
+// ============================================
 document.getElementById('invoice-form').addEventListener('submit', function (e) {
     if (!document.getElementById('patient_id').value) {
         e.preventDefault();
@@ -904,6 +1043,9 @@ document.getElementById('invoice-form').addEventListener('submit', function (e) 
     }
     if (!document.getElementById('branch_id').value) {
         e.preventDefault(); showToast('Selecciona una sucursal.', 'error'); return;
+    }
+    if (!document.getElementById('doctor_id').value) {
+        e.preventDefault(); showToast('Selecciona un médico asignado.', 'error'); return;
     }
 
     // Inyectar custom_price + cov_value + cov_type
@@ -937,32 +1079,49 @@ document.getElementById('invoice-form').addEventListener('submit', function (e) 
     document.getElementById('btn-submit').disabled = true;
 });
 
-document.getElementById('audiologist_id').addEventListener('change', function () {
-    const opt    = this.options[this.selectedIndex];
-    const pill   = document.getElementById('aud-pill');
-    const name   = opt.text?.trim() || '';
-    const branchName = opt.dataset.branch ? (opt.dataset.branch === 'null' ? '' : opt.dataset.branch) : '';
-    
-    if (!this.value) { 
-        pill.classList.add('d-none'); 
-        return; 
-    }
-    
-    const initials = name.split(' ').slice(0,2).map(w => w[0]?.toUpperCase() || '').join('');
-    document.getElementById('aud-pill-av').textContent = initials;
-    document.getElementById('aud-pill-name').textContent = name;
-    
-    // Opcional: Si quieres mostrar la sucursal en el pill (sin mostrarla en el select)
-    if (branchName && branchName !== 'null') {
-        document.getElementById('aud-pill-branch').textContent = '📍 ' + branchName;
-    } else {
-        document.getElementById('aud-pill-branch').textContent = '';
-    }
-    
-    pill.classList.remove('d-none');
+// ============================================
+// NCF
+// ============================================
+document.getElementById('with_ncf').addEventListener('change', function() {
+    document.getElementById('ncf-area').classList.toggle('d-none', !this.checked);
 });
 
-/* ══ Toast ══ */
+document.getElementById('btn-search-rnc').addEventListener('click', async function () {
+    const rnc = document.getElementById('customer_rnc').value.trim();
+    if (!rnc) {
+        showToast('Ingrese un RNC.', 'error');
+        return;
+    }
+    const status = document.getElementById('rnc-status');
+    status.innerHTML = '<span class="text-muted">Consultando...</span>';
+    try {
+        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
+        const data = await response.json();
+        if (data.error) {
+            status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
+            document.getElementById('customer_business_name').value = '';
+            return;
+        }
+        document.getElementById('customer_business_name').value = data.nombre_razon_social ?? '';
+        status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
+    } catch (e) {
+        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
+    }
+});
+
+document.getElementById('ncf_type').addEventListener('change', function(){
+    const prefixes = {
+        consumidor_final : 'B02',
+        credito_fiscal   : 'B01',
+        gubernamental    : 'B15',
+        regimen_especial : 'B14'
+    };
+    document.getElementById('ncf').value = prefixes[this.value] ?? '';
+});
+
+// ============================================
+// TOAST
+// ============================================
 function showToast(msg, type) {
     const d = document.createElement('div');
     d.className = 'toast-item toast-' + (type || 'success');
@@ -971,95 +1130,15 @@ function showToast(msg, type) {
     setTimeout(() => { d.style.transition='opacity .32s'; d.style.opacity='0'; setTimeout(()=>d.remove(),340); }, 3500);
 }
 
-/* ══ Boot ══ */
+// ============================================
+// BOOT
+// ============================================
 document.addEventListener('DOMContentLoaded', function () {
     psInit();
     addSvcRow();
-    const sel = document.getElementById('audiologist_id');
+    const sel = document.getElementById('doctor_id');
     if (sel.value) sel.dispatchEvent(new Event('change'));
 });
-
-document.getElementById('with_ncf')
-.addEventListener('change', function() {
-
-    document.getElementById('ncf-area')
-        .classList.toggle('d-none', !this.checked);
-
-});
-
-document.getElementById('btn-search-rnc')
-.addEventListener('click', async function () {
-
-    const rnc = document
-        .getElementById('customer_rnc')
-        .value
-        .trim();
-
-    if (!rnc) {
-        showToast('Ingrese un RNC.', 'error');
-        return;
-    }
-
-    const status = document.getElementById('rnc-status');
-
-    status.innerHTML =
-        '<span class="text-muted">Consultando...</span>';
-
-    try {
-
-        const response = await fetch(
-            '/api/rnc/' + encodeURIComponent(rnc)
-        );
-
-        const data = await response.json();
-
-        if (data.error) {
-
-            status.innerHTML =
-                `<span class="text-danger">${data.mensaje}</span>`;
-
-            document.getElementById(
-                'customer_business_name'
-            ).value = '';
-
-            return;
-        }
-
-        document.getElementById(
-            'customer_business_name'
-        ).value = data.nombre_razon_social ?? '';
-
-        status.innerHTML = `
-            <span class="text-success">
-                ✓ ${data.estado}
-            </span>
-        `;
-
-    } catch (e) {
-
-        status.innerHTML =
-            '<span class="text-danger">Error consultando RNC.</span>';
-
-    }
-
-});
-
-document.getElementById('ncf_type')
-.addEventListener('change', function(){
-
-    const prefixes = {
-        consumidor_final : 'B02',
-        credito_fiscal   : 'B01',
-        gubernamental    : 'B15',
-        regimen_especial : 'B14'
-    };
-
-    document.getElementById('ncf').value =
-        prefixes[this.value] ?? '';
-
-});
-
 </script>
 @endpush
-
 </x-app-layout>
