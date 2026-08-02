@@ -40,15 +40,15 @@ class DoctorFee extends Model
         return $this->belongsTo(Invoice::class);
     }
 
-    public function payments()
-    {
-        return $this->belongsToMany(
-            DoctorFeePayment::class,
-            'doctor_fee_payment_details',
-            'doctor_fee_id',
-            'doctor_fee_payment_id'
-        )->withPivot('amount_applied')->withTimestamps();
-    }
+   public function payments()
+{
+    return $this->belongsToMany(
+        DoctorFeePayment::class,
+        'doctor_fee_payment_details',
+        'fee_id',       // FK de DoctorFee en la tabla pivote
+        'payment_id'    // FK de DoctorFeePayment en la tabla pivote
+    )->withPivot('amount_applied');
+}
 
     public function getPaidAmountAttribute()
     {

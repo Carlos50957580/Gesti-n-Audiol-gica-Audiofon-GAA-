@@ -137,28 +137,37 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('services', [ReceptionistReportController::class, 'services'])->name('services');
     });
 
- Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:admin'])->group(function () {
+ // ── HONORARIOS MÉDICOS ─────────────────────────────────────
+Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:admin'])->group(function () {
 
-    Route::get('/', [DoctorFeeController::class, 'index'])->name('index');
-    Route::post('/calculate', [DoctorFeeController::class, 'calculateFee'])->name('calculate');
-    Route::post('/', [DoctorFeeController::class, 'store'])->name('store');
-    Route::get('/invoice/{invoiceId}', [DoctorFeeController::class, 'getInvoiceFees'])->name('invoice');
+    // ════════════════════════════════════════════════════════════
+    // RUTAS FIJAS (DEBEN IR ANTES DE LAS RUTAS CON PARÁMETROS)
+    // ════════════════════════════════════════════════════════════
 
-    // Configuración (rutas fijas primero)
+    // ── Configuración ──────────────────────────────────────────
     Route::get('/settings', [DoctorFeeSettingController::class, 'index'])->name('settings');
     Route::post('/settings', [DoctorFeeSettingController::class, 'store'])->name('settings.store');
+    Route::get('/settings/{id}', [DoctorFeeSettingController::class, 'show'])->name('settings.show'); // ✅ NUEVA: Obtener configuración por ID
     Route::put('/settings/{id}', [DoctorFeeSettingController::class, 'update'])->name('settings.update');
     Route::delete('/settings/{id}', [DoctorFeeSettingController::class, 'destroy'])->name('settings.destroy');
     Route::get('/settings/{doctorId}/get', [DoctorFeeSettingController::class, 'getSetting'])->name('settings.get');
 
-    // Pagos (rutas fijas/específicas primero)
+    // ── Pagos ──────────────────────────────────────────────────
     Route::get('/payments', [DoctorFeePaymentController::class, 'index'])->name('payments');
     Route::get('/payments/pending/{doctorId}', [DoctorFeePaymentController::class, 'getPendingFees'])->name('payments.pending');
     Route::post('/payments', [DoctorFeePaymentController::class, 'store'])->name('payments.store');
     Route::get('/payments/{id}', [DoctorFeePaymentController::class, 'show'])->name('payments.show');
     Route::delete('/payments/{id}', [DoctorFeePaymentController::class, 'destroy'])->name('payments.destroy');
 
-    // AHORA sí, la genérica /{id} al final
+    // ── Honorarios ─────────────────────────────────────────────
+    Route::get('/', [DoctorFeeController::class, 'index'])->name('index');
+    Route::post('/calculate', [DoctorFeeController::class, 'calculateFee'])->name('calculate');
+    Route::post('/', [DoctorFeeController::class, 'store'])->name('store');
+    Route::get('/invoice/{invoiceId}', [DoctorFeeController::class, 'getInvoiceFees'])->name('invoice');
+
+    // ════════════════════════════════════════════════════════════
+    // RUTAS CON PARÁMETROS (DEBEN IR AL FINAL)
+    // ════════════════════════════════════════════════════════════
     Route::get('/{id}', [DoctorFeeController::class, 'show'])->name('show');
     Route::put('/{id}', [DoctorFeeController::class, 'update'])->name('update');
     Route::delete('/{id}', [DoctorFeeController::class, 'destroy'])->name('destroy');

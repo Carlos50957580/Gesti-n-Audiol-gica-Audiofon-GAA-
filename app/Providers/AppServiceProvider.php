@@ -4,7 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
-
+use App\Models\Invoice;
+use App\Observers\InvoiceObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,7 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-            Paginator::useBootstrap(); // ← esto
+        Paginator::useBootstrap();
 
+        // ✅ Registrar el Observer de Invoice
+        Invoice::observe(InvoiceObserver::class);
     }
 }

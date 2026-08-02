@@ -46,7 +46,13 @@ class DoctorFeeSettingController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Verificar que no exista una configuración duplicada
+        if ($request->calculation_type === 'percentage' && $request->value > 100) {
+            return response()->json([
+                'errors' => ['value' => ['El porcentaje no puede ser mayor a 100']]
+            ], 422);
+        }
+
+        // ✅ Validar que no exista una configuración duplicada con el mismo alcance
         $exists = DoctorFeeSetting::where('doctor_id', $request->doctor_id)
             ->where('category_id', $request->category_id)
             ->where('service_id', $request->service_id)
@@ -58,10 +64,45 @@ class DoctorFeeSettingController extends Controller
             ], 422);
         }
 
-        if ($request->calculation_type === 'percentage' && $request->value > 100) {
-            return response()->json([
-                'errors' => ['value' => ['El porcentaje no puede ser mayor a 100']]
-            ], 422);
+        // ✅ Validar que no exista una configuración general si se intenta crear otra
+        if ($request->category_id === null && $request->service_id === null) {
+            $existsGeneral = DoctorFeeSetting::where('doctor_id', $request->doctor_id)
+                ->whereNull('category_id')
+                ->whereNull('service_id')
+                ->exists();
+
+            if ($existsGeneral) {
+                return response()->json([
+                    'message' => 'Ya existe una configuración general para este médico. Solo puede tener una configuración general.'
+                ], 422);
+            }
+        }
+
+        // ✅ Validar que no exista una configuración por categoría si se intenta crear otra para la misma categoría
+        if ($request->category_id !== null && $request->service_id === null) {
+            $existsCategory = DoctorFeeSetting::where('doctor_id', $request->doctor_id)
+                ->where('category_id', $request->category_id)
+                ->whereNull('service_id')
+                ->exists();
+
+            if ($existsCategory) {
+                return response()->json([
+                    'message' => 'Ya existe una configuración para esta categoría. Solo puede tener una por categoría.'
+                ], 422);
+            }
+        }
+
+        // ✅ Validar que no exista una configuración por servicio si se intenta crear otra para el mismo servicio
+        if ($request->service_id !== null) {
+            $existsService = DoctorFeeSetting::where('doctor_id', $request->doctor_id)
+                ->where('service_id', $request->service_id)
+                ->exists();
+
+            if ($existsService) {
+                return response()->json([
+                    'message' => 'Ya existe una configuración para este servicio específico.'
+                ], 422);
+            }
         }
 
         $setting = DoctorFeeSetting::create($request->all());
@@ -90,12 +131,31 @@ class DoctorFeeSettingController extends Controller
             ], 422);
         }
 
+        // ✅ Validar que no exista otra configuración con el mismo alcance (excluyendo la actual)
+        $exists = DoctorFeeSetting::where('doctor_id', $setting->doctor_id)
+            ->where('category_id', $request->category_id)
+            ->where('service_id', $request->service_id)
+            ->where('id', '!=', $id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Ya existe otra configuración para este médico con el mismo alcance'
+            ], 422);
+        }
+
         $setting->update($request->all());
 
         return response()->json([
             'message' => 'Configuración actualizada correctamente',
             'setting' => $setting
         ]);
+    }
+
+     public function show($id)
+    {
+        $setting = DoctorFeeSetting::with(['doctor', 'category', 'service'])->findOrFail($id);
+        return response()->json($setting);
     }
 
     public function destroy($id)

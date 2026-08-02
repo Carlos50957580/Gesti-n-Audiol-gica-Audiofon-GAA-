@@ -525,6 +525,11 @@ async function editSetting(id) {
         if (setting.service_id) {
             scopeType.value = 'service';
             document.getElementById('service-id').value = setting.service_id;
+            // Forzar la carga del select de servicios con el valor correcto
+            const serviceSelect = document.getElementById('service-id');
+            Array.from(serviceSelect.options).forEach(opt => {
+                opt.selected = opt.value == setting.service_id;
+            });
         } else if (setting.category_id) {
             scopeType.value = 'category';
             document.getElementById('category-id').value = setting.category_id;
@@ -552,7 +557,8 @@ async function editSetting(id) {
         
         showToast('Configuración cargada para edición', 'info');
         
-    } catch {
+    } catch (error) {
+        console.error('Error:', error);
         showToast('Error al cargar la configuración', 'error');
     }
 }
