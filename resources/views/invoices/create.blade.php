@@ -600,7 +600,7 @@ const SERVICES_DATA = {!! $services->map(fn($s) => [
 ]) !!};
 
 const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
-const URL_SEARCH = '{{ route("api.patients.search") }}';
+const URL_SEARCH = '{{ route("api.invoices.patients.search") }}';
 const URL_STORE  = '{{ route("api.patients.store") }}';
 const URL_DOCTORS = '{{ route("api.doctors") }}';
 

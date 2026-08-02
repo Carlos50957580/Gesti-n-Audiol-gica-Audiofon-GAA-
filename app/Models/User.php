@@ -126,4 +126,26 @@ class User extends Authenticatable
     {
         $this->update(['is_active' => false]);
     }
+
+    // app/Models/User.php - Agregar relaciones
+
+// ── Relaciones con honorarios ──────────────────────────────
+
+// Relación con DoctorFee (honorarios)
+public function doctorFees()
+{
+    return $this->hasMany(DoctorFee::class, 'doctor_id');
+}
+
+// Relación con DoctorFeePayment (pagos de honorarios)
+public function doctorFeePayments()
+{
+    return $this->hasMany(DoctorFeePayment::class, 'doctor_id');
+}
+
+// Relación con DoctorFeeSetting (configuraciones)
+public function doctorFeeSettings()
+{
+    return $this->hasMany(DoctorFeeSetting::class, 'doctor_id');
+}
 }

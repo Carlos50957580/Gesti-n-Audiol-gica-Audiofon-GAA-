@@ -1,20 +1,18 @@
 <?php
-// app/Models/AudiologistFee.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
-class AudiologistFee extends Model
+class DoctorFee extends Model
 {
     use HasFactory;
 
-    protected $table = 'audiologist_fees';
+    protected $table = 'doctor_fees';
 
     protected $fillable = [
-        'audiologist_id',
+        'doctor_id',
         'invoice_id',
         'invoice_total',
         'calculation_type',
@@ -32,9 +30,9 @@ class AudiologistFee extends Model
         'payment_date' => 'date',
     ];
 
-    public function audiologist()
+    public function doctor()
     {
-        return $this->belongsTo(User::class, 'audiologist_id');
+        return $this->belongsTo(User::class, 'doctor_id');
     }
 
     public function invoice()
@@ -45,10 +43,10 @@ class AudiologistFee extends Model
     public function payments()
     {
         return $this->belongsToMany(
-            AudiologistFeePayment::class,
-            'audiologist_fee_payment_details',
-            'fee_id',
-            'payment_id'
+            DoctorFeePayment::class,
+            'doctor_fee_payment_details',
+            'doctor_fee_id',
+            'doctor_fee_payment_id'
         )->withPivot('amount_applied')->withTimestamps();
     }
 

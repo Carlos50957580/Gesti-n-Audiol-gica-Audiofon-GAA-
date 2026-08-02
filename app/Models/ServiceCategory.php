@@ -45,4 +45,12 @@ class ServiceCategory extends Model
     {
         return $query->where('requires_clinical_record', 1);
     }
+
+    // app/Models/ServiceCategory.php - Agregar relación
+
+// Relación con configuraciones de honorarios
+public function doctorFeeSettings()
+{
+    return $this->hasMany(DoctorFeeSetting::class, 'category_id');
+}
 }

@@ -115,40 +115,47 @@
                         </div>
                     </li>
 
-                    {{-- Honorarios (solo admin) --}}
-                    {{-- <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('audiologist-fees.*') ? '' : 'collapsed' }}" 
-                           href="#sidebarAudiologistFees" 
-                           data-bs-toggle="collapse" 
-                           role="button" 
-                           aria-expanded="{{ request()->routeIs('audiologist-fees.*') ? 'true' : 'false' }}" 
-                           aria-controls="sidebarAudiologistFees">
-                            <i class="ri-money-dollar-circle-line"></i> 
-                            <span data-key="t-honorarios-parent">Honorarios</span>
-                        </a>
-                        <div class="collapse {{ request()->routeIs('audiologist-fees.*') ? 'show' : '' }}" id="sidebarAudiologistFees">
-                            <ul class="nav nav-sm flex-column">
-                                <li class="nav-item">
-                                    <a href="{{ route('audiologist-fees.index') }}" 
-                                       class="nav-link {{ request()->routeIs('audiologist-fees.index') ? 'active' : '' }}">
-                                        <span data-key="t-fee-gestion">Gestión de Honorarios</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{ route('audiologist-fees.payments') }}" 
-                                       class="nav-link {{ request()->routeIs('audiologist-fees.payments*') ? 'active' : '' }}">
-                                        <span data-key="t-fee-pagos">Pagos / Historial</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{ route('audiologist-fees.settings') }}" 
-                                       class="nav-link {{ request()->routeIs('audiologist-fees.settings*') ? 'active' : '' }}">
-                                        <span data-key="t-fee-config">Configuraciones</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li> --}}
+                   {{-- Honorarios - admin --}}
+@if(auth()->user()->role->name === 'admin')
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('doctor-fees.*') ? '' : 'collapsed' }}" 
+           href="#sidebarDoctorFees" 
+           data-bs-toggle="collapse" 
+           role="button" 
+           aria-expanded="{{ request()->routeIs('doctor-fees.*') ? 'true' : 'false' }}" 
+           aria-controls="sidebarDoctorFees">
+            <i class="ri-money-dollar-circle-line"></i> 
+            <span data-key="t-honorarios-parent">Honorarios</span>
+        </a>
+        
+        <div class="collapse {{ request()->routeIs('doctor-fees.*') ? 'show' : '' }}" id="sidebarDoctorFees">
+            <ul class="nav nav-sm flex-column">
+                
+                <li class="nav-item">
+                    <a href="{{ route('doctor-fees.index') }}" 
+                       class="nav-link {{ request()->routeIs('doctor-fees.index') ? 'active' : '' }}">
+                        <span data-key="t-fee-gestion">Gestión de Honorarios</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{{ route('doctor-fees.payments') }}" 
+                       class="nav-link {{ request()->routeIs('doctor-fees.payments*') ? 'active' : '' }}">
+                        <span data-key="t-fee-pagos">Pagos / Historial</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{{ route('doctor-fees.settings') }}" 
+                       class="nav-link {{ request()->routeIs('doctor-fees.settings*') ? 'active' : '' }}">
+                        <span data-key="t-fee-config">Configuraciones</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </li>
+@endif
 
                     {{-- Reportes Admin --}}
                     <li class="nav-item">

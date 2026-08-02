@@ -172,4 +172,12 @@ class Service extends Model
     {
         return $query->where('category_id', $categoryId);
     }
+
+    // app/Models/Service.php - Agregar relación
+
+// Relación con configuraciones de honorarios
+public function doctorFeeSettings()
+{
+    return $this->hasMany(DoctorFeeSetting::class, 'service_id');
+}
 }

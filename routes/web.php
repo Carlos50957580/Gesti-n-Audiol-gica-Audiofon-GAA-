@@ -6,19 +6,19 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\BranchController;
-use App\Http\Controllers\ClinicalRecordController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReceptionistReportController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\DoctorReportController;
 use App\Http\Controllers\DoctorAppointmentController;
-use App\Http\Controllers\DoctorClinicalRecordController;
 use App\Http\Controllers\ServiceCategoryController;
 use App\Http\Controllers\TaxController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\DoctorFeeController;
+use App\Http\Controllers\DoctorFeePaymentController;
+use App\Http\Controllers\DoctorFeeSettingController;
 
 // ============================================
 // RUTAS PÚBLICAS
@@ -75,8 +75,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('branches', BranchController::class);
     });
 
-
-
     // ── SERVICIOS (solo admin) ─────────────────────────────────────
     Route::middleware(['role:admin'])->group(function () {
         Route::get('services/{service}/show-data', [ServiceController::class, 'showData'])->name('services.show-data');
@@ -121,16 +119,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
     });
 
-    // ── HISTORIA CLÍNICA (solo médicos) ─────────────────────────────────────
-    Route::middleware(['role:medico'])->group(function () {
-        Route::get('clinical-records', [DoctorClinicalRecordController::class, 'index'])->name('clinical-records.index');
-        Route::get('clinical-records/{invoice}/edit', [DoctorClinicalRecordController::class, 'edit'])->name('clinical-records.edit');
-        Route::put('clinical-records/{invoice}', [DoctorClinicalRecordController::class, 'update'])->name('clinical-records.update');
-        Route::get('clinical-records/{invoice}/show', [DoctorClinicalRecordController::class, 'show'])->name('clinical-records.show');
-        Route::get('clinical-records/{invoice}/show-data', [DoctorClinicalRecordController::class, 'showData'])->name('clinical-records.show-data');
-        Route::get('clinical-records/patient/{patientId}/history', [DoctorClinicalRecordController::class, 'patientHistory'])->name('clinical-records.patient-history');
-    });
-
     // ── REPORTES ADMIN (solo admin) ─────────────────────────────────────
     Route::middleware(['role:admin'])->prefix('reports')->name('reports.')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
@@ -149,12 +137,32 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('services', [ReceptionistReportController::class, 'services'])->name('services');
     });
 
-    // ── REPORTES MÉDICO (solo médicos) ─────────────────────────────────────
-    Route::middleware(['role:medico'])->prefix('doctor/reports')->name('doctor.reports.')->group(function () {
-        Route::get('/', [DoctorReportController::class, 'index'])->name('index');
-        Route::get('appointments', [DoctorReportController::class, 'appointments'])->name('appointments');
-        Route::get('clinical-records', [DoctorReportController::class, 'clinicalRecords'])->name('clinical-records');
-    });
+ Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:admin'])->group(function () {
+
+    Route::get('/', [DoctorFeeController::class, 'index'])->name('index');
+    Route::post('/calculate', [DoctorFeeController::class, 'calculateFee'])->name('calculate');
+    Route::post('/', [DoctorFeeController::class, 'store'])->name('store');
+    Route::get('/invoice/{invoiceId}', [DoctorFeeController::class, 'getInvoiceFees'])->name('invoice');
+
+    // Configuración (rutas fijas primero)
+    Route::get('/settings', [DoctorFeeSettingController::class, 'index'])->name('settings');
+    Route::post('/settings', [DoctorFeeSettingController::class, 'store'])->name('settings.store');
+    Route::put('/settings/{id}', [DoctorFeeSettingController::class, 'update'])->name('settings.update');
+    Route::delete('/settings/{id}', [DoctorFeeSettingController::class, 'destroy'])->name('settings.destroy');
+    Route::get('/settings/{doctorId}/get', [DoctorFeeSettingController::class, 'getSetting'])->name('settings.get');
+
+    // Pagos (rutas fijas/específicas primero)
+    Route::get('/payments', [DoctorFeePaymentController::class, 'index'])->name('payments');
+    Route::get('/payments/pending/{doctorId}', [DoctorFeePaymentController::class, 'getPendingFees'])->name('payments.pending');
+    Route::post('/payments', [DoctorFeePaymentController::class, 'store'])->name('payments.store');
+    Route::get('/payments/{id}', [DoctorFeePaymentController::class, 'show'])->name('payments.show');
+    Route::delete('/payments/{id}', [DoctorFeePaymentController::class, 'destroy'])->name('payments.destroy');
+
+    // AHORA sí, la genérica /{id} al final
+    Route::get('/{id}', [DoctorFeeController::class, 'show'])->name('show');
+    Route::put('/{id}', [DoctorFeeController::class, 'update'])->name('update');
+    Route::delete('/{id}', [DoctorFeeController::class, 'destroy'])->name('destroy');
+});
 
 }); // Fin del grupo auth + active
 
@@ -164,7 +172,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 Route::middleware(['auth'])->prefix('api')->name('api.')->group(function () {
 
     // ── Pacientes ─────────────────────────────────────
-    Route::get('/patients/search', [InvoiceController::class, 'searchPatients'])->name('patients.search');
+
+  // ── Pacientes (facturación) ─────────────────────────────────────
+    Route::get('/invoices/patients/search', [InvoiceController::class, 'searchPatients'])
+        ->name('invoices.patients.search');
+
 
     // ── Servicios ─────────────────────────────────────
     Route::get('/services/by-category/{categoryId}', [ServiceController::class, 'getByCategory'])->name('services.by-category');
@@ -187,7 +199,8 @@ Route::middleware(['auth'])->prefix('api')->name('api.')->group(function () {
 // ── CITAS ─────────────────────────────────────
 // Admin y recepcionista pueden gestionar citas
 Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
-    Route::get('api/patients/search', [AppointmentController::class, 'searchPatients'])->name('api.patients.search');
+    Route::get('api/patients/search', [AppointmentController::class, 'searchPatients'])
+        ->name('api.patients.search');
     Route::get('appointments/{appointment}/show-data', [AppointmentController::class, 'showData'])->name('appointments.show-data');
     Route::get('appointments/{appointment}/edit-data', [AppointmentController::class, 'editData'])->name('appointments.edit-data');
     Route::resource('appointments', AppointmentController::class);
@@ -200,5 +213,6 @@ Route::middleware(['auth'])->prefix('doctor')->name('doctor.')->group(function (
     Route::patch('appointments/{appointment}/status', [DoctorAppointmentController::class, 'updateStatus'])->name('appointments.status');
     Route::patch('appointments/{appointment}/notes', [DoctorAppointmentController::class, 'updateNotes'])->name('appointments.notes');
 });
+
 
 require __DIR__.'/auth.php';

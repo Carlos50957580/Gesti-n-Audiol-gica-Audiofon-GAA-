@@ -67,7 +67,7 @@ class InvoiceController extends Controller
         return view('invoices.index', compact('invoices', 'branches'));
     }
 
-    public function create()
+     public function create()
     {
         // Obtener sucursales según rol
         if (auth()->user()->role->name === 'admin') {
@@ -76,14 +76,15 @@ class InvoiceController extends Controller
             $branches = Branch::where('id', auth()->user()->branch_id)->get();
         }
 
-        // Obtener médicos (solo los que están en la sucursal del usuario si es recepcionista)
+        // ✅ Obtener médicos correctamente (rol medico = id 3)
         $doctors = User::where(function($q) {
-            $q->where('role_id', 4)
+            $q->where('role_id', 3)  // ✅ Rol médico (ID 3)
               ->orWhere(function($q2) {
-                  $q2->where('role_id', 1)
+                  $q2->where('role_id', 1)  // Admin
                     ->where('is_doctor', 1);
               });
-        });
+        })
+        ->where('is_active', 1);
 
         if (auth()->user()->role->name === 'recepcionista') {
             $doctors->where('branch_id', auth()->user()->branch_id);
@@ -406,32 +407,36 @@ class InvoiceController extends Controller
         return response()->json($services);
     }
 
-    public function getDoctors(Request $request)
-    {
-        $query = User::where(function($q) {
-            $q->where('role_id', 4)
-              ->orWhere(function($q2) {
-                  $q2->where('role_id', 1)
-                    ->where('is_doctor', 1);
-              });
-        });
+    /**
+ * Obtener médicos para el select de facturación
+ */
+public function getDoctors(Request $request)
+{
+    // ✅ CORREGIDO: role_id = 3 (medico) en lugar de 4
+    $query = User::where(function($q) {
+        $q->where('role_id', 3)  // ✅ Rol médico (ID 3)
+          ->orWhere(function($q2) {
+              $q2->where('role_id', 1)  // Admin
+                ->where('is_doctor', 1);
+          });
+    })
+    ->where('is_active', 1);
 
-        if (auth()->user()->role->name === 'recepcionista') {
-            $query->where('branch_id', auth()->user()->branch_id);
-        } elseif ($request->filled('branch_id') && auth()->user()->role->name === 'admin') {
-            $query->where('branch_id', $request->branch_id);
-        }
-
-        $doctors = $query->with('branch')->orderBy('name')->get();
-
-        return response()->json($doctors->map(fn($doctor) => [
-            'id' => $doctor->id,
-            'name' => $doctor->name,
-            'branch_id' => $doctor->branch_id,
-            'branch_name' => $doctor->branch?->name,
-        ]));
+    if (auth()->user()->role->name === 'recepcionista') {
+        $query->where('branch_id', auth()->user()->branch_id);
+    } elseif ($request->filled('branch_id') && auth()->user()->role->name === 'admin') {
+        $query->where('branch_id', $request->branch_id);
     }
 
+    $doctors = $query->with('branch')->orderBy('name')->get();
+
+    return response()->json($doctors->map(fn($doctor) => [
+        'id' => $doctor->id,
+        'name' => $doctor->name,
+        'branch_id' => $doctor->branch_id,
+        'branch_name' => $doctor->branch?->name,
+    ]));
+}
     public function getBranches()
     {
         if (auth()->user()->role->name === 'admin') {
