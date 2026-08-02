@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Receipt;
 use App\Models\Invoice;
 use App\Models\Branch;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -190,7 +191,7 @@ class ReceiptController extends Controller
         }
     }
 
-    public function show(Receipt $receipt)
+     public function show(Receipt $receipt)
     {
         // ✅ Si es recepcionista, solo ve recibos de su sucursal
         if (auth()->user()->role->name !== 'admin') {
@@ -200,8 +201,32 @@ class ReceiptController extends Controller
         }
 
         $receipt->load(['invoice.patient', 'invoice.items.service', 'invoice.insurance', 'user', 'branch']);
-        return view('receipts.show', compact('receipt'));
+        
+        // ── Obtener configuración de la empresa ─────────────────────────────
+        $company = [
+            'name' => Setting::get('company_name', 'Mi Clínica'),
+            'business_name' => Setting::get('company_business_name', 'Mi Clínica SRL'),
+            'rnc' => Setting::get('company_rnc', ''),
+            'email' => Setting::get('company_email', ''),
+            'phone' => Setting::get('company_phone', ''),
+            'mobile' => Setting::get('company_mobile', ''),
+            'address' => Setting::get('company_address', ''),
+            'slogan' => Setting::get('company_slogan', ''),
+            'website' => Setting::get('company_website', ''),
+            'logo' => Setting::get('company_logo', null),
+            'favicon' => Setting::get('company_favicon', null),
+            'footer_text' => Setting::get('company_footer_text', 'Gracias por su preferencia'),
+            'currency' => Setting::get('company_currency', 'DOP'),
+            'tax_rate' => Setting::get('company_tax_rate', 18),
+            'invoice_prefix' => Setting::get('company_invoice_prefix', 'FAC-'),
+            'receipt_prefix' => Setting::get('company_receipt_prefix', 'REC-'),
+            'ncf_type' => Setting::get('company_ncf_type', 'consumidor_final'),
+        ];
+
+        return view('receipts.show', compact('receipt', 'company'));
     }
+
+
 
     public function invoiceData(Invoice $invoice)
     {

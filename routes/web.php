@@ -19,6 +19,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DoctorFeeController;
 use App\Http\Controllers\DoctorFeePaymentController;
 use App\Http\Controllers\DoctorFeeSettingController;
+use App\Http\Controllers\Settings\CompanyController; // ← IMPORTAR EL CONTROLADOR
 
 // ============================================
 // RUTAS PÚBLICAS
@@ -137,41 +138,49 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('services', [ReceptionistReportController::class, 'services'])->name('services');
     });
 
- // ── HONORARIOS MÉDICOS ─────────────────────────────────────
-Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:admin'])->group(function () {
+    // ── HONORARIOS MÉDICOS ─────────────────────────────────────
+    Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:admin'])->group(function () {
 
-    // ════════════════════════════════════════════════════════════
-    // RUTAS FIJAS (DEBEN IR ANTES DE LAS RUTAS CON PARÁMETROS)
-    // ════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════
+        // RUTAS FIJAS (DEBEN IR ANTES DE LAS RUTAS CON PARÁMETROS)
+        // ════════════════════════════════════════════════════════════
 
-    // ── Configuración ──────────────────────────────────────────
-    Route::get('/settings', [DoctorFeeSettingController::class, 'index'])->name('settings');
-    Route::post('/settings', [DoctorFeeSettingController::class, 'store'])->name('settings.store');
-    Route::get('/settings/{id}', [DoctorFeeSettingController::class, 'show'])->name('settings.show'); // ✅ NUEVA: Obtener configuración por ID
-    Route::put('/settings/{id}', [DoctorFeeSettingController::class, 'update'])->name('settings.update');
-    Route::delete('/settings/{id}', [DoctorFeeSettingController::class, 'destroy'])->name('settings.destroy');
-    Route::get('/settings/{doctorId}/get', [DoctorFeeSettingController::class, 'getSetting'])->name('settings.get');
+        // ── Configuración ──────────────────────────────────────────
+        Route::get('/settings', [DoctorFeeSettingController::class, 'index'])->name('settings');
+        Route::post('/settings', [DoctorFeeSettingController::class, 'store'])->name('settings.store');
+        Route::get('/settings/{id}', [DoctorFeeSettingController::class, 'show'])->name('settings.show');
+        Route::put('/settings/{id}', [DoctorFeeSettingController::class, 'update'])->name('settings.update');
+        Route::delete('/settings/{id}', [DoctorFeeSettingController::class, 'destroy'])->name('settings.destroy');
+        Route::get('/settings/{doctorId}/get', [DoctorFeeSettingController::class, 'getSetting'])->name('settings.get');
 
-    // ── Pagos ──────────────────────────────────────────────────
-    Route::get('/payments', [DoctorFeePaymentController::class, 'index'])->name('payments');
-    Route::get('/payments/pending/{doctorId}', [DoctorFeePaymentController::class, 'getPendingFees'])->name('payments.pending');
-    Route::post('/payments', [DoctorFeePaymentController::class, 'store'])->name('payments.store');
-    Route::get('/payments/{id}', [DoctorFeePaymentController::class, 'show'])->name('payments.show');
-    Route::delete('/payments/{id}', [DoctorFeePaymentController::class, 'destroy'])->name('payments.destroy');
+        // ── Pagos ──────────────────────────────────────────────────
+        Route::get('/payments', [DoctorFeePaymentController::class, 'index'])->name('payments');
+        Route::get('/payments/pending/{doctorId}', [DoctorFeePaymentController::class, 'getPendingFees'])->name('payments.pending');
+        Route::post('/payments', [DoctorFeePaymentController::class, 'store'])->name('payments.store');
+        Route::get('/payments/{id}', [DoctorFeePaymentController::class, 'show'])->name('payments.show');
+        Route::delete('/payments/{id}', [DoctorFeePaymentController::class, 'destroy'])->name('payments.destroy');
 
-    // ── Honorarios ─────────────────────────────────────────────
-    Route::get('/', [DoctorFeeController::class, 'index'])->name('index');
-    Route::post('/calculate', [DoctorFeeController::class, 'calculateFee'])->name('calculate');
-    Route::post('/', [DoctorFeeController::class, 'store'])->name('store');
-    Route::get('/invoice/{invoiceId}', [DoctorFeeController::class, 'getInvoiceFees'])->name('invoice');
+        // ── Honorarios ─────────────────────────────────────────────
+        Route::get('/', [DoctorFeeController::class, 'index'])->name('index');
+        Route::post('/calculate', [DoctorFeeController::class, 'calculateFee'])->name('calculate');
+        Route::post('/', [DoctorFeeController::class, 'store'])->name('store');
+        Route::get('/invoice/{invoiceId}', [DoctorFeeController::class, 'getInvoiceFees'])->name('invoice');
 
-    // ════════════════════════════════════════════════════════════
-    // RUTAS CON PARÁMETROS (DEBEN IR AL FINAL)
-    // ════════════════════════════════════════════════════════════
-    Route::get('/{id}', [DoctorFeeController::class, 'show'])->name('show');
-    Route::put('/{id}', [DoctorFeeController::class, 'update'])->name('update');
-    Route::delete('/{id}', [DoctorFeeController::class, 'destroy'])->name('destroy');
-});
+        // ════════════════════════════════════════════════════════════
+        // RUTAS CON PARÁMETROS (DEBEN IR AL FINAL)
+        // ════════════════════════════════════════════════════════════
+        Route::get('/{id}', [DoctorFeeController::class, 'show'])->name('show');
+        Route::put('/{id}', [DoctorFeeController::class, 'update'])->name('update');
+        Route::delete('/{id}', [DoctorFeeController::class, 'destroy'])->name('destroy');
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // 🆕 CONFIGURACIÓN DE EMPRESA (solo admin)
+    // ════════════════════════════════════════════════════════════════
+    Route::middleware(['role:admin'])->prefix('settings')->name('settings.')->group(function () {
+        Route::get('/company', [CompanyController::class, 'index'])->name('company');
+        Route::put('/company', [CompanyController::class, 'update'])->name('company.update');
+    });
 
 }); // Fin del grupo auth + active
 
@@ -180,12 +189,9 @@ Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:ad
 // ============================================
 Route::middleware(['auth'])->prefix('api')->name('api.')->group(function () {
 
-    // ── Pacientes ─────────────────────────────────────
-
-  // ── Pacientes (facturación) ─────────────────────────────────────
+    // ── Pacientes (facturación) ─────────────────────────────────────
     Route::get('/invoices/patients/search', [InvoiceController::class, 'searchPatients'])
         ->name('invoices.patients.search');
-
 
     // ── Servicios ─────────────────────────────────────
     Route::get('/services/by-category/{categoryId}', [ServiceController::class, 'getByCategory'])->name('services.by-category');
@@ -235,6 +241,5 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.
     Route::get('/fees', [AdminReportController::class, 'fees'])->name('fees');
     Route::get('/export', [AdminReportController::class, 'export'])->name('export');
 });
-
 
 require __DIR__.'/auth.php';

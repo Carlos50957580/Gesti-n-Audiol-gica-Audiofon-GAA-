@@ -3,11 +3,17 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Iniciar Sesión | Audiofon</title>
+    <title>Iniciar Sesión | {{ company('name', 'Audiofon') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="Plataforma de Gestión de Planes de Estudio UASD" name="description" />
-    <meta content="UASD" name="author" />
-    <link rel="shortcut icon" href="{{ asset('velzon/assets/images/favicon.ico') }}">
+    <meta content="{{ company('slogan', 'Plataforma de Gestión Clínica') }}" name="description" />
+    <meta content="{{ company('name', 'Audiofon') }}" name="author" />
+    
+    <!-- Favicon -->
+    @if(company('favicon'))
+        <link rel="shortcut icon" href="{{ asset('storage/' . company('favicon')) }}">
+    @else
+        <link rel="shortcut icon" href="{{ asset('velzon/assets/images/favicon.ico') }}">
+    @endif
 
     <script src="{{ asset('velzon/assets/js/layout.js') }}"></script>
     <link href="{{ asset('velzon/assets/css/bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
@@ -32,10 +38,17 @@
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
                                                 <a href="/" class="d-block">
-                                                   <img src="{{ asset('velzon/assets/images/logo-darkh.png') }}" 
-                                                        alt="audiofon Logo" 
-                                                        height="60" 
-                                                        width="120">
+                                                    @if(company('logo'))
+                                                        <img src="{{ asset('storage/' . company('logo')) }}" 
+                                                             alt="{{ company('name') }} Logo" 
+                                                             height="60" 
+                                                             style="max-width:200px; object-fit:contain;">
+                                                    @else
+                                                        <img src="{{ asset('velzon/assets/images/logo-darkh.png') }}" 
+                                                             alt="{{ company('name') }} Logo" 
+                                                             height="60" 
+                                                             width="120">
+                                                    @endif
                                                 </a>
                                             </div>
                                             <div class="mt-auto">
@@ -51,13 +64,13 @@
                                                     </div>
                                                     <div class="carousel-inner text-center text-white-50 pb-5" style="background-color: rgba(0, 0, 0, 0.5); border-radius: 5px; padding: 10px;">
                                                         <div class="carousel-item active">
-                                                            <p class="fs-15 fst-italic">"Oir bien, escucha mejor"</p>
+                                                            <p class="fs-15 fst-italic">"{{ company('slogan', 'Tu salud es nuestra prioridad') }}"</p>
                                                         </div>
                                                         <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">"Escuchar bien cambia como vives."</p>
+                                                            <p class="fs-15 fst-italic">"{{ company('footer_text', 'Gracias por confiar en nosotros') }}"</p>
                                                         </div>
                                                         <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">"Reserva tu cita ahora"</p>
+                                                            <p class="fs-15 fst-italic">"Bienvenido a {{ company('name', 'Audiofon') }}"</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -72,7 +85,15 @@
                                     <div class="p-lg-5 p-4">
                                         <div>
                                             <h5 class="text-primary">¡Bienvenido de Nuevo!</h5>
-                                            <p class="text-muted">Inicia sesión para continuar a la plataforma.</p>
+                                            <p class="text-muted">Inicia sesión para continuar a {{ company('name', 'la plataforma') }}.</p>
+                                            
+                                            @if(company('phone'))
+                                                <p class="text-muted" style="font-size:13px;">
+                                                    @if(company('email'))
+                                                        | <i class="ri-mail-line"></i> {{ company('email') }}
+                                                    @endif
+                                                </p>
+                                            @endif
                                         </div>
 
                                         {{-- ✅ MOSTRAR MENSAJES FLASH --}}
@@ -165,7 +186,17 @@
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                           <p class="mb-0" class="fw-semibold text-primary text-decoration-underline">¿No tiene una cuenta? Contacta con el administrador</p>
+                                            <p class="mb-0">
+                                                <span class="fw-semibold text-primary">¿No tiene una cuenta?</span>
+                                                <br>
+                                                <span class="text-muted" style="font-size:13px;">
+                                                    Contacta con el administrador
+                                                    @if(company('phone'))
+                                                        <br>
+                                                        <i class="ri-phone-line"></i> {{ company('phone') }}
+                                                    @endif
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -189,8 +220,21 @@
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="text-center">
-                            <p class="mb-0">&copy;
-                                <script>document.write(new Date().getFullYear())</script>  - Audiofon.
+                            <p class="mb-0">
+                                &copy; <script>document.write(new Date().getFullYear())</script> 
+                                {{ company('name', 'Audiofon') }}
+                                @if(company('rnc'))
+                                    <span class="text-muted" style="font-size:12px;margin-left:8px;">
+                                        <i class="ri-identifier-line"></i> RNC: {{ company('rnc') }}
+                                    </span>
+                                @endif
+                                <br>
+                                <small class="text-muted">
+                                    {{ company('footer_text', 'Todos los derechos reservados.') }}
+                                    @if(company('address'))
+                                        <br>{{ company('address') }}
+                                    @endif
+                                </small>
                             </p>
                         </div>
                     </div>

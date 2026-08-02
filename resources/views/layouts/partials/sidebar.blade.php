@@ -166,6 +166,15 @@
                         </a>
                     </li>
 
+                    {{-- 🆕 CONFIGURACIÓN DE EMPRESA (solo admin) --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('settings.company*') ? 'active' : '' }}" 
+           href="{{ route('settings.company') }}">
+            <i class="ri-store-3-line"></i> 
+            <span data-key="t-empresa">Empresa</span>
+        </a>
+    </li>
+
                 @endif {{-- Fin admin --}}
 
                 {{-- ============================ --}}

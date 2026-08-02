@@ -171,10 +171,6 @@
                                         <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-soft-primary btn-sm" title="Ver">
                                             <i class="ri-eye-line"></i>
                                         </a>
-                                        <button type="button" class="btn btn-soft-secondary btn-sm" 
-                                                onclick="printInvoice({{ $invoice->id }})" title="Imprimir">
-                                            <i class="ri-printer-line"></i>
-                                        </button>
                                         @if($invoice->status === 'pendiente' && auth()->user()->role->name === 'admin')
                                         <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="d-inline">
                                             @csrf @method('DELETE')

@@ -51,8 +51,12 @@
     content:''; position:absolute; right:40px; bottom:-50px;
     width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,.05);
 }
-.rec-brand { font-size:1.4rem; font-weight:900; letter-spacing:-.03em; position:relative; z-index:1; }
-.rec-brand span { opacity:.7; font-weight:400; font-size:.9rem; display:block; margin-top:.1rem; }
+.rec-brand { 
+    font-size:1.4rem; font-weight:900; letter-spacing:-.03em; position:relative; z-index:1; 
+}
+.rec-brand span { 
+    opacity:.7; font-weight:400; font-size:.9rem; display:block; margin-top:.1rem; 
+}
 .rec-num { font-family:monospace; font-size:1.5rem; font-weight:800; letter-spacing:.05em; position:relative; z-index:1; }
 .rec-num small { font-size:.72rem; opacity:.7; display:block; font-family:sans-serif; font-weight:400; letter-spacing:0; }
 
@@ -169,13 +173,28 @@
 ══════════════════════ --}}
 <div class="receipt-paper">
 
-    {{-- Header --}}
+    {{-- Header con datos de la empresa --}}
     <div class="rec-header">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
                 <div class="rec-brand">
-                    <i class="ri-heart-pulse-line me-2" style="opacity:.8;"></i>Audiofon
-                    <span>Clínica Auditiva</span>
+                    @if($company['logo'])
+                        <img src="{{ asset('storage/' . $company['logo']) }}" 
+                             alt="{{ $company['name'] }}" height="40" style="filter:brightness(0) invert(1);margin-right:10px;">
+                    @else
+                        <i class="ri-heart-pulse-line me-2" style="opacity:.8;"></i>
+                    @endif
+                    {{ $company['name'] }}
+                    <span>{{ $company['slogan'] }}</span>
+                </div>
+                <div style="font-size:.78rem;opacity:.8;margin-top:.3rem;position:relative;z-index:1;">
+                    {{ $company['address'] }}
+                </div>
+                <div style="font-size:.75rem;opacity:.7;margin-top:.1rem;position:relative;z-index:1;">
+                    RNC: {{ $company['rnc'] }} | Tel: {{ $company['phone'] }}
+                    @if($company['email'])
+                        | {{ $company['email'] }}
+                    @endif
                 </div>
                 <div class="status-pill mt-2">
                     <i class="ri-checkbox-circle-line"></i> Pago registrado
@@ -246,7 +265,7 @@
                     <div class="info-box-sub">Autorización: {{ $receipt->invoice->authorization_number }}</div>
                 @endif
                 <div class="info-box-sub" style="color:var(--rt);">
-                    Descuento: RD$ {{ number_format($receipt->invoice->insurance_discount, 2, ',', '.') }}
+                    Descuento: {{ $company['currency'] }} {{ number_format($receipt->invoice->insurance_discount, 2, ',', '.') }}
                 </div>
             </div>
             @endif
@@ -272,7 +291,7 @@
                     <tr>
                         <td>{{ $item->service->name }}</td>
                         <td style="text-align:center;">{{ $item->quantity }}</td>
-                        <td style="text-align:right;font-weight:600;">RD$ {{ number_format($item->subtotal, 2, ',', '.') }}</td>
+                        <td style="text-align:right;font-weight:600;">{{ $company['currency'] }} {{ number_format($item->subtotal, 2, ',', '.') }}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -302,10 +321,10 @@
                     <div style="flex:1;margin-left:.75rem;">
                         <div class="method-row-name" style="margin-left:0;">Efectivo</div>
                         @if($vuelto > 0.009)
-                            <div class="method-row-ref">Recibido: RD$ {{ number_format($receipt->cash_amount, 2, ',', '.') }}</div>
+                            <div class="method-row-ref">Recibido: {{ $company['currency'] }} {{ number_format($receipt->cash_amount, 2, ',', '.') }}</div>
                         @endif
                     </div>
-                    <span class="method-row-amt">RD$ {{ number_format($cashNeeded, 2, ',', '.') }}</span>
+                    <span class="method-row-amt">{{ $company['currency'] }} {{ number_format($cashNeeded, 2, ',', '.') }}</span>
                 </div>
                 @if($vuelto > 0.009)
                 <div class="method-row" style="background:rgba(10,179,156,.05);border-color:rgba(10,179,156,.25);">
@@ -316,7 +335,7 @@
                         <div class="method-row-name" style="margin-left:0;color:var(--rt);">Vuelto entregado</div>
                         <div class="method-row-ref">Cambio al paciente</div>
                     </div>
-                    <span class="method-row-amt" style="color:var(--rt);">RD$ {{ number_format($vuelto, 2, ',', '.') }}</span>
+                    <span class="method-row-amt" style="color:var(--rt);">{{ $company['currency'] }} {{ number_format($vuelto, 2, ',', '.') }}</span>
                 </div>
                 @endif
                 @endif
@@ -332,7 +351,7 @@
                             <div class="method-row-ref">Ref: {{ $receipt->card_reference }}</div>
                         @endif
                     </div>
-                    <span class="method-row-amt">RD$ {{ number_format($receipt->card_amount, 2, ',', '.') }}</span>
+                    <span class="method-row-amt">{{ $company['currency'] }} {{ number_format($receipt->card_amount, 2, ',', '.') }}</span>
                 </div>
                 @endif
 
@@ -347,7 +366,7 @@
                             <div class="method-row-ref">Ref: {{ $receipt->transfer_reference }}</div>
                         @endif
                     </div>
-                    <span class="method-row-amt">RD$ {{ number_format($receipt->transfer_amount, 2, ',', '.') }}</span>
+                    <span class="method-row-amt">{{ $company['currency'] }} {{ number_format($receipt->transfer_amount, 2, ',', '.') }}</span>
                 </div>
                 @endif
 
@@ -369,21 +388,21 @@
                 <div class="totals-box">
                     <div class="tot-row">
                         <span class="tot-lbl">Subtotal servicios</span>
-                        <span class="tot-val">RD$ {{ number_format($receipt->invoice->subtotal, 2, ',', '.') }}</span>
+                        <span class="tot-val">{{ $company['currency'] }} {{ number_format($receipt->invoice->subtotal, 2, ',', '.') }}</span>
                     </div>
                     @if($receipt->invoice->insurance_discount > 0)
                     <div class="tot-row">
                         <span class="tot-lbl" style="color:var(--rt);">Descuento seguro</span>
-                        <span class="tot-val" style="color:var(--rt);">− RD$ {{ number_format($receipt->invoice->insurance_discount, 2, ',', '.') }}</span>
+                        <span class="tot-val" style="color:var(--rt);">− {{ $company['currency'] }} {{ number_format($receipt->invoice->insurance_discount, 2, ',', '.') }}</span>
                     </div>
                     @endif
                     <div class="tot-row">
                         <span class="tot-lbl">Total factura</span>
-                        <span class="tot-val">RD$ {{ number_format($receipt->invoice->total, 2, ',', '.') }}</span>
+                        <span class="tot-val">{{ $company['currency'] }} {{ number_format($receipt->invoice->total, 2, ',', '.') }}</span>
                     </div>
                     <div class="tot-row">
                         <span class="tot-lbl">Total pagado</span>
-                        <span class="tot-val" style="color:var(--rt);">RD$ {{ number_format($receipt->total_paid, 2, ',', '.') }}</span>
+                        <span class="tot-val" style="color:var(--rt);">{{ $company['currency'] }} {{ number_format($receipt->total_paid, 2, ',', '.') }}</span>
                     </div>
                 </div>
 
@@ -398,11 +417,13 @@
 
     </div>
 
-    {{-- Footer --}}
+    {{-- Footer con datos de la empresa --}}
     <div class="rec-footer">
         <i class="ri-heart-pulse-line me-1"></i>
-        Audiofon · Gracias por su preferencia ·
+        {{ $company['name'] }} · {{ $company['footer_text'] }} ·
         Recibo generado el {{ $receipt->created_at->format('d/m/Y') }} a las {{ $receipt->created_at->format('g:i A') }}
+        <br>
+        <small>{{ $company['business_name'] }} · RNC: {{ $company['rnc'] }} · {{ $company['address'] }}</small>
     </div>
 </div>
 
@@ -417,6 +438,9 @@
 function printThermal() {
     const frame = document.getElementById('thermal-frame');
     const doc   = frame.contentDocument || frame.contentWindow.document;
+
+    // Datos de la empresa desde PHP
+    const company = @json($company);
 
     doc.open();
     doc.write(`<!DOCTYPE html>
@@ -433,9 +457,9 @@ function printThermal() {
   }
 
   body {
-    font-family: monospace; /* 🔥 mejor que Courier New */
-    font-size: 14px;        /* 🔥 tamaño mínimo seguro */
-    font-weight: 700;       /* 🔥 evita texto gris */
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 700;
     color: #000;
     background: #fff;
     padding: 6px 8px;
@@ -474,6 +498,11 @@ function printThermal() {
     font-weight: 900;
   }
 
+  .company-logo {
+    max-height: 40px;
+    margin-bottom: 4px;
+  }
+
   @media print {
     @page { margin: 0; }
     body  { padding: 4px 6px; }
@@ -482,14 +511,20 @@ function printThermal() {
 </head>
 <body>
 
-<div class="center bold big">AUDIOFON</div>
-<div class="center small">{{ $receipt->branch->name }}</div>
-@if($receipt->branch->address)
-<div class="center small">{{ $receipt->branch->address }}</div>
-@endif
-@if($receipt->branch->phone)
-<div class="center small">Tel: {{ $receipt->branch->phone }}</div>
-@endif
+{{-- Header con datos de la empresa --}}
+<div class="center">
+    @if($company['logo'])
+        <img src="{{ public_path('storage/' . $company['logo']) }}" 
+             alt="{{ $company['name'] }}" class="company-logo">
+    @endif
+    <div class="bold big">{{ strtoupper($company['name']) }}</div>
+    <div class="small">{{ $company['slogan'] }}</div>
+    <div class="small">{{ $company['address'] }}</div>
+    <div class="small">RNC: {{ $company['rnc'] }} | Tel: {{ $company['phone'] }}</div>
+    @if($company['email'])
+        <div class="small">{{ $company['email'] }}</div>
+    @endif
+</div>
 
 <div class="sep2"></div>
 
@@ -536,12 +571,12 @@ function printThermal() {
 <table style="margin-bottom:6px;">
   <tr>
     <td class="bold">{{ strtoupper($item->service->name) }}</td>
-    <td class="td-r bold">RD$ {{ number_format($item->subtotal, 2) }}</td>
+    <td class="td-r bold">{{ $company['currency'] }} {{ number_format($item->subtotal, 2) }}</td>
   </tr>
   <tr>
     <td class="small">
-      {{ $item->quantity }} x RD$ {{ number_format($item->price, 2) }}
-      &nbsp; Seg: RD$ {{ number_format($item->insurance_amount ?? 0, 2) }}
+      {{ $item->quantity }} x {{ $company['currency'] }} {{ number_format($item->price, 2) }}
+      &nbsp; Seg: {{ $company['currency'] }} {{ number_format($item->insurance_amount ?? 0, 2) }}
     </td>
   </tr>
 </table>
@@ -552,12 +587,12 @@ function printThermal() {
 <table>
   <tr>
     <td class="lbl">Subtotal</td>
-    <td class="td-r">RD$ {{ number_format($receipt->invoice->subtotal, 2) }}</td>
+    <td class="td-r">{{ $company['currency'] }} {{ number_format($receipt->invoice->subtotal, 2) }}</td>
   </tr>
   @if($receipt->invoice->insurance_discount > 0)
   <tr>
     <td class="lbl">Desc. seguro</td>
-    <td class="td-r">- RD$ {{ number_format($receipt->invoice->insurance_discount, 2) }}</td>
+    <td class="td-r">- {{ $company['currency'] }} {{ number_format($receipt->invoice->insurance_discount, 2) }}</td>
   </tr>
   @endif
 </table>
@@ -569,14 +604,17 @@ function printThermal() {
 <table>
   <tr class="total-row">
     <td>TOTAL</td>
-    <td class="td-r">RD$ {{ number_format($receipt->total_paid, 2) }}</td>
+    <td class="td-r">{{ $company['currency'] }} {{ number_format($receipt->total_paid, 2) }}</td>
   </tr>
 </table>
 
 <div class="sep2"></div>
 
 <div class="center small" style="margin-top:6px;">
-  Gracias por su preferencia
+    {{ $company['footer_text'] }}
+</div>
+<div class="center small" style="margin-top:2px;font-size:10px;">
+    {{ $company['business_name'] }} · RNC: {{ $company['rnc'] }}
 </div>
 
 <div style="margin-top:20px;"></div>

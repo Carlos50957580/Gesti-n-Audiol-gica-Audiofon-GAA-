@@ -249,6 +249,9 @@ class InvoiceController extends Controller
     /**
      * Display the specified invoice.
      */
+   /**
+     * Display the specified invoice.
+     */
     public function show(Invoice $invoice)
     {
         // Validar acceso
@@ -260,10 +263,28 @@ class InvoiceController extends Controller
 
         $invoice->load(['patient', 'user', 'doctor', 'branch', 'insurance', 'items.service.category']);
 
-        // Obtener settings de la base de datos
-        $settings = Setting::getAll();
+        // ── Obtener configuración de la empresa ─────────────────────────────
+        $company = [
+            'name' => Setting::get('company_name', 'Mi Clínica'),
+            'business_name' => Setting::get('company_business_name', 'Mi Clínica SRL'),
+            'rnc' => Setting::get('company_rnc', ''),
+            'email' => Setting::get('company_email', ''),
+            'phone' => Setting::get('company_phone', ''),
+            'mobile' => Setting::get('company_mobile', ''),
+            'address' => Setting::get('company_address', ''),
+            'slogan' => Setting::get('company_slogan', ''),
+            'website' => Setting::get('company_website', ''),
+            'logo' => Setting::get('company_logo', null),
+            'favicon' => Setting::get('company_favicon', null),
+            'footer_text' => Setting::get('company_footer_text', 'Gracias por su preferencia'),
+            'currency' => Setting::get('company_currency', 'DOP'),
+            'tax_rate' => Setting::get('company_tax_rate', 18),
+            'invoice_prefix' => Setting::get('company_invoice_prefix', 'FAC-'),
+            'receipt_prefix' => Setting::get('company_receipt_prefix', 'REC-'),
+            'ncf_type' => Setting::get('company_ncf_type', 'consumidor_final'),
+        ];
 
-        return view('invoices.show', compact('invoice', 'settings'));
+        return view('invoices.show', compact('invoice', 'company'));
     }
 
     /**
@@ -279,10 +300,32 @@ class InvoiceController extends Controller
         }
 
         $invoice->load(['patient', 'doctor', 'branch', 'insurance', 'items.service.category']);
-        $settings = Setting::getAll();
 
-        return view('invoices.print', compact('invoice', 'settings'));
+        // ── Obtener configuración de la empresa ─────────────────────────────
+        $company = [
+            'name' => Setting::get('company_name', 'Mi Clínica'),
+            'business_name' => Setting::get('company_business_name', 'Mi Clínica SRL'),
+            'rnc' => Setting::get('company_rnc', ''),
+            'email' => Setting::get('company_email', ''),
+            'phone' => Setting::get('company_phone', ''),
+            'mobile' => Setting::get('company_mobile', ''),
+            'address' => Setting::get('company_address', ''),
+            'slogan' => Setting::get('company_slogan', ''),
+            'website' => Setting::get('company_website', ''),
+            'logo' => Setting::get('company_logo', null),
+            'favicon' => Setting::get('company_favicon', null),
+            'footer_text' => Setting::get('company_footer_text', 'Gracias por su preferencia'),
+            'currency' => Setting::get('company_currency', 'DOP'),
+            'tax_rate' => Setting::get('company_tax_rate', 18),
+            'invoice_prefix' => Setting::get('company_invoice_prefix', 'FAC-'),
+            'receipt_prefix' => Setting::get('company_receipt_prefix', 'REC-'),
+            'ncf_type' => Setting::get('company_ncf_type', 'consumidor_final'),
+        ];
+
+        return view('invoices.print', compact('invoice', 'company'));
     }
+
+    // ... resto de métodos ...
 
     /**
      * Cancel the specified invoice.
