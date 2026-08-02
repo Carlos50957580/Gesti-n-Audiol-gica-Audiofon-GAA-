@@ -116,7 +116,7 @@
                     </li>
 
                     {{-- Honorarios (solo admin) --}}
-                    <li class="nav-item">
+                    {{-- <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('audiologist-fees.*') ? '' : 'collapsed' }}" 
                            href="#sidebarAudiologistFees" 
                            data-bs-toggle="collapse" 
@@ -148,7 +148,7 @@
                                 </li>
                             </ul>
                         </div>
-                    </li>
+                    </li> --}}
 
                     {{-- Reportes Admin --}}
                     <li class="nav-item">

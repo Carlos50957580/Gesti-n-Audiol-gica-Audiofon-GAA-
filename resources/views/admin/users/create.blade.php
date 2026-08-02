@@ -89,7 +89,7 @@
                             @enderror
                         </div>
 
-                        <!-- ✅ NUEVO: Es médico -->
+                        <!-- Es Médico -->
                         <div class="col-md-6">
                             <label class="form-label">Tipo de Usuario</label>
                             <div class="form-check form-switch mt-2">
@@ -105,6 +105,26 @@
                                 </small>
                             </div>
                             @error('is_doctor')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- ✅ NUEVO: Estado (Activo/Inactivo) -->
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <div class="form-check form-switch mt-2">
+                                <input type="hidden" name="is_active" value="0">
+                                <input type="checkbox" name="is_active" class="form-check-input" id="isActive" 
+                                       value="1" {{ old('is_active', true) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="isActive">
+                                    Activo
+                                </label>
+                                <small class="d-block text-muted">
+                                    <i class="ri-information-line"></i> 
+                                    Si está inactivo, no podrá iniciar sesión
+                                </small>
+                            </div>
+                            @error('is_active')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -156,34 +176,45 @@
         const roleSelect = document.getElementById('roleSelect');
         const isDoctorCheckbox = document.getElementById('isDoctor');
         const doctorInfo = document.getElementById('doctorInfo');
-        const allowedDoctorRoles = [1, 4]; // Admin (1) y Médico (4)
+        
+        const allowedDoctorRoles = @json($allowedDoctorRoles ?? [1, 3]);
+        const medicoRoleId = @json($medicoRoleId ?? 3);
 
-        // Validar si el rol seleccionado puede ser médico
-        function validateDoctorRole() {
+        function updateDoctorStatus() {
             const roleId = parseInt(roleSelect.value);
+            const isDoctorRole = (roleId === medicoRoleId);
             
-            if (isDoctorCheckbox.checked && !allowedDoctorRoles.includes(roleId)) {
-                doctorInfo.style.display = 'block';
-                isDoctorCheckbox.disabled = true;
-                isDoctorCheckbox.checked = false;
-                alert('El rol seleccionado no puede ser médico. Selecciona Admin o Médico.');
-            } else if (isDoctorCheckbox.checked && allowedDoctorRoles.includes(roleId)) {
+            // ✅ Si el rol es "medico", marcar y deshabilitar
+            if (isDoctorRole) {
+                isDoctorCheckbox.checked = true;
+                isDoctorCheckbox.disabled = true; // ✅ Deshabilitar para que no se pueda desmarcar
                 doctorInfo.style.display = 'none';
-                isDoctorCheckbox.disabled = false;
-            } else {
-                doctorInfo.style.display = 'none';
-                isDoctorCheckbox.disabled = false;
+                return;
             }
+            
+            // ✅ Si el rol es "admin", permitir marcar/desmarcar libremente
+            if (roleId === {{ $allowedDoctorRoles[0] ?? 1 }}) { // ID de admin
+                isDoctorCheckbox.disabled = false;
+                doctorInfo.style.display = 'none';
+                return;
+            }
+            
+            // ✅ Para otros roles (recepcionista), desmarcar y deshabilitar
+            isDoctorCheckbox.checked = false;
+            isDoctorCheckbox.disabled = true;
+            doctorInfo.style.display = 'block';
         }
 
         // Evento cuando cambia el rol
         roleSelect.addEventListener('change', function() {
-            validateDoctorRole();
+            updateDoctorStatus();
         });
 
-        // Evento cuando cambia el checkbox de médico
+        // Evento cuando el usuario intenta marcar/desmarcar el checkbox
         isDoctorCheckbox.addEventListener('change', function() {
             const roleId = parseInt(roleSelect.value);
+            
+            // Si el rol no es admin ni medico, no permitir marcar
             if (this.checked && !allowedDoctorRoles.includes(roleId)) {
                 doctorInfo.style.display = 'block';
                 this.checked = false;
@@ -193,8 +224,8 @@
             }
         });
 
-        // Inicializar validación
-        validateDoctorRole();
+        // Inicializar
+        updateDoctorStatus();
     });
 </script>
 @endpush

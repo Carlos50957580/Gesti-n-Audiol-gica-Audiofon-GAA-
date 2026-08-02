@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes; // ✅ Importar SoftDeletes
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes; // ✅ Agregar SoftDeletes
 
     protected $fillable = [
         'name',
@@ -17,6 +18,7 @@ class User extends Authenticatable
         'role_id',
         'branch_id',
         'is_doctor',
+        'is_active', // ✅ Agregar
         'profile_photo',
     ];
 
@@ -25,14 +27,15 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_doctor' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_doctor' => 'boolean',
+        'is_active' => 'boolean', // ✅ Agregar
+    ];
+
+    // ✅ Fechas para soft delete
+    protected $dates = ['deleted_at'];
 
     // Relaciones
     public function role()
@@ -45,27 +48,50 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
-    // ✅ NUEVO: Scope para filtrar médicos
+    // ✅ Scopes
     public function scopeDoctors($query)
     {
         return $query->where('is_doctor', 1);
     }
 
-    // ✅ NUEVO: Scope para filtrar no médicos
     public function scopeNonDoctors($query)
     {
         return $query->where('is_doctor', 0);
     }
 
-    // ✅ NUEVO: Verificar si el usuario es médico
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', 1);
+    }
+
+    public function scopeInactive($query)
+    {
+        return $query->where('is_active', 0);
+    }
+
+    // ✅ Métodos
     public function isDoctor(): bool
     {
         return (bool) $this->is_doctor;
     }
 
-    // ✅ NUEVO: Verificar si es administrador
     public function isAdmin(): bool
     {
-        return $this->role_id == 1; // Asumiendo que el rol admin tiene ID 1
+        return $this->role_id == 1;
+    }
+
+    public function isActive(): bool
+    {
+        return (bool) $this->is_active;
+    }
+
+    public function activate()
+    {
+        $this->update(['is_active' => true]);
+    }
+
+    public function deactivate()
+    {
+        $this->update(['is_active' => false]);
     }
 }

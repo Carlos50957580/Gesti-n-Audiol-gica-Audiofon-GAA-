@@ -17,7 +17,7 @@ public function run(): void
     Role::insert([
         ['name' => 'admin', 'description' => 'Administrador del sistema'],
         ['name' => 'recepcionista', 'description' => 'Usuario cajero '],
-        ['name' => 'audiologo', 'description' => 'Usuario audiologo '],    
+        ['name' => 'medico', 'description' => 'Usuario medico '],    
     ]);
 }
 

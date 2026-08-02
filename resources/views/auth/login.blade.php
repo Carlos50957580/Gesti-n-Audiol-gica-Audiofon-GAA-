@@ -33,10 +33,9 @@
                                             <div class="mb-4">
                                                 <a href="/" class="d-block">
                                                    <img src="{{ asset('velzon/assets/images/logo-darkh.png') }}" 
-     alt="audiofon Logo" 
-     height="60" 
-     width="120">
-
+                                                        alt="audiofon Logo" 
+                                                        height="60" 
+                                                        width="120">
                                                 </a>
                                             </div>
                                             <div class="mt-auto">
@@ -50,17 +49,17 @@
                                                         <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="1" aria-label="Diapositiva 2"></button>
                                                         <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="2" aria-label="Diapositiva 3"></button>
                                                     </div>
-                                                  <div class="carousel-inner text-center text-white-50 pb-5" style="background-color: rgba(0, 0, 0, 0.5); border-radius: 5px; padding: 10px;">
-    <div class="carousel-item active">
-        <p class="fs-15 fst-italic">"Oir bien, escucha mejor"</p>
-    </div>
-    <div class="carousel-item">
-        <p class="fs-15 fst-italic">"Escuchar bien cambia como vives."</p>
-    </div>
-    <div class="carousel-item">
-        <p class="fs-15 fst-italic">"Reserva tu cita ahora"</p>
-    </div>
-</div>
+                                                    <div class="carousel-inner text-center text-white-50 pb-5" style="background-color: rgba(0, 0, 0, 0.5); border-radius: 5px; padding: 10px;">
+                                                        <div class="carousel-item active">
+                                                            <p class="fs-15 fst-italic">"Oir bien, escucha mejor"</p>
+                                                        </div>
+                                                        <div class="carousel-item">
+                                                            <p class="fs-15 fst-italic">"Escuchar bien cambia como vives."</p>
+                                                        </div>
+                                                        <div class="carousel-item">
+                                                            <p class="fs-15 fst-italic">"Reserva tu cita ahora"</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                                 <!-- end carousel -->
                                             </div>
@@ -75,6 +74,34 @@
                                             <h5 class="text-primary">¡Bienvenido de Nuevo!</h5>
                                             <p class="text-muted">Inicia sesión para continuar a la plataforma.</p>
                                         </div>
+
+                                        {{-- ✅ MOSTRAR MENSAJES FLASH --}}
+                                        @if(session('success'))
+                                            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                                                <i class="ri-check-line me-1"></i> {{ session('success') }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        @endif
+
+                                        @if(session('error'))
+                                            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                                                <i class="ri-error-warning-line me-1"></i> {{ session('error') }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        @endif
+
+                                        {{-- ✅ MOSTRAR ERRORES DE VALIDACIÓN GENERALES --}}
+                                        @if($errors->any())
+                                            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                                                <i class="ri-error-warning-line me-1"></i>
+                                                <ul class="mb-0">
+                                                    @foreach($errors->all() as $error)
+                                                        <li>{{ $error }}</li>
+                                                    @endforeach
+                                                </ul>
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        @endif
 
                                         <div class="mt-4">
                                             <form method="POST" action="{{ route('login') }}">
@@ -138,7 +165,7 @@
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                           <p class="mb-0" class="fw-semibold text-primary text-decoration-underline">¿No tiene una cuenta? Contacta con el administrador</a></p>
+                                           <p class="mb-0" class="fw-semibold text-primary text-decoration-underline">¿No tiene una cuenta? Contacta con el administrador</p>
                                         </div>
                                     </div>
                                 </div>
@@ -184,19 +211,16 @@
     <script src="{{ asset('velzon/assets/js/pages/password-addon.init.js') }}"></script>
 
     <script>
-    const passwordBtn = document.getElementById('password-addon');
-    const passwordInput = document.getElementById('password');
+        const passwordBtn = document.getElementById('password-addon');
+        const passwordInput = document.getElementById('password');
 
-    passwordBtn.addEventListener('click', function () {
-        // Cambiar el tipo de input
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
-        
-        // Cambiar el icono (opcional)
-        this.querySelector('i').classList.toggle('ri-eye-fill');
-        this.querySelector('i').classList.toggle('ri-eye-off-fill');
-    });
-</script>
+        passwordBtn.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('ri-eye-fill');
+            this.querySelector('i').classList.toggle('ri-eye-off-fill');
+        });
+    </script>
 </body>
 
 </html>

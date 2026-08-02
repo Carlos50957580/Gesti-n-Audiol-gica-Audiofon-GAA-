@@ -39,11 +39,11 @@
                         <input type="text" name="search" class="form-control" placeholder="Nombre o email..." 
                                value="{{ request('search') }}">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Rol</label>
                         <select name="role_id" class="form-select">
                             <option value="">Todos</option>
-                            @foreach($roles ?? [] as $role)
+                            @foreach($roles as $role)
                             <option value="{{ $role->id }}" {{ request('role_id') == $role->id ? 'selected' : '' }}>
                                 {{ ucfirst($role->name) }}
                             </option>
@@ -58,14 +58,20 @@
                             <option value="0" {{ request('is_doctor') == '0' ? 'selected' : '' }}>No Médicos</option>
                         </select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="ri-search-line"></i> Filtrar
-                        </button>
+                    <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select name="is_active" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="1" {{ request('is_active') == '1' ? 'selected' : '' }}>Activos</option>
+                            <option value="0" {{ request('is_active') == '0' ? 'selected' : '' }}>Inactivos</option>
+                        </select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end gap-1">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="ri-search-line"></i>
+                        </button>
                         <a href="{{ route('admin.usuarios.index') }}" class="btn btn-secondary w-100">
-                            <i class="ri-refresh-line"></i> Limpiar
+                            <i class="ri-refresh-line"></i>
                         </a>
                     </div>
                 </form>
@@ -81,6 +87,7 @@
                                 <th>Rol</th>
                                 <th>Tipo</th>
                                 <th>Sucursal</th>
+                                <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -124,7 +131,17 @@
                                     <span class="badge bg-info">{{ $user->branch->name ?? 'N/A' }}</span>
                                 </td>
                                 <td>
+                                    @if($user->trashed())
+                                        <span class="badge bg-danger">Eliminado</span>
+                                    @elseif($user->is_active)
+                                        <span class="badge bg-success">Activo</span>
+                                    @else
+                                        <span class="badge bg-warning">Inactivo</span>
+                                    @endif
+                                </td>
+                                <td>
                                     <div class="d-flex gap-1">
+                                        <!-- Ver -->
                                         <button type="button" class="btn btn-soft-primary btn-sm" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#viewUserModal"
@@ -134,21 +151,69 @@
                                                 data-role="{{ $user->role->name ?? 'Sin rol' }}"
                                                 data-branch="{{ $user->branch->name ?? 'N/A' }}"
                                                 data-is_doctor="{{ $user->is_doctor ? 'Sí' : 'No' }}"
+                                                data-is_active="{{ $user->is_active ? 'Activo' : 'Inactivo' }}"
                                                 title="Ver">
                                             <i class="ri-eye-line"></i>
                                         </button>
+
+                                        <!-- Editar -->
+                                        @if(!$user->trashed())
                                         <a href="{{ route('admin.usuarios.edit', $user) }}" class="btn btn-soft-primary btn-sm" title="Editar">
                                             <i class="ri-edit-2-line"></i>
                                         </a>
-                                        @if($user->id !== auth()->id())
+                                        @endif
+
+                                        <!-- Activar/Desactivar -->
+                                        @if(!$user->trashed() && $user->id !== auth()->id())
+                                            @if($user->is_active)
+                                            <form action="{{ route('admin.usuarios.deactivate', $user) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-soft-warning btn-sm" 
+                                                        onclick="return confirm('¿Desactivar este usuario?')" title="Desactivar">
+                                                    <i class="ri-pause-circle-line"></i>
+                                                </button>
+                                            </form>
+                                            @else
+                                            <form action="{{ route('admin.usuarios.activate', $user) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-soft-success btn-sm" 
+                                                        onclick="return confirm('¿Activar este usuario?')" title="Activar">
+                                                    <i class="ri-play-circle-line"></i>
+                                                </button>
+                                            </form>
+                                            @endif
+                                        @endif
+
+                                        <!-- Eliminar (Soft Delete) -->
+                                        @if(!$user->trashed() && $user->id !== auth()->id())
                                         <form action="{{ route('admin.usuarios.destroy', $user) }}" method="POST" class="d-inline">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="btn btn-soft-danger btn-sm" 
-                                                    onclick="return confirm('¿Estás seguro de eliminar este usuario?')" title="Eliminar">
+                                                    onclick="return confirm('¿Eliminar este usuario?')" title="Eliminar">
                                                 <i class="ri-delete-bin-line"></i>
                                             </button>
                                         </form>
-                                        @else
+                                        @endif
+
+                                        <!-- Restaurar (si está eliminado) -->
+                                        @if($user->trashed())
+                                        <form action="{{ route('admin.usuarios.restore', $user->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-soft-success btn-sm" 
+                                                    onclick="return confirm('¿Restaurar este usuario?')" title="Restaurar">
+                                                <i class="ri-restart-line"></i>
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('admin.usuarios.force-delete', $user->id) }}" method="POST" class="d-inline">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn btn-soft-danger btn-sm" 
+                                                    onclick="return confirm('¿Eliminar permanentemente este usuario?')" title="Eliminar permanentemente">
+                                                <i class="ri-skull-line"></i>
+                                            </button>
+                                        </form>
+                                        @endif
+
+                                        @if($user->id === auth()->id())
                                         <button type="button" class="btn btn-soft-secondary btn-sm" title="No puedes eliminarte a ti mismo" disabled>
                                             <i class="ri-delete-bin-line"></i>
                                         </button>
@@ -158,7 +223,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     <i class="ri-user-line" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
                                     No hay usuarios registrados
                                 </td>
@@ -204,6 +269,10 @@
                                 <td id="viewUserType"><span class="badge bg-success">Médico</span></td>
                             </tr>
                             <tr>
+                                <td class="fw-medium">Estado:</td>
+                                <td id="viewUserStatus"><span class="badge bg-success">Activo</span></td>
+                            </tr>
+                            <tr>
                                 <td class="fw-medium">Sucursal:</td>
                                 <td id="viewUserBranch">N/A</td>
                             </tr>
@@ -226,12 +295,12 @@
         if (viewModal) {
             viewModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
-                const id = button.getAttribute('data-id');
                 const name = button.getAttribute('data-name');
                 const email = button.getAttribute('data-email');
                 const role = button.getAttribute('data-role');
                 const branch = button.getAttribute('data-branch');
                 const isDoctor = button.getAttribute('data-is_doctor');
+                const isActive = button.getAttribute('data-is_active');
                 
                 document.getElementById('viewUserName').textContent = name;
                 document.getElementById('viewUserEmail').textContent = email;
@@ -242,6 +311,13 @@
                     typeElement.innerHTML = '<span class="badge bg-success"><i class="ri-stethoscope-line me-1"></i> Médico</span>';
                 } else {
                     typeElement.innerHTML = '<span class="badge bg-secondary"><i class="ri-user-line me-1"></i> No Médico</span>';
+                }
+                
+                const statusElement = document.getElementById('viewUserStatus');
+                if (isActive === 'Activo') {
+                    statusElement.innerHTML = '<span class="badge bg-success">Activo</span>';
+                } else {
+                    statusElement.innerHTML = '<span class="badge bg-warning">Inactivo</span>';
                 }
                 
                 document.getElementById('viewUserBranch').textContent = branch;
