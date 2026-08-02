@@ -12,20 +12,17 @@ class ReceiptController extends Controller
 {
     public function index(Request $request)
     {
-        $user     = auth()->user();
-        $isAdmin  = $user->role->name === 'admin';
-        $isAdmin2 = $user->role_id == 4; // 🔥 Verificar si es admin2
-        $tab      = $request->get('tab', 'pending');
+        $user = auth()->user();
+        $isAdmin = $user->role->name === 'admin';
+        $tab = $request->get('tab', 'pending');
 
         // ── Query de facturas pendientes ─────────────────────────────────────
         $invoicesQuery = Invoice::with(['patient', 'branch', 'insurance'])
             ->where('status', 'pendiente')
             ->orderBy('created_at', 'asc');
 
-        // 🔥 Para admin2: solo ver facturas de su sucursal (como recepcionista)
-        if (!$isAdmin && !$isAdmin2) {
-            $invoicesQuery->where('branch_id', $user->branch_id);
-        } elseif ($isAdmin2) {
+        // ✅ Si es recepcionista, solo ve facturas de su sucursal
+        if (!$isAdmin) {
             $invoicesQuery->where('branch_id', $user->branch_id);
         }
 
@@ -41,7 +38,7 @@ class ReceiptController extends Controller
             });
         }
 
-        if (($isAdmin || $isAdmin2) && $request->filled('branch_id')) {
+        if ($isAdmin && $request->filled('branch_id')) {
             $invoicesQuery->where('branch_id', $request->branch_id);
         }
 
@@ -49,9 +46,7 @@ class ReceiptController extends Controller
 
         // ── Total por cobrar ─────────────────────────────────────────────────
         $totalAmountQuery = Invoice::where('status', 'pendiente');
-        if (!$isAdmin && !$isAdmin2) {
-            $totalAmountQuery->where('branch_id', $user->branch_id);
-        } elseif ($isAdmin2) {
+        if (!$isAdmin) {
             $totalAmountQuery->where('branch_id', $user->branch_id);
         }
         $totalAmount = $totalAmountQuery->sum('total');
@@ -66,9 +61,7 @@ class ReceiptController extends Controller
             ->whereHas('invoice.patient')
             ->orderBy('created_at', 'desc');
 
-        if (!$isAdmin && !$isAdmin2) {
-            $receiptsQuery->where('branch_id', $user->branch_id);
-        } elseif ($isAdmin2) {
+        if (!$isAdmin) {
             $receiptsQuery->where('branch_id', $user->branch_id);
         }
 
@@ -92,7 +85,7 @@ class ReceiptController extends Controller
             $receiptsQuery->whereDate('created_at', '<=', $request->rto);
         }
 
-        if (($isAdmin || $isAdmin2) && $request->filled('rbranch_id')) {
+        if ($isAdmin && $request->filled('rbranch_id')) {
             $receiptsQuery->where('branch_id', $request->rbranch_id);
         }
 
@@ -101,19 +94,17 @@ class ReceiptController extends Controller
         // ── Total cobrado este mes ──────────────────────────────────────────
         $totalCollectedQuery = Receipt::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year);
-        if (!$isAdmin && !$isAdmin2) {
-            $totalCollectedQuery->where('branch_id', $user->branch_id);
-        } elseif ($isAdmin2) {
+        if (!$isAdmin) {
             $totalCollectedQuery->where('branch_id', $user->branch_id);
         }
         $totalCollected = $totalCollectedQuery->sum('total_paid');
 
-        // ── Sucursales (solo admin y admin2) ─────────────────────────────────
-        $branches = ($isAdmin || $isAdmin2) ? Branch::orderBy('name')->get() : collect();
+        // ── Sucursales (solo admin) ─────────────────────────────────────────
+        $branches = $isAdmin ? Branch::orderBy('name')->get() : collect();
 
         return view('receipts.index', compact(
             'invoices', 'receipts', 'branches',
-            'isAdmin', 'isAdmin2', 'totalAmount', 'totalCollected', 'tab'
+            'isAdmin', 'totalAmount', 'totalCollected', 'tab'
         ));
     }
 
@@ -132,14 +123,10 @@ class ReceiptController extends Controller
         $invoice = Invoice::where('status', 'pendiente')->findOrFail($request->invoice_id);
 
         $user = auth()->user();
-        $isAdmin2 = $user->role_id == 4;
         
-        // 🔥 Para admin2: solo puede cobrar facturas de su sucursal
-        if ($user->role->name !== 'admin' && !$isAdmin2 && $invoice->branch_id !== $user->branch_id) {
-            abort(403);
-        }
-        if ($isAdmin2 && $invoice->branch_id !== $user->branch_id) {
-            abort(403);
+        // ✅ Si es recepcionista, solo puede cobrar facturas de su sucursal
+        if ($user->role->name !== 'admin' && $invoice->branch_id !== $user->branch_id) {
+            abort(403, 'No tienes permiso para cobrar esta factura.');
         }
 
         $cash     = (float) ($request->cash_amount     ?? 0);
@@ -205,6 +192,13 @@ class ReceiptController extends Controller
 
     public function show(Receipt $receipt)
     {
+        // ✅ Si es recepcionista, solo ve recibos de su sucursal
+        if (auth()->user()->role->name !== 'admin') {
+            if ($receipt->branch_id != auth()->user()->branch_id) {
+                abort(403, 'No tienes acceso a este recibo.');
+            }
+        }
+
         $receipt->load(['invoice.patient', 'invoice.items.service', 'invoice.insurance', 'user', 'branch']);
         return view('receipts.show', compact('receipt'));
     }
@@ -216,12 +210,8 @@ class ReceiptController extends Controller
         }
 
         $user = auth()->user();
-        $isAdmin2 = $user->role_id == 4;
         
-        if ($user->role->name !== 'admin' && !$isAdmin2 && $invoice->branch_id !== $user->branch_id) {
-            return response()->json(['error' => 'Sin autorización.'], 403);
-        }
-        if ($isAdmin2 && $invoice->branch_id !== $user->branch_id) {
+        if ($user->role->name !== 'admin' && $invoice->branch_id !== $user->branch_id) {
             return response()->json(['error' => 'Sin autorización.'], 403);
         }
 
@@ -230,7 +220,7 @@ class ReceiptController extends Controller
         return response()->json([
             'id'                 => $invoice->id,
             'invoice_number'     => $invoice->invoice_number,
-            'patient_name'       => $invoice->patient->first_name . ' ' . $invoice->patient->last_name,
+            'patient_name'       => $invoice->patient->full_name ?? $invoice->patient->first_name . ' ' . $invoice->patient->last_name,
             'patient_cedula'     => $invoice->patient->cedula,
             'patient_phone'      => $invoice->patient->phone,
             'branch_name'        => $invoice->branch->name,

@@ -99,143 +99,152 @@ class InvoiceController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'doctor_id' => 'required|exists:users,id',
-            'branch_id' => 'required|exists:branches,id',
-            'insurance_id' => 'nullable|exists:insurances,id',
-            'authorization_number' => 'nullable|string|max:255',
-            'with_ncf' => 'nullable|boolean',
-            'ncf' => 'nullable|string|max:255',
-            'ncf_type' => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
-            'customer_rnc' => 'nullable|string|max:255',
-            'customer_business_name' => 'nullable|string|max:255',
-            'services' => 'required|array|min:1',
-            'services.*.id' => 'required|exists:services,id',
-            'services.*.quantity' => 'required|integer|min:1',
-            'services.*.custom_price' => 'nullable|numeric|min:0',
-            'services.*.cov_value' => 'nullable|numeric|min:0',
-            'services.*.cov_type' => 'nullable|in:pct,amt',
-        ]);
+{
+    $validated = $request->validate([
+        'patient_id' => 'required|exists:patients,id',
+        'doctor_id' => 'required|exists:users,id',
+        'branch_id' => 'required|exists:branches,id',
+        'insurance_id' => 'nullable|exists:insurances,id',
+        'authorization_number' => 'nullable|string|max:255',
+        'with_ncf' => 'nullable|boolean',
+        'ncf' => 'nullable|string|max:255',
+        'ncf_type' => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+        'customer_rnc' => 'nullable|string|max:255',
+        'customer_business_name' => 'nullable|string|max:255',
+        'services' => 'required|array|min:1',
+        'services.*.id' => 'required|exists:services,id',
+        'services.*.quantity' => 'required|integer|min:1',
+        'services.*.custom_price' => 'nullable|numeric|min:0',
+        'services.*.cov_value' => 'nullable|numeric|min:0',
+        'services.*.cov_type' => 'nullable|in:pct,amt',
+    ]);
 
-        // Validar que la sucursal sea correcta según el rol
-        if (auth()->user()->role->name === 'recepcionista') {
-            if ($request->branch_id != auth()->user()->branch_id) {
-                return redirect()
-                    ->back()
-                    ->withInput()
-                    ->with('error', 'No puedes facturar en otra sucursal.');
-            }
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $subtotal = 0;
-            $totalTax = 0;
-            $insuranceDiscount = 0;
-            $items = [];
-
-            foreach ($request->services as $serviceData) {
-                $service = Service::with('taxes')->find($serviceData['id']);
-                $quantity = $serviceData['quantity'];
-                $price = $serviceData['custom_price'] ?? $service->price;
-                $subtotalItem = $price * $quantity;
-
-                // Calcular impuestos del servicio
-                $taxCalculation = $service->calculateTaxes($subtotalItem);
-                $taxAmount = $taxCalculation['total_tax'];
-                $totalTax += $taxAmount;
-
-                // Calcular cobertura
-                $coveragePercentage = 0;
-                $insuranceAmount = 0;
-                $patientAmount = $subtotalItem;
-
-                if ($request->filled('insurance_id')) {
-                    $coverage = $service->getCoverageForInsurance(Insurance::find($request->insurance_id));
-                    if ($coverage) {
-                        $covValue = $serviceData['cov_value'] ?? 0;
-                        $covType = $serviceData['cov_type'] ?? 'pct';
-
-                        if ($covType === 'pct') {
-                            $coveragePercentage = min($covValue, 100);
-                            $insuranceAmount = $subtotalItem * ($coveragePercentage / 100);
-                        } else {
-                            $insuranceAmount = min($covValue, $subtotalItem);
-                            $coveragePercentage = ($subtotalItem > 0) ? ($insuranceAmount / $subtotalItem) * 100 : 0;
-                        }
-                        $patientAmount = $subtotalItem - $insuranceAmount;
-                        $insuranceDiscount += $insuranceAmount;
-                    }
-                }
-
-                $items[] = [
-                    'service_id' => $service->id,
-                    'price' => $price,
-                    'quantity' => $quantity,
-                    'subtotal' => $subtotalItem,
-                    'coverage_percentage' => $coveragePercentage,
-                    'insurance_amount' => $insuranceAmount,
-                    'patient_amount' => $patientAmount,
-                    'tax_amount' => $taxAmount,
-                    'tax_details' => $taxCalculation['taxes'],
-                    'total_with_tax' => $patientAmount + $taxAmount,
-                ];
-
-                $subtotal += $subtotalItem;
-            }
-
-            $totalWithTax = $subtotal + $totalTax;
-            $total = $totalWithTax - $insuranceDiscount;
-
-            // Crear factura
-            $invoice = Invoice::create([
-                'patient_id' => $request->patient_id,
-                'user_id' => auth()->id(),
-                'doctor_id' => $request->doctor_id,
-                'branch_id' => $request->branch_id,
-                'insurance_id' => $request->insurance_id,
-                'subtotal' => $subtotal,
-                'tax_amount' => $totalTax,
-                'total_with_tax' => $totalWithTax,
-                'insurance_discount' => $insuranceDiscount,
-                'total' => $total,
-                'status' => 'pendiente',
-                'authorization_number' => $request->authorization_number,
-                'with_ncf' => $request->has('with_ncf'),
-                'ncf' => $request->ncf,
-                'ncf_type' => $request->ncf_type,
-                'customer_rnc' => $request->customer_rnc,
-                'customer_business_name' => $request->customer_business_name,
-                'tax_details' => [
-                    'total_tax' => $totalTax,
-                    'items' => collect($items)->map(fn($item) => $item['tax_details'])->flatten(1)->toArray()
-                ]
-            ]);
-
-            // Crear items
-            foreach ($items as $item) {
-                $invoice->items()->create($item);
-            }
-
-            DB::commit();
-
-            // ✅ REDIRIGIR A SHOW
-            return redirect()
-                ->route('invoices.show', $invoice->id)
-                ->with('success', "Factura #{$invoice->id} creada exitosamente.");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
+    // Validar que la sucursal sea correcta según el rol
+    if (auth()->user()->role->name === 'recepcionista') {
+        if ($request->branch_id != auth()->user()->branch_id) {
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Error al crear la factura: ' . $e->getMessage());
+                ->with('error', 'No puedes facturar en otra sucursal.');
         }
     }
 
+    DB::beginTransaction();
+
+    try {
+        $subtotal = 0;
+        $totalTax = 0;
+        $insuranceDiscount = 0;
+        $items = [];
+
+        // Obtener el seguro seleccionado
+        $insurance = $request->filled('insurance_id') ? Insurance::find($request->insurance_id) : null;
+
+        foreach ($request->services as $serviceData) {
+            $service = Service::with(['taxes', 'insuranceCoverage'])->find($serviceData['id']);
+            $quantity = $serviceData['quantity'];
+            $price = $serviceData['custom_price'] ?? $service->price;
+            $subtotalItem = $price * $quantity;
+
+            // Calcular impuestos del servicio
+            $taxCalculation = $service->calculateTaxes($subtotalItem);
+            $taxAmount = $taxCalculation['total_tax'];
+            $totalTax += $taxAmount;
+
+            // ✅ Calcular cobertura con prioridad
+            $coveragePercentage = 0;
+            $insuranceAmount = 0;
+            $patientAmount = $subtotalItem;
+            $coverageSource = 'Sin cobertura';
+
+            if ($insurance) {
+                // Verificar si el servicio tiene cobertura específica
+                $specificCoverage = $service->getCoverageForInsurance($insurance);
+                
+                if ($specificCoverage) {
+                    // ✅ Usar cobertura específica del servicio
+                    $calculation = $specificCoverage->calculateCoverage($subtotalItem);
+                    $coveragePercentage = $calculation['percentage'];
+                    $insuranceAmount = $calculation['insurance_amount'];
+                    $patientAmount = $subtotalItem - $insuranceAmount;
+                    $coverageSource = 'Específica del servicio';
+                } else {
+                    // ✅ Usar cobertura global del seguro
+                    $globalCoverage = $insurance->coverage_percentage;
+                    if ($globalCoverage > 0) {
+                        $coveragePercentage = $globalCoverage;
+                        $insuranceAmount = $subtotalItem * ($globalCoverage / 100);
+                        $patientAmount = $subtotalItem - $insuranceAmount;
+                        $coverageSource = 'Seguro global';
+                    }
+                }
+                
+                $insuranceDiscount += $insuranceAmount;
+            }
+
+            $items[] = [
+                'service_id' => $service->id,
+                'price' => $price,
+                'quantity' => $quantity,
+                'subtotal' => $subtotalItem,
+                'coverage_percentage' => $coveragePercentage,
+                'insurance_amount' => $insuranceAmount,
+                'patient_amount' => $patientAmount,
+                'tax_amount' => $taxAmount,
+                'tax_details' => $taxCalculation['taxes'],
+                'total_with_tax' => $patientAmount + $taxAmount,
+            ];
+
+            $subtotal += $subtotalItem;
+        }
+
+        $totalWithTax = $subtotal + $totalTax;
+        $total = $totalWithTax - $insuranceDiscount;
+
+        // Crear factura
+        $invoice = Invoice::create([
+            'patient_id' => $request->patient_id,
+            'user_id' => auth()->id(),
+            'doctor_id' => $request->doctor_id,
+            'branch_id' => $request->branch_id,
+            'insurance_id' => $request->insurance_id,
+            'subtotal' => $subtotal,
+            'tax_amount' => $totalTax,
+            'total_with_tax' => $totalWithTax,
+            'insurance_discount' => $insuranceDiscount,
+            'total' => $total,
+            'status' => 'pendiente',
+            'authorization_number' => $request->authorization_number,
+            'with_ncf' => $request->has('with_ncf'),
+            'ncf' => $request->ncf,
+            'ncf_type' => $request->ncf_type,
+            'customer_rnc' => $request->customer_rnc,
+            'customer_business_name' => $request->customer_business_name,
+            'tax_details' => [
+                'total_tax' => $totalTax,
+                'items' => collect($items)->map(fn($item) => $item['tax_details'])->flatten(1)->toArray()
+            ]
+        ]);
+
+        // Crear items
+        foreach ($items as $item) {
+            $invoice->items()->create($item);
+        }
+
+        DB::commit();
+
+        return redirect()
+            ->route('invoices.show', $invoice->id)
+            ->with('success', "Factura #{$invoice->id} creada exitosamente.");
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()
+            ->back()
+            ->withInput()
+            ->with('error', 'Error al crear la factura: ' . $e->getMessage());
+    }
+}
     /**
      * Display the specified invoice.
      */
@@ -433,4 +442,41 @@ class InvoiceController extends Controller
 
         return response()->json($branches);
     }
+
+    public function getCoverage($serviceId, $insuranceId)
+{
+    $service = Service::with('insuranceCoverage')->findOrFail($serviceId);
+    $insurance = Insurance::findOrFail($insuranceId);
+    
+    // Verificar si el servicio tiene cobertura específica
+    $specificCoverage = $service->getCoverageForInsurance($insurance);
+    
+    if ($specificCoverage) {
+        $calculation = $specificCoverage->calculateCoverage($service->price);
+        return response()->json([
+            'has_coverage' => true,
+            'coverage_percentage' => $calculation['percentage'],
+            'insurance_amount' => $calculation['insurance_amount'],
+            'patient_amount' => $calculation['patient_amount'],
+            'is_specific' => true,
+            'source' => 'Específica del servicio',
+            'requires_authorization' => $specificCoverage->requires_authorization
+        ]);
+    }
+    
+    // Si no hay cobertura específica, usar la global del seguro
+    $globalCoverage = $insurance->coverage_percentage;
+    $insuranceAmount = $service->price * ($globalCoverage / 100);
+    $patientAmount = $service->price - $insuranceAmount;
+    
+    return response()->json([
+        'has_coverage' => $globalCoverage > 0,
+        'coverage_percentage' => $globalCoverage,
+        'insurance_amount' => $insuranceAmount,
+        'patient_amount' => $patientAmount,
+        'is_specific' => false,
+        'source' => 'Seguro global',
+        'requires_authorization' => false
+    ]);
+}
 }

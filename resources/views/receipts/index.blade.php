@@ -3,8 +3,8 @@
 <div class="container-fluid pt-3">
 
     @php
-    $isAdmin2 = auth()->user()->role_id == 4;
-@endphp
+        $isAdmin = auth()->user()->role->name === 'admin';
+    @endphp
 
 <style>
 :root {
@@ -249,20 +249,20 @@
                                autocomplete="off">
                     </div>
                 </div>
-               @if($isAdmin || $isAdmin2)
-<div class="col-md-3">
-    <select name="branch_id" class="form-select form-select-sm"
-            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
-            onchange="document.getElementById('filter-form').submit()">
-        <option value="">Todas las sucursales</option>
-        @foreach($branches as $br)
-            <option value="{{ $br->id }}" {{ request('branch_id') == $br->id ? 'selected':'' }}>
-                {{ $br->name }}
-            </option>
-        @endforeach
-    </select>
-</div>
-@endif
+                @if($isAdmin)
+                <div class="col-md-3">
+                    <select name="branch_id" class="form-select form-select-sm"
+                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
+                            onchange="document.getElementById('filter-form').submit()">
+                        <option value="">Todas las sucursales</option>
+                        @foreach($branches as $br)
+                            <option value="{{ $br->id }}" {{ request('branch_id') == $br->id ? 'selected':'' }}>
+                                {{ $br->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm" style="border-radius:2rem;font-size:.8rem;">
                         <i class="ri-search-line me-1"></i>Buscar
@@ -398,20 +398,20 @@
                            class="form-control form-control-sm"
                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;">
                 </div>
-               @if($isAdmin || $isAdmin2)
-<div class="col-md-2">
-    <select name="rbranch_id" class="form-select form-select-sm"
-            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
-            onchange="document.getElementById('receipts-filter-form').submit()">
-        <option value="">Todas las sucursales</option>
-        @foreach($branches as $br)
-            <option value="{{ $br->id }}" {{ request('rbranch_id') == $br->id ? 'selected':'' }}>
-                {{ $br->name }}
-            </option>
-        @endforeach
-    </select>
-</div>
-@endif
+                @if($isAdmin)
+                <div class="col-md-2">
+                    <select name="rbranch_id" class="form-select form-select-sm"
+                            style="border-radius:2rem;border:1.5px solid var(--border);font-size:.83rem;"
+                            onchange="document.getElementById('receipts-filter-form').submit()">
+                        <option value="">Todas las sucursales</option>
+                        @foreach($branches as $br)
+                            <option value="{{ $br->id }}" {{ request('rbranch_id') == $br->id ? 'selected':'' }}>
+                                {{ $br->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
                 <div class="col-auto">
                     <button type="submit" class="btn btn-sm"
                             style="border-radius:2rem;font-size:.8rem;background:var(--rt);color:#fff;border:none;">
@@ -624,11 +624,11 @@
                             <div class="pay-total-row pay-final"><span>Total ingresado</span><span id="pd-total">RD$ 0.00</span></div>
                             <div style="font-size:.78rem;margin-top:.35rem;text-align:right;" id="pd-diff"></div>
                         </div>
-                        <div class="vuelto-box" id="vuelto-box">
-                            <div class="vuelto-lbl"><i class="ri-exchange-funds-line"></i>Cambio a devolver al paciente</div>
-                            <div class="vuelto-amt" id="vuelto-amt">RD$ 0.00</div>
-                            <div class="vuelto-sub" id="vuelto-sub">—</div>
-                        </div>
+                       <div class="vuelto-box" id="vuelto-box" style="display:none;">
+    <div class="vuelto-lbl"><i class="ri-exchange-funds-line"></i>Cambio a devolver al paciente</div>
+    <div class="vuelto-amt" id="vuelto-amt">RD$ 0.00</div>
+    <div class="vuelto-sub" id="vuelto-sub">—</div>
+</div>
                         <div class="mt-3">
                             <label style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Notas (opcional)</label>
                             <textarea name="notes" rows="2" class="form-control mt-1"
@@ -725,16 +725,16 @@ function fillModal(d) {
         }
     }
     document.getElementById('modal-total').textContent = 'RD$ ' + fmt(d.total);
-   if (d.total > 0) {
-    document.getElementById('mc-cash').classList.add('selected');
-    document.getElementById('i-cash').value = d.total.toFixed(2);
-} else {
-    // Factura en 0 — ningún método requerido, solo confirmar
-    document.getElementById('modal-total').textContent = 'RD$ 0.00 — Sin costo';
-}
+    if (d.total > 0) {
+        document.getElementById('mc-cash').classList.add('selected');
+        document.getElementById('i-cash').value = d.total.toFixed(2);
+        // ✅ Disparar recalcPay después de cargar
+        setTimeout(() => recalcPay(), 100);
+    } else {
+        document.getElementById('modal-total').textContent = 'RD$ 0.00 — Sin costo';
+    }
     document.getElementById('modal-loading').style.display = 'none';
     document.getElementById('modal-content').style.display = '';
-    recalcPay();
 }
 
 function toggleMethod(m) {
@@ -751,29 +751,49 @@ function toggleMethod(m) {
 }
 
 function recalcPay() {
+    console.log('🔁 recalcPay ejecutado');
+    
     const cash     = parseFloat(document.getElementById('i-cash')?.value)     || 0;
     const card     = parseFloat(document.getElementById('i-card')?.value)     || 0;
     const transfer = parseFloat(document.getElementById('i-transfer')?.value) || 0;
     const total    = cash + card + transfer;
+    
+    console.log('💰 Montos:', { cash, card, transfer, total, invoiceTotal });
+    
     toggleRow('pr-cash',     'pd-cash',     cash);
     toggleRow('pr-card',     'pd-card',     card);
     toggleRow('pr-transfer', 'pd-transfer', transfer);
     document.getElementById('pd-total').textContent = 'RD$ ' + fmt(total);
+    
     const diffEl    = document.getElementById('pd-diff');
     const vueltoBox = document.getElementById('vuelto-box');
-    if (invoiceTotal <= 0) { diffEl.textContent = ''; vueltoBox.style.display = 'none'; return; }
+    
+    // Si la factura es 0, no hay vuelto
+    if (invoiceTotal <= 0) { 
+        diffEl.textContent = ''; 
+        vueltoBox.style.display = 'none'; 
+        return; 
+    }
+    
     const diff       = total - invoiceTotal;
     const nonCash    = card + transfer;
     const cashNeeded = Math.max(0, invoiceTotal - nonCash);
     const vuelto     = cash - cashNeeded;
+    
+    console.log('🧮 Cálculos:', { diff, nonCash, cashNeeded, vuelto });
+    
+    // ✅ MOSTRAR VUELTO CORRECTAMENTE
     if (vuelto > 0.009) {
-        vueltoBox.style.display = '';
+        vueltoBox.style.display = 'block';
         document.getElementById('vuelto-amt').textContent = 'RD$ ' + fmt(vuelto);
         document.getElementById('vuelto-sub').textContent =
             `Efectivo recibido: RD$ ${fmt(cash)} · Efectivo necesario: RD$ ${fmt(cashNeeded)}`;
+        console.log('✅ Vuelto mostrado:', fmt(vuelto));
     } else {
         vueltoBox.style.display = 'none';
     }
+    
+    // ✅ CALCULAR DIFERENCIA
     if (Math.abs(diff) < 0.01) {
         diffEl.innerHTML = '<span class="pay-diff-ok"><i class="ri-check-double-line me-1"></i>Monto exacto ✓</span>';
     } else if (vuelto > 0.009 && Math.abs(diff - vuelto) < 0.01) {
@@ -782,6 +802,8 @@ function recalcPay() {
         diffEl.innerHTML = `<span class="pay-diff-warn"><i class="ri-error-warning-line me-1"></i>Exceso en tarjeta/transferencia: RD$ ${fmt(diff)}</span>`;
     } else if (diff < -0.009) {
         diffEl.innerHTML = `<span class="pay-diff-warn"><i class="ri-error-warning-line me-1"></i>Faltan RD$ ${fmt(Math.abs(diff))}</span>`;
+    } else {
+        diffEl.innerHTML = '';
     }
 }
 
@@ -798,15 +820,17 @@ function submitPay() {
     const card     = parseFloat(document.getElementById('i-card')?.value)     || 0;
     const transfer = parseFloat(document.getElementById('i-transfer')?.value) || 0;
     const total    = cash + card + transfer;
-if (total < 0) { showToast('El monto no puede ser negativo.', 'err'); return; }
+    
+    if (total < 0) { showToast('El monto no puede ser negativo.', 'err'); return; }
     if ((card + transfer) > invoiceTotal + 0.01) {
         showToast('Tarjeta y/o transferencia no pueden exceder el total de la factura.', 'err'); return;
     }
     const nonCash    = card + transfer;
     const cashNeeded = Math.max(0, invoiceTotal - nonCash);
     if (invoiceTotal > 0 && cash < cashNeeded - 0.01) {
-    showToast(`Faltan RD$ ${fmt(cashNeeded - cash)} para completar el pago.`, 'err'); return;
-}
+        showToast(`Faltan RD$ ${fmt(cashNeeded - cash)} para completar el pago.`, 'err'); 
+        return;
+    }
     document.getElementById('btn-confirm-pay').disabled = true;
     document.getElementById('pay-spin').classList.remove('d-none');
     document.getElementById('pay-icon').classList.add('d-none');

@@ -79,6 +79,10 @@
     background:linear-gradient(135deg,#1a2e5e 0%,#405189 60%,#3d7abf 100%);
     color:#fff;
 }
+.role-banner.doctor-banner {
+    background:linear-gradient(135deg,#0ab39c 0%,#2d7a6e 50%,#405189 100%);
+    color:#fff;
+}
 .role-banner h5 { margin:0; font-size:1.1rem; font-weight:800; }
 .role-banner p  { margin:0; font-size:.82rem; opacity:.82; }
 .role-banner-ico {
@@ -151,17 +155,17 @@
 .br-table tbody tr:hover td { background:var(--surface); }
 .br-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:.5rem; }
 
-/* ── Audiologist ranking ── */
-.au-row { display:flex; align-items:center; gap:.85rem; padding:.65rem .2rem; border-bottom:1px solid var(--border); }
-.au-row:last-child { border-bottom:none; }
-.au-rank { width:20px; font-size:.7rem; font-weight:800; color:var(--muted); text-align:center; }
-.au-av   { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; color:#fff; }
-.au-name { font-size:.84rem; font-weight:600; color:var(--ink); }
-.au-mini { font-size:.72rem; color:var(--muted); }
-.au-bar  { flex:1; height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
-.au-bar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--dp),var(--dt)); }
-.au-count { font-size:.9rem; font-weight:800; color:var(--dp); text-align:right; min-width:28px; }
-.au-done  { font-size:.7rem; color:var(--dt); font-weight:600; text-align:right; }
+/* ── Doctor ranking ── */
+.doctor-row { display:flex; align-items:center; gap:.85rem; padding:.65rem .2rem; border-bottom:1px solid var(--border); }
+.doctor-row:last-child { border-bottom:none; }
+.doctor-rank { width:20px; font-size:.7rem; font-weight:800; color:var(--muted); text-align:center; }
+.doctor-av   { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; color:#fff; }
+.doctor-name { font-size:.84rem; font-weight:600; color:var(--ink); }
+.doctor-mini { font-size:.72rem; color:var(--muted); }
+.doctor-bar  { flex:1; height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
+.doctor-bar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--dp),var(--dt)); }
+.doctor-count { font-size:.9rem; font-weight:800; color:var(--dp); text-align:right; min-width:28px; }
+.doctor-done  { font-size:.7rem; color:var(--dt); font-weight:600; text-align:right; }
 
 /* ── Donut ── */
 .donut-wrap { display:flex; align-items:center; gap:1.2rem; }
@@ -208,14 +212,16 @@
 <div class="row mb-3 align-items-center">
     <div class="col">
         <h4 class="mb-0" style="font-weight:800;letter-spacing:-.02em;">
-            @if($isAdmin) Panel de control @else Mi panel @endif
+            @if($isAdmin) Panel de Control
+            @elseif($isDoctor) Mis Citas
+            @else Panel de Control
+            @endif
         </h4>
         <p class="mb-0 text-muted" style="font-size:.8rem;">
             <span class="pulse me-2"></span>
             {{ now()->locale('es')->isoFormat('dddd, D [de] MMMM [de] YYYY') }}
         </p>
     </div>
-   
 </div>
 
 {{-- ══════════════════════════════════
@@ -240,17 +246,26 @@
     </div>
     @endif
 </div>
+@elseif($isDoctor)
+<div class="role-banner doctor-banner fa0">
+    <div class="banner-deco"></div>
+    <div class="banner-deco2"></div>
+    <div class="role-banner-ico"><i class="ri-stethoscope-line"></i></div>
+    <div>
+        <h5>Bienvenido, Dr. {{ auth()->user()->name }}</h5>
+        <p>{{ auth()->user()->branch->name ?? 'Mi Sucursal' }} · Citas asignadas a tu agenda</p>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+        <span style="background:rgba(255,255,255,.15);border-radius:2rem;padding:.25rem .75rem;font-size:.78rem;font-weight:700;">
+            <i class="ri-calendar-check-line me-1"></i>{{ $apptToday }} citas hoy
+        </span>
+    </div>
+</div>
 @else
 <div class="role-banner branch-banner fa0">
     <div class="banner-deco"></div>
     <div class="banner-deco2"></div>
-    <div class="role-banner-ico">
-        @if(auth()->user()->role->name === 'audiologo')
-            <i class="ri-stethoscope-line"></i>
-        @else
-            <i class="ri-building-2-line"></i>
-        @endif
-    </div>
+    <div class="role-banner-ico"><i class="ri-building-2-line"></i></div>
     <div>
         <h5>{{ auth()->user()->branch->name ?? 'Mi Sucursal' }}</h5>
         <p>
@@ -362,7 +377,7 @@
                         <div class="ag-av av{{ $ci }}">{{ $ini ?: '?' }}</div>
                         <div>
                             <div class="ag-name">{{ $fn }} {{ $ln }}</div>
-                            <div class="ag-doc">{{ $ap->audiologist->name ?? '—' }}</div>
+                            <div class="ag-doc">{{ $ap->doctor->name ?? '—' }}</div>
                         </div>
                         <span class="ag-st {{ $stc }}">{{ ucfirst($ap->status) }}</span>
                     </div>
@@ -378,7 +393,7 @@
 </div>
 
 {{-- ══════════════════════════════════
-     ROW 3: Servicios + Donut citas + Audiólogos
+     ROW 3: Servicios + Donut citas + Médicos
 ══════════════════════════════════ --}}
 <div class="row g-3">
 
@@ -453,35 +468,35 @@
         </div>
     </div>
 
-    {{-- Audiólogos --}}
+    {{-- Médicos --}}
     <div class="col-xl-4 fa2">
         <div class="dc h-100">
             <div class="dc-head">
                 <div class="dc-ico" style="background:rgba(247,184,75,.12);color:var(--da)"><i class="ri-user-star-line"></i></div>
-                <h6>Audiólogos — citas este mes</h6>
+                <h6>Médicos — citas este mes</h6>
             </div>
             <div class="dc-body" style="padding-top:.35rem;">
-                @forelse($topAudiologists as $i => $au)
+                @forelse($topDoctors as $i => $doc)
                     @php
-                        $ini = strtoupper(collect(explode(' ',$au->name))->map(fn($w)=>$w[0]??'')->take(2)->join(''));
-                        $pct = $maxAppts > 0 ? round($au->appts_month / $maxAppts * 100) : 0;
+                        $ini = strtoupper(collect(explode(' ',$doc->name))->map(fn($w)=>$w[0]??'')->take(2)->join(''));
+                        $pct = $maxAppts > 0 ? round($doc->appts_month / $maxAppts * 100) : 0;
                     @endphp
-                    <div class="au-row">
-                        <div class="au-rank">#{{ $i+1 }}</div>
-                        <div class="au-av av{{ $i % 6 }}">{{ $ini }}</div>
+                    <div class="doctor-row">
+                        <div class="doctor-rank">#{{ $i+1 }}</div>
+                        <div class="doctor-av av{{ $i % 6 }}">{{ $ini }}</div>
                         <div style="flex:1;min-width:0;">
-                            <div class="au-name">{{ $au->name }}</div>
-                            <div class="au-bar mt-1"><div class="au-bar-fill" style="width:{{ $pct }}%"></div></div>
+                            <div class="doctor-name">{{ $doc->name }}</div>
+                            <div class="doctor-bar mt-1"><div class="doctor-bar-fill" style="width:{{ $pct }}%"></div></div>
                         </div>
                         <div>
-                            <div class="au-count">{{ $au->appts_month }}</div>
-                            <div class="au-done">{{ $au->appts_completed }} ✓</div>
+                            <div class="doctor-count">{{ $doc->appts_month }}</div>
+                            <div class="doctor-done">{{ $doc->appts_completed }} ✓</div>
                         </div>
                     </div>
                 @empty
                     <div style="text-align:center;color:var(--muted);font-size:.83rem;padding:2rem 0;">
                         <i class="ri-user-line" style="font-size:1.8rem;opacity:.25;display:block;margin-bottom:.4rem;"></i>
-                        Sin audiólogos asignados
+                        Sin médicos asignados
                     </div>
                 @endforelse
             </div>
@@ -565,10 +580,79 @@
         </div>
     </div>
 
-    @else
-    {{-- Accesos rápidos — recepcionista / audiólogo --}}
+    @elseif($isDoctor)
+    {{-- Mis citas de hoy (solo médico) --}}
+    <div class="col-xl-4 fa1">
+        <div class="dc h-100">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(10,179,156,.1);color:var(--dt)"><i class="ri-calendar-check-line"></i></div>
+                <h6>Mis citas de hoy</h6>
+                <a href="{{ route('doctor.appointments.index') }}" class="see-all">Ver todas →</a>
+            </div>
+            <div class="dc-body" style="padding-top:.35rem;">
+                @forelse($myTodayAppointments as $ap)
+                    @php
+                        $fn  = $ap->patient->first_name ?? '';
+                        $ln  = $ap->patient->last_name  ?? '';
+                        $ini = strtoupper(substr($fn,0,1).substr($ln,0,1));
+                        $ci  = $loop->index % 6;
+                        $stc = match($ap->status) { 'completada'=>'ag-comp','cancelada'=>'ag-canc',default=>'ag-prog' };
+                    @endphp
+                    <div class="ag-item">
+                        <div class="ag-time">{{ \Carbon\Carbon::parse($ap->appointment_time)->format('g:i') }}</div>
+                        <div class="ag-av av{{ $ci }}">{{ $ini ?: '?' }}</div>
+                        <div>
+                            <div class="ag-name">{{ $fn }} {{ $ln }}</div>
+                            <div class="ag-doc">{{ $ap->branch->name ?? '—' }}</div>
+                        </div>
+                        <span class="ag-st {{ $stc }}">{{ ucfirst($ap->status) }}</span>
+                    </div>
+                @empty
+                    <div style="text-align:center;padding:2rem 0;color:var(--muted);font-size:.83rem;">
+                        <i class="ri-calendar-check-line" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem;"></i>
+                        No tienes citas para hoy
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 
-                {{-- Mini stats de sucursal --}}
+    @else
+    {{-- Accesos rápidos — recepcionista --}}
+    <div class="col-xl-4 fa1">
+        <div class="dc">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(64,81,137,.1);color:var(--dp)"><i class="ri-rocket-line"></i></div>
+                <h6>Acciones rápidas</h6>
+            </div>
+            <div class="dc-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="{{ route('patients.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                            <i class="ri-user-add-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
+                            <span style="font-size:.78rem;font-weight:600;">Nuevo paciente</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('appointments.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                            <i class="ri-calendar-add-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
+                            <span style="font-size:.78rem;font-weight:600;">Nueva cita</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('invoices.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                            <i class="ri-file-add-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
+                            <span style="font-size:.78rem;font-weight:600;">Nueva factura</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('receipts.index') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                            <i class="ri-bank-card-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
+                            <span style="font-size:.78rem;font-weight:600;">Registrar pago</span>
+                        </a>
+                    </div>
+                </div>
+
                 <hr style="margin:1rem 0;border-color:var(--border);">
                 <div class="row g-2">
                     <div class="col-6">

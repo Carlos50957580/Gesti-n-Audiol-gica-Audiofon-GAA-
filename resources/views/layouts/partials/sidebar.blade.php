@@ -188,16 +188,27 @@
                     </li>
                     @endif
 
-                    {{-- Citas --}}
-                    @if($isAdmin || $isReceptionist || $isDoctor || $isMedicRole)
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" 
-                           href="{{ route('appointments.index') }}">
-                            <i class="ri-calendar-check-line"></i>
-                            <span data-key="t-citas">Citas</span>
-                        </a>
-                    </li>
-                    @endif
+                   {{-- Citas (Admin y Recepcionista) --}}
+@if(in_array(auth()->user()->role->name, ['admin', 'recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}" 
+           href="{{ route('appointments.index') }}">
+            <i class="ri-calendar-check-line"></i>
+            <span data-key="t-citas">Citas</span>
+        </a>
+    </li>
+@endif
+
+{{-- Mis Citas (Médicos) --}}
+@if(auth()->user()->is_doctor == 1)
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('doctor.appointments.*') ? 'active' : '' }}" 
+           href="{{ route('doctor.appointments.index') }}">
+            <i class="ri-calendar-line"></i>
+            <span data-key="t-mis-citas">Mis Citas</span>
+        </a>
+    </li>
+@endif
 
                    
 
@@ -220,6 +231,7 @@
                         </a>
                     </li>
                     @endif
+                    
 
                     {{-- Reportes Recepcionista --}}
                     @if($isReceptionist)
@@ -239,6 +251,8 @@
         </div>
         <!-- Sidebar -->
     </div>
+
+
 
     <div class="sidebar-background"></div>
 </div>

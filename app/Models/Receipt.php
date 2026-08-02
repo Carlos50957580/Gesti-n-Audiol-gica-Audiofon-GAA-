@@ -30,7 +30,6 @@ class Receipt extends Model
     ];
 
     // ── Relaciones ────────────────────────────────────────────────────────────
-
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
@@ -46,7 +45,7 @@ class Receipt extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // ── Accessors ─────────────────────────────────────────────────────────────
 
     /** Número de recibo legible: REC-000001 */
     public function getReceiptNumberAttribute(): string
@@ -58,8 +57,8 @@ class Receipt extends Model
     public function getPaymentSummaryAttribute(): string
     {
         $parts = [];
-        if ($this->cash_amount     > 0) $parts[] = 'Efectivo';
-        if ($this->card_amount     > 0) $parts[] = 'Tarjeta';
+        if ($this->cash_amount > 0) $parts[] = 'Efectivo';
+        if ($this->card_amount > 0) $parts[] = 'Tarjeta';
         if ($this->transfer_amount > 0) $parts[] = 'Transferencia';
         return implode(' + ', $parts) ?: '—';
     }
@@ -74,5 +73,28 @@ class Receipt extends Model
         ])->filter(fn($v) => $v > 0)->count();
 
         return $used > 1;
+    }
+
+    /** Método de pago principal */
+    public function getMainPaymentMethodAttribute(): string
+    {
+        if ($this->cash_amount > 0) {
+            return 'Efectivo';
+        } elseif ($this->card_amount > 0) {
+            return 'Tarjeta';
+        } elseif ($this->transfer_amount > 0) {
+            return 'Transferencia';
+        }
+        return 'Mixto';
+    }
+
+    /** Desglose de pagos */
+    public function getPaymentBreakdownAttribute(): array
+    {
+        return [
+            'cash' => $this->cash_amount ?? 0,
+            'card' => $this->card_amount ?? 0,
+            'transfer' => $this->transfer_amount ?? 0,
+        ];
     }
 }

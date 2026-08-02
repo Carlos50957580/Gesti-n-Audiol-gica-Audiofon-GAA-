@@ -41,7 +41,7 @@ class Service extends Model
         return $this->hasMany(ServiceInsuranceCoverage::class, 'service_id');
     }
 
-    // ✅ NUEVA: Relación con impuestos (many-to-many)
+    // Relación con impuestos (many-to-many)
     public function taxes(): BelongsToMany
     {
         return $this->belongsToMany(Tax::class, 'service_tax', 'service_id', 'tax_id')
@@ -70,16 +70,63 @@ class Service extends Model
         return $this->category?->requires_clinical_record ?? false;
     }
 
-    // Obtener cobertura para un seguro específico
+    /**
+     * Obtener cobertura para un seguro específico (prioriza la configuración específica)
+     */
     public function getCoverageForInsurance(Insurance $insurance): ?ServiceInsuranceCoverage
     {
-        return $this->insuranceCoverage()
+        // Buscar cobertura específica para este servicio y seguro
+        $specificCoverage = $this->insuranceCoverage()
             ->where('insurance_id', $insurance->id)
             ->where('is_active', 1)
             ->first();
+
+        // Si existe cobertura específica, usarla
+        if ($specificCoverage) {
+            return $specificCoverage;
+        }
+
+        // Si no existe, retornar null (se usará la cobertura global del seguro)
+        return null;
     }
 
-    // ✅ NUEVO: Calcular impuestos para el servicio
+    /**
+     * Calcular cobertura para un servicio con un seguro específico
+     */
+    public function calculateCoverageWithInsurance(float $subtotal, Insurance $insurance, float $covValue = 0, string $covType = 'pct'): array
+    {
+        // Buscar cobertura específica
+        $specificCoverage = $this->getCoverageForInsurance($insurance);
+        
+        if ($specificCoverage) {
+            // ✅ Usar cobertura específica del servicio
+            $calculation = $specificCoverage->calculateCoverage($subtotal);
+            return [
+                'coverage_percentage' => $calculation['percentage'],
+                'insurance_amount' => $calculation['insurance_amount'],
+                'patient_amount' => $calculation['patient_amount'],
+                'is_specific' => true,
+                'coverage_source' => 'Servicio específico'
+            ];
+        }
+
+        // ✅ Si no hay cobertura específica, usar la cobertura global del seguro
+        $globalCoverage = $insurance->coverage_percentage;
+        $insuranceAmount = $subtotal * ($globalCoverage / 100);
+        $patientAmount = $subtotal - $insuranceAmount;
+
+        return [
+            'coverage_percentage' => $globalCoverage,
+            'insurance_amount' => $insuranceAmount,
+            'patient_amount' => $patientAmount,
+            'is_specific' => false,
+            'coverage_source' => 'Seguro global'
+        ];
+    }
+
+    /**
+     * Calcular impuestos para el servicio
+     */
     public function calculateTaxes(float $subtotal): array
     {
         $taxes = $this->taxes()->where('is_active', 1)->get();

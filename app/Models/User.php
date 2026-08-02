@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\SoftDeletes; // ✅ Importar SoftDeletes
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes; // ✅ Agregar SoftDeletes
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -18,7 +18,7 @@ class User extends Authenticatable
         'role_id',
         'branch_id',
         'is_doctor',
-        'is_active', // ✅ Agregar
+        'is_active',
         'profile_photo',
     ];
 
@@ -31,13 +31,13 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_doctor' => 'boolean',
-        'is_active' => 'boolean', // ✅ Agregar
+        'is_active' => 'boolean',
     ];
 
-    // ✅ Fechas para soft delete
     protected $dates = ['deleted_at'];
 
-    // Relaciones
+    // ── Relaciones ───────────────────────────────────────────────────────────
+
     public function role()
     {
         return $this->belongsTo(Role::class);
@@ -48,7 +48,38 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
-    // ✅ Scopes
+    // ✅ Relación con citas (como médico/doctor)
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class, 'doctor_id');
+    }
+
+    // ✅ Relación con citas (como paciente - si aplica)
+    public function patientAppointments()
+    {
+        return $this->hasMany(Appointment::class, 'patient_id');
+    }
+
+    // ✅ Relación con facturas (como usuario que creó)
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class, 'user_id');
+    }
+
+    // ✅ Relación con facturas (como médico/doctor)
+    public function doctorInvoices()
+    {
+        return $this->hasMany(Invoice::class, 'doctor_id');
+    }
+
+    // ✅ Relación con recibos
+    public function receipts()
+    {
+        return $this->hasMany(Receipt::class, 'user_id');
+    }
+
+    // ── Scopes ───────────────────────────────────────────────────────────────
+
     public function scopeDoctors($query)
     {
         return $query->where('is_doctor', 1);
@@ -69,7 +100,8 @@ class User extends Authenticatable
         return $query->where('is_active', 0);
     }
 
-    // ✅ Métodos
+    // ── Métodos ──────────────────────────────────────────────────────────────
+
     public function isDoctor(): bool
     {
         return (bool) $this->is_doctor;

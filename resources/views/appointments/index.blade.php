@@ -378,7 +378,7 @@
                 <div class="appt-dot dot-programada"></div>
                 <div class="flex-grow-1">
                     <div class="upcoming-patient">{{ $u->patient->first_name }} {{ $u->patient->last_name }}</div>
-                    <div class="upcoming-meta"><i class="ri-user-voice-line me-1"></i>{{ $u->audiologist->name }}</div>
+                    <div class="upcoming-meta"><i class="ri-user-voice-line me-1"></i>{{ $u->doctor->name }}</div>
                     <div class="upcoming-meta"><i class="ri-calendar-line me-1"></i>{{ \Carbon\Carbon::parse($u->appointment_date)->translatedFormat('d M Y') }}</div>
                 </div>
                 <span class="upcoming-time">{{ \Carbon\Carbon::parse($u->appointment_time)->format('g:i A') }}</span>
@@ -416,7 +416,7 @@
                 <thead>
                     <tr>
                         <th>Paciente</th>
-                        <th>Audiólogo</th>
+                        <th>Médico</th>
                         <th class="d-none d-md-table-cell">Sucursal</th>
                         <th>Fecha</th>
                         <th>Hora</th>
@@ -433,7 +433,7 @@
                                 <span class="fw-semibold" style="font-size:.87rem;">{{ $appt->patient->first_name }} {{ $appt->patient->last_name }}</span>
                             </div>
                         </td>
-                        <td><span style="font-size:.84rem;"><i class="ri-user-voice-line me-1 text-muted"></i>{{ $appt->audiologist->name }}</span></td>
+                        <td><span style="font-size:.84rem;"><i class="ri-user-heart-line me-1 text-muted"></i>{{ $appt->doctor->name }}</span></td>
                         <td class="d-none d-md-table-cell"><span class="text-muted" style="font-size:.82rem;">{{ $appt->branch->name }}</span></td>
                         <td><span style="font-size:.84rem;font-weight:600;">{{ \Carbon\Carbon::parse($appt->appointment_date)->format('d/m/Y') }}</span></td>
                         <td>
@@ -505,8 +505,8 @@
                     <input type="hidden" id="f-id">
                     <input type="hidden" id="f-method" value="POST">
 
-                    {{-- Sección 1: Paciente y Audiólogo --}}
-                    <p class="section-label"><i class="ri-user-heart-line me-1"></i>Paciente y Audiólogo</p>
+                    {{-- Sección 1: Paciente y Médico --}}
+                    <p class="section-label"><i class="ri-user-heart-line me-1"></i>Paciente y Médico</p>
                     <div class="row g-3 mb-4">
 
                         {{-- PATIENT SEARCH --}}
@@ -534,59 +534,79 @@
                             <div class="text-danger mt-1" style="font-size:.8rem;" id="err-patient_id"></div>
                         </div>
 
-                        {{-- Audiólogo --}}
+                        {{-- Médico --}}
                         <div class="col-12">
                             <div class="form-floating">
-                                <select class="form-select" id="f-audiologist">
+                                <select class="form-select" id="f-doctor">
                                     <option value="">— Seleccionar —</option>
-                                    @foreach(\App\Models\User::whereHas('role', fn($q) => $q->where('name','audiologo'))->orderBy('name')->get() as $au)
-                                        <option value="{{ $au->id }}">{{ $au->name }}</option>
+                                    @foreach(\App\Models\User::where(function($q) {
+                                        $q->where('role_id', 4)
+                                          ->orWhere(function($q2) {
+                                              $q2->where('role_id', 1)->where('is_doctor', 1);
+                                          });
+                                    })->orderBy('name')->get() as $doc)
+                                        <option value="{{ $doc->id }}">{{ $doc->name }}</option>
                                     @endforeach
                                 </select>
-                                <label><i class="ri-user-voice-line me-1 text-muted"></i>Audiólogo</label>
-                                <div class="invalid-feedback" id="err-audiologist_id"></div>
+                                <label><i class="ri-user-heart-line me-1 text-muted"></i>Médico</label>
+                                <div class="invalid-feedback" id="err-doctor_id"></div>
                             </div>
                         </div>
                     </div>
 
                     {{-- Sección 2: Fecha y hora --}}
-                    <p class="section-label"><i class="ri-calendar-event-line me-1"></i>Fecha y hora</p>
-                    <div class="row g-3 mb-4">
-                        <div class="col-6">
-                            <div class="form-floating">
-                                <input type="date" class="form-control" id="f-date" placeholder="Fecha">
-                                <label>Fecha</label>
-                                <div class="invalid-feedback" id="err-appointment_date"></div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-floating">
-                                <input type="time" class="form-control" id="f-time" placeholder="Hora">
-                                <label>Hora</label>
-                                <div class="invalid-feedback" id="err-appointment_time"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Sección 3: Servicios --}}
-                    <p class="section-label"><i class="ri-stethoscope-line me-1"></i>Servicios a realizar</p>
-                    <div class="mb-4">
-                        <div id="services-wrap" class="row">
-    @forelse(\App\Models\Service::where('active', true)->orderBy('name')->get() as $svc)
-        <div class="col-12 col-md-6">
-            <div class="form-check" style="padding:.3rem 0;">
-                <input class="form-check-input svc-check" type="checkbox" value="{{ $svc->id }}" id="svc-{{ $svc->id }}">
-                <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="svc-{{ $svc->id }}" style="font-size:.86rem;color:#344563;cursor:pointer;">
-                    <span>{{ $svc->name }}</span>
-                </label>
-            </div>
+<p class="section-label"><i class="ri-calendar-event-line me-1"></i>Fecha y hora</p>
+<div class="row g-3 mb-4">
+   <div class="col-6">
+        <div class="form-floating">
+            <input type="date" class="form-control" id="f-date" 
+                   placeholder="Fecha" 
+                   min="{{ date('Y-m-d') }}"
+                   oninput="validateDate(this)">
+            <label>Fecha</label>
+            <div class="invalid-feedback" id="err-appointment_date"></div>
         </div>
-    @empty
-        <p class="text-muted mb-0" style="font-size:.82rem;">No hay servicios activos registrados.</p>
-    @endforelse
+    </div>
+    <div class="col-6">
+        <div class="form-floating">
+            <input type="time" class="form-control" id="f-time" placeholder="Hora">
+            <label>Hora</label>
+            <div class="invalid-feedback" id="err-appointment_time"></div>
+        </div>
+    </div>
 </div>
 
-                    </div>
+                    {{-- Sección 3: Servicios a realizar --}}
+<p class="section-label"><i class="ri-stethoscope-line me-1"></i>Servicios a realizar</p>
+<div class="mb-4">
+    <div class="mb-2">
+        <select id="service-category-filter" class="form-select form-select-sm" style="border-radius:2rem;border:1.5px solid #e2e8f0;font-size:.84rem;">
+            <option value="all">Todas las categorías</option>
+            @foreach(\App\Models\ServiceCategory::where('is_active', 1)->orderBy('name')->get() as $cat)
+                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div id="services-wrap" class="row">
+        @forelse(\App\Models\Service::where('is_active', 1)->with('category')->orderBy('name')->get() as $svc)
+            <div class="col-12 col-md-6 service-item" data-category="{{ $svc->category_id }}">
+                <div class="form-check" style="padding:.3rem 0;">
+                    <input class="form-check-input svc-check" type="checkbox" value="{{ $svc->id }}" id="svc-{{ $svc->id }}">
+                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="svc-{{ $svc->id }}" style="font-size:.86rem;color:#344563;cursor:pointer;">
+                        <span>
+                            {{ $svc->name }}
+                            @if($svc->category)
+                                <small class="text-muted" style="font-size:.7rem;">({{ $svc->category->name }})</small>
+                            @endif
+                        </span>
+                    </label>
+                </div>
+            </div>
+        @empty
+            <p class="text-muted mb-0" style="font-size:.82rem;">No hay servicios activos registrados.</p>
+        @endforelse
+    </div>
+</div>
 
                     {{-- Sección 4: Estado (solo en edición) --}}
                     <div id="status-wrap" style="display:none;">
@@ -634,8 +654,8 @@
                     <div id="show-status-badge"></div>
                 </div>
                 <div class="detail-row">
-                    <div class="detail-icon bg-info-subtle text-info"><i class="ri-user-voice-line"></i></div>
-                    <div><div class="detail-lbl">Audiólogo</div><div class="detail-val" id="show-audiologist">—</div></div>
+                    <div class="detail-icon bg-info-subtle text-info"><i class="ri-user-heart-line"></i></div>
+                    <div><div class="detail-lbl">Médico</div><div class="detail-val" id="show-doctor">—</div></div>
                 </div>
                 <div class="detail-row">
                     <div class="detail-icon bg-primary-subtle text-primary"><i class="ri-building-2-line"></i></div>
@@ -649,12 +669,10 @@
                     <div class="detail-icon bg-success-subtle text-success"><i class="ri-time-line"></i></div>
                     <div><div class="detail-lbl">Hora</div><div class="detail-val" id="show-time">—</div></div>
                 </div>
-                {{-- NUEVO: Teléfono del paciente --}}
                 <div class="detail-row">
                     <div class="detail-icon" style="background:#fef3c7;color:#d97706;"><i class="ri-phone-line"></i></div>
                     <div><div class="detail-lbl">Teléfono</div><div class="detail-val" id="show-phone">—</div></div>
                 </div>
-                {{-- NUEVO: Servicios de la cita --}}
                 <div class="detail-row">
                     <div class="detail-icon bg-primary-subtle text-primary" style="align-self:flex-start;margin-top:.2rem;">
                         <i class="ri-stethoscope-line"></i>
@@ -714,6 +732,27 @@
 
 <script>
 /* ══════════════════════════════════════
+   VALIDAR FECHA - No permitir fechas pasadas
+══════════════════════════════════════ */
+function validateDate(input) {
+    const selectedDate = new Date(input.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+        input.setCustomValidity('No puedes seleccionar una fecha pasada.');
+        input.classList.add('is-invalid');
+        document.getElementById('err-appointment_date').textContent = 'No puedes seleccionar una fecha pasada.';
+        return false;
+    } else {
+        input.setCustomValidity('');
+        input.classList.remove('is-invalid');
+        document.getElementById('err-appointment_date').textContent = '';
+        return true;
+    }
+}
+
+/* ══════════════════════════════════════
    CONSTANTS
 ══════════════════════════════════════ */
 const CSRF        = document.querySelector('meta[name="csrf-token"]').content;
@@ -771,7 +810,19 @@ document.addEventListener('DOMContentLoaded', function () {
         buttonText: { today:'Hoy', month:'Mes', week:'Semana', list:'Lista' },
         events      : CAL_EVENTS,
         eventClick  : info => openShowModal(info.event.id),
-        dateClick   : info => openCreateModal(info.dateStr),
+        dateClick   : function(info) {
+            // ✅ Validar que la fecha no sea pasada
+            const clickedDate = new Date(info.dateStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (clickedDate < today) {
+                showToast('No puedes crear citas en días pasados.', 'error');
+                return;
+            }
+            
+            openCreateModal(info.dateStr);
+        },
     });
     cal.render();
 
@@ -784,6 +835,42 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     psInit();
+
+    // ✅ Filtro de servicios por categoría
+    const categoryFilter = document.getElementById('service-category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', function () {
+            const categoryId = this.value;
+            document.querySelectorAll('.service-item').forEach(item => {
+                if (categoryId === 'all' || item.dataset.category == categoryId) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // ✅ Inicializar el filtro cuando se abre el modal
+    const apptModalEl = document.getElementById('apptModal');
+    if (apptModalEl) {
+        apptModalEl.addEventListener('show.bs.modal', function () {
+            const filter = document.getElementById('service-category-filter');
+            if (filter) {
+                filter.value = 'all';
+                document.querySelectorAll('.service-item').forEach(item => {
+                    item.style.display = '';
+                });
+            }
+            
+            // ✅ Resetear validación de fecha al abrir el modal
+            const dateInput = document.getElementById('f-date');
+            if (dateInput) {
+                dateInput.classList.remove('is-invalid');
+                dateInput.setCustomValidity('');
+            }
+        });
+    }
 });
 
 /* ══════════════════════════════════════
@@ -919,7 +1006,21 @@ function openCreateModal(dateStr) {
     document.getElementById('f-method').value = 'POST';
     document.getElementById('f-id').value     = '';
     document.getElementById('status-wrap').style.display = 'none';
-    if (dateStr) document.getElementById('f-date').value = dateStr;
+    
+    if (dateStr) {
+        const selectedDate = new Date(dateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // ✅ Si la fecha es pasada, usar la fecha de hoy
+        if (selectedDate < today) {
+            const todayStr = today.toISOString().split('T')[0];
+            document.getElementById('f-date').value = todayStr;
+            document.getElementById('f-date').setAttribute('min', todayStr);
+        } else {
+            document.getElementById('f-date').value = dateStr;
+        }
+    }
     apptModal.show();
 }
 
@@ -937,7 +1038,7 @@ async function openEditModal(id) {
         const d = await r.json();
 
         psSetPill(d.patient_id, d.patient_name, d.patient_cedula);
-        document.getElementById('f-audiologist').value = d.audiologist_id       || '';
+        document.getElementById('f-doctor').value = d.doctor_id       || '';
         document.getElementById('f-date').value        = d.appointment_date_raw || '';
         document.getElementById('f-time').value        = d.appointment_time_raw || '';
         document.getElementById('f-status').value      = d.status               || 'programada';
@@ -964,13 +1065,32 @@ async function saveAppt() {
         return;
     }
 
+    // ✅ VALIDAR FECHA
+    const dateInput = document.getElementById('f-date');
+    const dateValue = dateInput.value;
+    const selectedDate = new Date(dateValue);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (!dateValue) {
+        document.getElementById('err-appointment_date').textContent = 'Debes seleccionar una fecha.';
+        dateInput.classList.add('is-invalid');
+        return;
+    }
+    
+    if (selectedDate < today) {
+        document.getElementById('err-appointment_date').textContent = 'No puedes seleccionar una fecha pasada.';
+        dateInput.classList.add('is-invalid');
+        return;
+    }
+
     // Recoger IDs de servicios marcados
     const serviceIds = [...document.querySelectorAll('.svc-check:checked')].map(c => c.value);
 
     const payload = {
         patient_id       : patId,
-        audiologist_id   : document.getElementById('f-audiologist').value,
-        appointment_date : document.getElementById('f-date').value,
+        doctor_id        : document.getElementById('f-doctor').value,
+        appointment_date : dateValue,
         appointment_time : document.getElementById('f-time').value,
         status           : document.getElementById('f-status').value || 'programada',
         service_ids      : serviceIds,
@@ -1011,7 +1131,7 @@ async function openShowModal(id) {
     showId = id;
 
     // Resetear todos los campos mientras carga
-    ['show-patient','show-audiologist','show-branch','show-date','show-time','show-phone']
+    ['show-patient','show-doctor','show-branch','show-date','show-time','show-phone']
         .forEach(i => document.getElementById(i).textContent = '…');
     document.getElementById('show-av').textContent         = '…';
     document.getElementById('show-status-badge').innerHTML = '';
@@ -1032,7 +1152,7 @@ async function openShowModal(id) {
         av.style.fontSize = '1.05rem';
 
         document.getElementById('show-patient').textContent    = d.patient_name;
-        document.getElementById('show-audiologist').textContent = d.audiologist_name;
+        document.getElementById('show-doctor').textContent = d.doctor_name;
         document.getElementById('show-branch').textContent     = d.branch_name;
         document.getElementById('show-date').textContent       = d.appointment_date;
         document.getElementById('show-time').textContent       = d.appointment_time;
@@ -1100,7 +1220,7 @@ async function confirmDelete() {
 ══════════════════════════════════════ */
 function clearForm() {
     psReset();
-    document.getElementById('f-audiologist').value = '';
+    document.getElementById('f-doctor').value = '';
     document.getElementById('f-date').value        = '';
     document.getElementById('f-time').value        = '';
     document.getElementById('f-status').value      = 'programada';
@@ -1111,7 +1231,7 @@ function clearForm() {
 }
 
 function clearErrors() {
-    ['err-patient_id','err-audiologist_id','err-appointment_date','err-appointment_time'].forEach(id => {
+    ['err-patient_id','err-doctor_id','err-appointment_date','err-appointment_time'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = '';
     });
@@ -1121,13 +1241,13 @@ function clearErrors() {
 function showFieldErrors(errors) {
     const map = {
         patient_id       : 'err-patient_id',
-        audiologist_id   : 'err-audiologist_id',
+        doctor_id        : 'err-doctor_id',
         appointment_date : 'err-appointment_date',
         appointment_time : 'err-appointment_time',
     };
     const inputMap = {
         patient_id       : 'f-patient-id',
-        audiologist_id   : 'f-audiologist',
+        doctor_id        : 'f-doctor',
         appointment_date : 'f-date',
         appointment_time : 'f-time',
     };

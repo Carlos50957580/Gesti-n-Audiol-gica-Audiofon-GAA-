@@ -216,20 +216,20 @@
                 <div class="card-icon bg-info-subtle text-info"><i class="ri-shield-check-line"></i></div>
                 <h6>Seguro Médico</h6>
             </div>
-            <div class="inv-card-body">
-                <div class="form-floating mb-3">
-                    <select name="insurance_id" id="insurance_id" class="form-select">
-                        <option value="">— Sin seguro —</option>
-                        @foreach($insurances as $ins)
-                            <option value="{{ $ins->id }}"
-                                    data-coverage="{{ $ins->coverage_percentage }}"
-                                    {{ old('insurance_id') == $ins->id ? 'selected' : '' }}>
-                                {{ $ins->name }} ({{ $ins->coverage_percentage }}%)
-                            </option>
-                        @endforeach
-                    </select>
-                    <label>Seguro</label>
-                </div>
+           <div class="inv-card-body">
+    <div class="form-floating mb-3">
+        <select name="insurance_id" id="insurance_id" class="form-select">
+            <option value="">— Sin seguro —</option>
+            @foreach($insurances as $ins)
+                <option value="{{ $ins->id }}"
+                        data-coverage="{{ $ins->coverage_percentage }}"
+                        {{ old('insurance_id') == $ins->id ? 'selected' : '' }}>
+                    {{ $ins->name }}
+                </option>
+            @endforeach
+        </select>
+        <label>Seguro</label>
+    </div>
                 <div id="coverage-controls" class="d-none">
                     <div class="sidebar-section-label">Cobertura global</div>
                     <div class="cov-toggle-group mb-2">
@@ -514,6 +514,75 @@
 @push('scripts')
 <script>
 // ============================================
+// OBTENER COBERTURA DE SERVICIO CON SEGURO
+// ============================================
+async function getServiceCoverage(serviceId, insuranceId) {
+    try {
+        const response = await fetch(`/api/services/coverage/${serviceId}/${insuranceId}`, {
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error al obtener cobertura:', error);
+        return null;
+    }
+}
+
+// ============================================
+// ACTUALIZAR COBERTURA DE FILA
+// ============================================
+async function updateRowCoverage(tr) {
+    const serviceId = parseInt(tr.querySelector('.svc-select').value);
+    const insuranceId = document.getElementById('insurance_id').value;
+    const covInput = tr.querySelector('.cov-input');
+    const covUnitLabel = tr.querySelector('.cov-unit-label');
+    const subtotalCell = tr.querySelector('.subtotal-cell');
+    
+    if (!insuranceId || !serviceId) {
+        covInput.value = 0;
+        covInput.title = 'Sin seguro';
+        recalcRow(tr);
+        return;
+    }
+    
+    const coverageData = await getServiceCoverage(serviceId, insuranceId);
+    
+    if (coverageData && coverageData.has_coverage) {
+        let coverageValue = coverageData.coverage_percentage;
+        
+        // Si es específica, mostrar badge
+        if (coverageData.is_specific) {
+            covInput.title = '📌 Cobertura específica del servicio';
+            // Guardar en dataset para saber que es específica
+            tr.dataset.isSpecific = 'true';
+        } else {
+            covInput.title = '📋 Cobertura global del seguro';
+            tr.dataset.isSpecific = 'false';
+        }
+        
+        // Establecer el valor en el input de cobertura
+        covInput.value = coverageValue;
+        
+        // Actualizar la etiqueta de tipo
+        if (coverageData.coverage_percentage > 0) {
+            covUnitLabel.textContent = '%';
+            tr.dataset.covType = 'pct';
+            tr.querySelector('.row-btn-pct')?.classList.add('active');
+            tr.querySelector('.row-btn-amt')?.classList.remove('active');
+        }
+        
+        recalcRow(tr);
+    } else {
+        // Sin cobertura
+        covInput.value = 0;
+        covInput.title = 'Sin cobertura';
+        tr.dataset.isSpecific = 'false';
+        recalcRow(tr);
+    }
+}
+
+// ============================================
 // DATOS INICIALES
 // ============================================
 const SERVICES_DATA = {!! $services->map(fn($s) => [
@@ -658,13 +727,11 @@ function filterServices(categoryId) {
             }
         });
         
-        // Si hay opciones visibles y el valor actual no es visible o está vacío
         if (hasVisible) {
             const currentValue = select.value;
             const currentOption = select.querySelector(`option[value="${currentValue}"]`);
             if (!currentOption || currentOption.style.display === 'none' || !currentValue) {
                 select.value = firstVisibleValue;
-                // ✅ ACTUALIZAR EL PRECIO MANUALMENTE
                 const priceInp = row.querySelector('.price-input');
                 if (priceInp && firstVisiblePrice) {
                     priceInp.value = firstVisiblePrice.toFixed(2);
@@ -683,18 +750,30 @@ function filterServices(categoryId) {
 // ============================================
 // INSURANCE
 // ============================================
-document.getElementById('insurance_id').addEventListener('change', function () {
+document.getElementById('insurance_id').addEventListener('change', async function () {
     const opt = this.options[this.selectedIndex];
     hasInsurance = !!this.value;
     document.getElementById('coverage-controls').classList.toggle('d-none', !hasInsurance);
     ['th-cov','th-ins','th-pat'].forEach(id => document.getElementById(id).classList.toggle('d-none', !hasInsurance));
     document.querySelectorAll('.td-cov,.td-ins,.td-pat').forEach(td => td.classList.toggle('d-none', !hasInsurance));
+    
     if (hasInsurance) {
-        covType = 'pct'; setCovType('pct');
+        covType = 'pct'; 
+        setCovType('pct');
         document.getElementById('global-cov-input').value = parseFloat(opt.dataset.coverage || 0);
         applyGlobalCoverage();
+        
+        // ✅ Actualizar cobertura de todas las filas
+        const rows = document.querySelectorAll('.svc-row');
+        for (const row of rows) {
+            await updateRowCoverage(row);
+        }
     } else {
-        document.querySelectorAll('.svc-row').forEach(tr => recalcRow(tr));
+        document.querySelectorAll('.svc-row').forEach(tr => {
+            tr.querySelector('.cov-input').value = 0;
+            tr.dataset.isSpecific = 'false';
+            recalcRow(tr);
+        });
         recalculate();
     }
 });
@@ -740,7 +819,6 @@ function buildOptions(selId) {
 function addSvcRow(selId, qty) {
     document.getElementById('svc-empty').style.display = 'none';
     
-    // ✅ Si no se especifica selId, usar el primer servicio disponible
     if (!selId) {
         const firstService = SERVICES_DATA[0];
         selId = firstService?.id || '';
@@ -760,6 +838,7 @@ function addSvcRow(selId, qty) {
     const tr = document.createElement('tr');
     tr.className = 'svc-row';
     tr.dataset.covType = initType;
+    tr.dataset.isSpecific = 'false';
     tr.innerHTML = `
         <td>
             <select name="services[${ri}][id]" class="form-select form-select-sm svc-select">
@@ -807,14 +886,19 @@ function addSvcRow(selId, qty) {
 
     const priceInp = tr.querySelector('.price-input');
 
-    // ✅ Al cambiar servicio - ACTUALIZAR PRECIO CORRECTAMENTE
-    tr.querySelector('.svc-select').addEventListener('change', function() {
+    // ✅ Al cambiar servicio - ACTUALIZAR PRECIO Y COBERTURA
+    tr.querySelector('.svc-select').addEventListener('change', async function() {
         const sel = this;
         const selectedOpt = sel.options[sel.selectedIndex];
         const basePrice = parseFloat(selectedOpt?.dataset?.price || 0);
         priceInp.value = basePrice > 0 ? basePrice.toFixed(2) : '0.00';
         priceInp.classList.remove('modified');
         recalcRow(tr);
+        
+        // ✅ Actualizar cobertura si hay seguro seleccionado
+        if (hasInsurance) {
+            await updateRowCoverage(tr);
+        }
     });
 
     // Al editar precio
@@ -881,6 +965,8 @@ function recalcRow(tr) {
     }
 
     let insAmt = 0, patAmt = subtotal + taxAmount;
+    let isSpecific = tr.dataset.isSpecific === 'true';
+    
     if (hasInsurance && covVal > 0) {
         insAmt = type === 'pct'
             ? subtotal * (Math.min(covVal, 100) / 100)
@@ -889,9 +975,12 @@ function recalcRow(tr) {
     }
 
     const subtotalCell = tr.querySelector('.subtotal-cell');
-    subtotalCell.textContent = 'RD$ ' + fmt(subtotal);
+    let subtotalHTML = 'RD$ ' + fmt(subtotal);
+    if (isSpecific && hasInsurance && covVal > 0) {
+        subtotalHTML += ' <span class="badge bg-info ms-1" style="font-size:0.6rem;">Específica</span>';
+    }
+    subtotalCell.innerHTML = subtotalHTML;
     
-    // Mostrar impuestos en el subtotal
     if (taxAmount > 0) {
         subtotalCell.title = `Subtotal: RD$ ${fmt(subtotal)}\nImpuestos: RD$ ${fmt(taxAmount)}\nTotal con impuestos: RD$ ${fmt(subtotal + taxAmount)}`;
     }

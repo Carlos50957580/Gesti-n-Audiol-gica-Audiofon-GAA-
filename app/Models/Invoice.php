@@ -39,6 +39,13 @@ class Invoice extends Model
         'tax_details' => 'array'
     ];
 
+    // ✅ Accessor para número de factura (usado en recibos)
+    public function getInvoiceNumberAttribute(): string
+    {
+        return 'FAC-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    // Relaciones
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
@@ -77,5 +84,21 @@ class Invoice extends Model
     public function clinicalRecord()
     {
         return $this->hasOne(ClinicalRecord::class);
+    }
+
+    // ✅ Scopes para estados
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pendiente');
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('status', 'pagada');
+    }
+
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelada');
     }
 }

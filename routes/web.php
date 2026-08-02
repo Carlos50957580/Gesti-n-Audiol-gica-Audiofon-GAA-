@@ -75,21 +75,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('branches', BranchController::class);
     });
 
-    // ── CITAS (admin y recepcionista) ─────────────────────────────────────
-    Route::middleware(['role:admin,recepcionista'])->group(function () {
-        Route::get('api/patients/search', [AppointmentController::class, 'searchPatients'])->name('api.patients.search');
-        Route::get('appointments/{appointment}/show-data', [AppointmentController::class, 'showData'])->name('appointments.show-data');
-        Route::get('appointments/{appointment}/edit-data', [AppointmentController::class, 'editData'])->name('appointments.edit-data');
-        Route::resource('appointments', AppointmentController::class);
-    });
 
-    // ── MIS CITAS (solo médicos) ─────────────────────────────────────
-    Route::middleware(['role:medico'])->prefix('doctor')->name('doctor.')->group(function () {
-        Route::get('appointments', [DoctorAppointmentController::class, 'index'])->name('appointments.index');
-        Route::get('appointments/{appointment}', [DoctorAppointmentController::class, 'show'])->name('appointments.show');
-        Route::patch('appointments/{appointment}/status', [DoctorAppointmentController::class, 'updateStatus'])->name('appointments.status');
-        Route::patch('appointments/{appointment}/notes', [DoctorAppointmentController::class, 'updateNotes'])->name('appointments.notes');
-    });
 
     // ── SERVICIOS (solo admin) ─────────────────────────────────────
     Route::middleware(['role:admin'])->group(function () {
@@ -196,6 +182,23 @@ Route::middleware(['auth'])->prefix('api')->name('api.')->group(function () {
 
     // ── RNC ─────────────────────────────────────
     Route::get('/rnc/{rnc}', [InvoiceController::class, 'consultRnc'])->name('rnc');
+});
+
+// ── CITAS ─────────────────────────────────────
+// Admin y recepcionista pueden gestionar citas
+Route::middleware(['auth', 'role:admin,recepcionista'])->group(function () {
+    Route::get('api/patients/search', [AppointmentController::class, 'searchPatients'])->name('api.patients.search');
+    Route::get('appointments/{appointment}/show-data', [AppointmentController::class, 'showData'])->name('appointments.show-data');
+    Route::get('appointments/{appointment}/edit-data', [AppointmentController::class, 'editData'])->name('appointments.edit-data');
+    Route::resource('appointments', AppointmentController::class);
+});
+
+// ── MIS CITAS (solo médicos) ──────────────────
+Route::middleware(['auth'])->prefix('doctor')->name('doctor.')->group(function () {
+    Route::get('appointments', [DoctorAppointmentController::class, 'index'])->name('appointments.index');
+    Route::get('appointments/{appointment}', [DoctorAppointmentController::class, 'show'])->name('appointments.show');
+    Route::patch('appointments/{appointment}/status', [DoctorAppointmentController::class, 'updateStatus'])->name('appointments.status');
+    Route::patch('appointments/{appointment}/notes', [DoctorAppointmentController::class, 'updateNotes'])->name('appointments.notes');
 });
 
 require __DIR__.'/auth.php';
