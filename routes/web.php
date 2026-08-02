@@ -223,5 +223,18 @@ Route::middleware(['auth'])->prefix('doctor')->name('doctor.')->group(function (
     Route::patch('appointments/{appointment}/notes', [DoctorAppointmentController::class, 'updateNotes'])->name('appointments.notes');
 });
 
+use App\Http\Controllers\AdminReportController;
+
+// ── REPORTES ADMIN ─────────────────────────────────────
+Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
+    Route::get('/', [AdminReportController::class, 'index'])->name('index');
+    Route::get('/invoices', [AdminReportController::class, 'invoices'])->name('invoices');
+    Route::get('/appointments', [AdminReportController::class, 'appointments'])->name('appointments');
+    Route::get('/patients', [AdminReportController::class, 'patients'])->name('patients');
+    Route::get('/services', [AdminReportController::class, 'services'])->name('services');
+    Route::get('/fees', [AdminReportController::class, 'fees'])->name('fees');
+    Route::get('/export', [AdminReportController::class, 'export'])->name('export');
+});
+
 
 require __DIR__.'/auth.php';

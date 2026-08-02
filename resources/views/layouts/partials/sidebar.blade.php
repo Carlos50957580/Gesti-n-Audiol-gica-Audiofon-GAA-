@@ -160,7 +160,7 @@
                     {{-- Reportes Admin --}}
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
-                           href="{{ route('reports.index') }}">
+                           href="{{ route('admin.reports.index') }}">
                             <i class="ri-bar-chart-line"></i>
                             <span data-key="t-reportes-admin">Reportes</span>
                         </a>
