@@ -535,24 +535,28 @@
                         </div>
 
                         {{-- Médico --}}
-                        <div class="col-12">
-                            <div class="form-floating">
-                                <select class="form-select" id="f-doctor">
-                                    <option value="">— Seleccionar —</option>
-                                    @foreach(\App\Models\User::where(function($q) {
-                                        $q->where('role_id', 4)
-                                          ->orWhere(function($q2) {
-                                              $q2->where('role_id', 1)->where('is_doctor', 1);
-                                          });
-                                    })->orderBy('name')->get() as $doc)
-                                        <option value="{{ $doc->id }}">{{ $doc->name }}</option>
-                                    @endforeach
-                                </select>
-                                <label><i class="ri-user-heart-line me-1 text-muted"></i>Médico</label>
-                                <div class="invalid-feedback" id="err-doctor_id"></div>
-                            </div>
-                        </div>
-                    </div>
+<div class="col-12">
+    <div class="form-floating">
+        <select class="form-select" id="f-doctor">
+            <option value="">— Seleccionar —</option>
+            @php
+                $medicoRoleId = \App\Models\Role::where('name', 'medico')->value('id');
+                $adminRoleId = \App\Models\Role::where('name', 'admin')->value('id');
+            @endphp
+            @foreach(\App\Models\User::where(function($q) use ($medicoRoleId, $adminRoleId) {
+                $q->where('role_id', $medicoRoleId)  // ✅ Rol médico
+                  ->orWhere(function($q2) use ($adminRoleId) {
+                      $q2->where('role_id', $adminRoleId)  // Admin
+                        ->where('is_doctor', 1);
+                  });
+            })->orderBy('name')->get() as $doc)
+                <option value="{{ $doc->id }}">{{ $doc->name }}</option>
+            @endforeach
+        </select>
+        <label><i class="ri-user-heart-line me-1 text-muted"></i>Médico</label>
+        <div class="invalid-feedback" id="err-doctor_id"></div>
+    </div>
+</div>
 
                     {{-- Sección 2: Fecha y hora --}}
 <p class="section-label"><i class="ri-calendar-event-line me-1"></i>Fecha y hora</p>

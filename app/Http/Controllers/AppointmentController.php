@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Service;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
@@ -119,14 +120,18 @@ class AppointmentController extends Controller
             ? Patient::orderBy('first_name')->get()
             : Patient::where('branch_id', $user->branch_id)->orderBy('first_name')->get();
 
-        // ✅ Médicos: usuarios con rol medico O admin con is_doctor = true
-        $doctors = User::where(function($q) {
-                $q->where('role_id', 4) // Rol médico
-                  ->orWhere(function($q2) {
-                      $q2->where('role_id', 1) // Admin
+        // ✅ CORREGIDO: Médicos: usuarios con rol medico (ID 3) O admin con is_doctor = true
+        $medicoRoleId = Role::where('name', 'medico')->value('id');
+        $adminRoleId = Role::where('name', 'admin')->value('id');
+
+        $doctors = User::where(function($q) use ($medicoRoleId, $adminRoleId) {
+                $q->where('role_id', $medicoRoleId)  // ✅ Rol médico (ID 3)
+                  ->orWhere(function($q2) use ($adminRoleId) {
+                      $q2->where('role_id', $adminRoleId)  // Admin
                         ->where('is_doctor', 1);
                   });
-            });
+            })
+            ->where('is_active', 1);
 
         // ✅ Si no es admin, solo muestra médicos de su sucursal
         if (!$isAdmin) {
@@ -202,14 +207,18 @@ class AppointmentController extends Controller
             ? Patient::orderBy('first_name')->get()
             : Patient::where('branch_id', $user->branch_id)->orderBy('first_name')->get();
 
-        // ✅ Médicos según rol
-        $doctors = User::where(function($q) {
-                $q->where('role_id', 4)
-                  ->orWhere(function($q2) {
-                      $q2->where('role_id', 1)
+        // ✅ CORREGIDO: Médicos según rol
+        $medicoRoleId = Role::where('name', 'medico')->value('id');
+        $adminRoleId = Role::where('name', 'admin')->value('id');
+
+        $doctors = User::where(function($q) use ($medicoRoleId, $adminRoleId) {
+                $q->where('role_id', $medicoRoleId)  // ✅ Rol médico (ID 3)
+                  ->orWhere(function($q2) use ($adminRoleId) {
+                      $q2->where('role_id', $adminRoleId)  // Admin
                         ->where('is_doctor', 1);
                   });
-            });
+            })
+            ->where('is_active', 1);
 
         if (!$isAdmin) {
             $doctors->where('branch_id', $user->branch_id);
