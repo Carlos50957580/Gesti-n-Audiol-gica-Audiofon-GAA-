@@ -120,23 +120,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
     });
 
-    // ── REPORTES ADMIN (solo admin) ─────────────────────────────────────
-    Route::middleware(['role:admin'])->prefix('reports')->name('reports.')->group(function () {
-        Route::get('/', [ReportController::class, 'index'])->name('index');
-        Route::get('invoices', [ReportController::class, 'invoices'])->name('invoices');
-        Route::get('appointments', [ReportController::class, 'appointments'])->name('appointments');
-        Route::get('clinical-records', [ReportController::class, 'clinicalRecords'])->name('clinical-records');
-        Route::get('patients', [ReportController::class, 'patients'])->name('patients');
-        Route::get('by-user', [ReportController::class, 'byUser'])->name('by-user');
-    });
 
-    // ── REPORTES RECEPCIONISTA (solo recepcionista) ─────────────────────────────────────
-    Route::middleware(['role:recepcionista'])->prefix('receptionist/reports')->name('receptionist.reports.')->group(function () {
-        Route::get('/', [ReceptionistReportController::class, 'index'])->name('index');
-        Route::get('summary', [ReceptionistReportController::class, 'summary'])->name('summary');
-        Route::get('invoices', [ReceptionistReportController::class, 'invoices'])->name('invoices');
-        Route::get('services', [ReceptionistReportController::class, 'services'])->name('services');
-    });
+// ── REPORTES RECEPCIONISTA ─────────────────────────────────────
+Route::middleware(['role:recepcionista'])->prefix('receptionist/reports')->name('receptionist.reports.')->group(function () {
+    Route::get('/', [ReceptionistReportController::class, 'index'])->name('index');
+    Route::get('summary', [ReceptionistReportController::class, 'summary'])->name('summary');
+    Route::get('invoices', [ReceptionistReportController::class, 'invoices'])->name('invoices');
+    Route::get('services', [ReceptionistReportController::class, 'services'])->name('services');
+    Route::get('print', [ReceptionistReportController::class, 'print'])->name('print');
+});
+
 
     // ── HONORARIOS MÉDICOS ─────────────────────────────────────
     Route::prefix('doctor-fees')->name('doctor-fees.')->middleware(['auth', 'role:admin'])->group(function () {
@@ -240,6 +233,34 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.
     Route::get('/services', [AdminReportController::class, 'services'])->name('services');
     Route::get('/fees', [AdminReportController::class, 'fees'])->name('fees');
     Route::get('/export', [AdminReportController::class, 'export'])->name('export');
+});
+
+use App\Http\Controllers\ClinicalRecordController;
+
+// ============================================
+// HISTORIAS CLÍNICAS
+// ============================================
+Route::middleware(['auth', 'active'])->group(function () {
+
+Route::get('/clinical-records/{clinicalRecord}/print', [ClinicalRecordController::class, 'print'])
+    ->name('clinical-records.print');
+    
+    // Solo admin con is_doctor o médicos pueden acceder
+    Route::middleware(['role:admin,medico'])->group(function () {
+        
+        Route::resource('clinical-records', ClinicalRecordController::class);
+        
+        // Rutas adicionales para documentos
+        Route::post('/clinical-records/{clinicalRecord}/documents', [ClinicalRecordController::class, 'uploadDocument'])
+            ->name('clinical-records.upload-document');
+            
+        Route::delete('/clinical-records/documents/{documentId}', [ClinicalRecordController::class, 'deleteDocument'])
+            ->name('clinical-records.delete-document');
+            
+        // API para obtener facturas pendientes de un paciente
+        Route::get('/clinical-records/pending-invoices/{patientId}', [ClinicalRecordController::class, 'getPendingInvoices'])
+            ->name('clinical-records.pending-invoices');
+    });
 });
 
 require __DIR__.'/auth.php';

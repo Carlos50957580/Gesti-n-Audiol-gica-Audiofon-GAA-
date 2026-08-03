@@ -50,8 +50,21 @@ class Patient extends Model
         return $this->hasMany(Invoice::class);
     }
 
-    public function clinicalRecords()
-    {
-        return $this->hasMany(ClinicalRecord::class);
+
+
+    // En app/Models/Patient.php
+
+public function clinicalRecords()
+{
+    return $this->hasMany(ClinicalRecord::class)->orderBy('consultation_date', 'desc');
+}
+
+
+public function getAgeAttribute()
+{
+    if ($this->birth_date) {
+        return \Carbon\Carbon::parse($this->birth_date)->age;
     }
+    return null;
+}
 }

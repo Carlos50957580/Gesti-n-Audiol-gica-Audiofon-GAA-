@@ -40,6 +40,7 @@ class Invoice extends Model
     ];
 
     // ✅ Accessor para número de factura (usado en recibos)
+    // Este es el que se usa en las vistas
     public function getInvoiceNumberAttribute(): string
     {
         return 'FAC-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
@@ -100,5 +101,48 @@ class Invoice extends Model
     public function scopeCancelled($query)
     {
         return $query->where('status', 'cancelada');
+    }
+
+    // ============================================
+    // MÉTODOS DE UTILIDAD
+    // ============================================
+    
+    /**
+     * Verifica si la factura requiere historia clínica
+     */
+    public function requiresClinicalRecord()
+    {
+        // Verificar si algún servicio de la factura requiere historia clínica
+        foreach ($this->items as $item) {
+            $service = $item->service;
+            if ($service) {
+                // Verificar directamente en el servicio
+                if ($service->requires_clinical_record) {
+                    return true;
+                }
+                // Verificar en la categoría del servicio
+                if ($service->category && $service->category->requires_clinical_record) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Verifica si la factura ya tiene una historia clínica asociada
+     */
+    public function hasClinicalRecord()
+    {
+        return $this->clinicalRecord()->exists();
+    }
+
+    /**
+     * Obtiene el total formateado con moneda
+     */
+    public function getFormattedTotalAttribute()
+    {
+        $currency = \App\Models\Setting::get('company_currency', 'DOP');
+        return $currency . ' ' . number_format($this->total, 2, ',', '.');
     }
 }

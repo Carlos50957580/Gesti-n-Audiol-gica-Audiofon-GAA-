@@ -99,7 +99,6 @@
 }
 .mini-stat-label { font-size:.7rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#8098bb; }
 .mini-stat-value { font-size:1.25rem; font-weight:800; color:#344563; line-height:1.1; }
-
 .upcoming-item {
     display:flex; align-items:flex-start; gap:.7rem;
     padding:.7rem 1rem; border-bottom:1px solid #f3f5f9; transition:background .15s; cursor:pointer;
@@ -143,7 +142,6 @@
 .appt-table tbody tr { border-bottom:1px solid #f3f5f9; transition:background .15s; }
 .appt-table tbody tr:hover { background:#f8faff; }
 .appt-table tbody tr:last-child { border-bottom:none; }
-
 .pat-av {
     width:34px; height:34px; border-radius:50%; flex-shrink:0;
     display:inline-flex; align-items:center; justify-content:center;
@@ -163,7 +161,6 @@
 .mh-info    { background:linear-gradient(135deg,#299cdb,#0ab39c); color:#fff; border-radius:.5rem .5rem 0 0; }
 .mh-danger  { background:linear-gradient(135deg,#e74c3c,#c0392b); color:#fff; border-radius:.5rem .5rem 0 0; }
 .mh-primary .btn-close,.mh-info .btn-close,.mh-danger .btn-close { filter:invert(1); }
-
 .form-floating>.form-control,
 .form-floating>.form-select { border:1.5px solid #e2e8f0; border-radius:.5rem; }
 .form-floating>.form-control:focus,
@@ -218,7 +215,6 @@
 .ps-item-name { font-size:.85rem; font-weight:600; color:#344563; }
 .ps-item-ced  { font-size:.73rem; color:#8098bb; font-family:monospace; }
 .ps-msg { padding:.7rem .9rem; font-size:.83rem; color:#8098bb; text-align:center; }
-
 .ps-pill {
     display:none; align-items:center; gap:.45rem; margin-top:.45rem;
     background:linear-gradient(135deg,rgba(64,81,137,.07),rgba(10,179,156,.07));
@@ -269,7 +265,6 @@
 @keyframes toastIn { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
 .toast-success { background:linear-gradient(135deg,#0ab39c,#3d9f80); }
 .toast-error   { background:linear-gradient(135deg,#e74c3c,#c0392b); }
-
 @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 .anim-row { animation:fadeInUp .28s ease both; }
 .anim-row:nth-child(1){animation-delay:.03s}.anim-row:nth-child(2){animation-delay:.07s}
@@ -301,7 +296,6 @@
 
 {{-- ══ TOP GRID ══ --}}
 <div class="appt-grid mb-4">
-
     {{-- Calendario --}}
     <div class="calendar-card">
         <div class="calendar-header">
@@ -322,7 +316,6 @@
 
     {{-- Sidebar --}}
     <div class="d-flex flex-column gap-3">
-
         {{-- Stats --}}
         <div class="sidebar-card">
             <div class="p-3" style="border-bottom:1px solid #f0f2f7;">
@@ -390,7 +383,6 @@
             </div>
             @endforelse
         </div>
-
     </div>
 </div>
 
@@ -410,6 +402,7 @@
             <i class="ri-add-line"></i>Nueva Cita
         </button>
     </div>
+
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table appt-table mb-0">
@@ -508,7 +501,6 @@
                     {{-- Sección 1: Paciente y Médico --}}
                     <p class="section-label"><i class="ri-user-heart-line me-1"></i>Paciente y Médico</p>
                     <div class="row g-3 mb-4">
-
                         {{-- PATIENT SEARCH --}}
                         <div class="col-12">
                             <input type="hidden" id="f-patient-id">
@@ -535,82 +527,83 @@
                         </div>
 
                         {{-- Médico --}}
-<div class="col-12">
-    <div class="form-floating">
-        <select class="form-select" id="f-doctor">
-            <option value="">— Seleccionar —</option>
-            @php
-                $medicoRoleId = \App\Models\Role::where('name', 'medico')->value('id');
-                $adminRoleId = \App\Models\Role::where('name', 'admin')->value('id');
-            @endphp
-            @foreach(\App\Models\User::where(function($q) use ($medicoRoleId, $adminRoleId) {
-                $q->where('role_id', $medicoRoleId)  // ✅ Rol médico
-                  ->orWhere(function($q2) use ($adminRoleId) {
-                      $q2->where('role_id', $adminRoleId)  // Admin
-                        ->where('is_doctor', 1);
-                  });
-            })->orderBy('name')->get() as $doc)
-                <option value="{{ $doc->id }}">{{ $doc->name }}</option>
-            @endforeach
-        </select>
-        <label><i class="ri-user-heart-line me-1 text-muted"></i>Médico</label>
-        <div class="invalid-feedback" id="err-doctor_id"></div>
-    </div>
-</div>
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <select class="form-select" id="f-doctor">
+                                    <option value="">— Seleccionar —</option>
+                                    @php
+                                        $medicoRoleId = \App\Models\Role::where('name', 'medico')->value('id');
+                                        $adminRoleId = \App\Models\Role::where('name', 'admin')->value('id');
+                                    @endphp
+                                    @foreach(\App\Models\User::where(function($q) use ($medicoRoleId, $adminRoleId) {
+                                        $q->where('role_id', $medicoRoleId)
+                                          ->orWhere(function($q2) use ($adminRoleId) {
+                                              $q2->where('role_id', $adminRoleId)
+                                                ->where('is_doctor', 1);
+                                          });
+                                    })->orderBy('name')->get() as $doc)
+                                        <option value="{{ $doc->id }}">{{ $doc->name }}</option>
+                                    @endforeach
+                                </select>
+                                <label><i class="ri-user-heart-line me-1 text-muted"></i>Médico</label>
+                                <div class="invalid-feedback" id="err-doctor_id"></div>
+                            </div>
+                        </div>
+                    </div>
 
                     {{-- Sección 2: Fecha y hora --}}
-<p class="section-label"><i class="ri-calendar-event-line me-1"></i>Fecha y hora</p>
-<div class="row g-3 mb-4">
-   <div class="col-6">
-        <div class="form-floating">
-            <input type="date" class="form-control" id="f-date" 
-                   placeholder="Fecha" 
-                   min="{{ date('Y-m-d') }}"
-                   oninput="validateDate(this)">
-            <label>Fecha</label>
-            <div class="invalid-feedback" id="err-appointment_date"></div>
-        </div>
-    </div>
-    <div class="col-6">
-        <div class="form-floating">
-            <input type="time" class="form-control" id="f-time" placeholder="Hora">
-            <label>Hora</label>
-            <div class="invalid-feedback" id="err-appointment_time"></div>
-        </div>
-    </div>
-</div>
+                    <p class="section-label"><i class="ri-calendar-event-line me-1"></i>Fecha y hora</p>
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <input type="date" class="form-control" id="f-date"
+                                       placeholder="Fecha"
+                                       min="{{ date('Y-m-d') }}"
+                                       oninput="validateDate(this)">
+                                <label>Fecha</label>
+                                <div class="invalid-feedback" id="err-appointment_date"></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <input type="time" class="form-control" id="f-time" placeholder="Hora">
+                                <label>Hora</label>
+                                <div class="invalid-feedback" id="err-appointment_time"></div>
+                            </div>
+                        </div>
+                    </div>
 
                     {{-- Sección 3: Servicios a realizar --}}
-<p class="section-label"><i class="ri-stethoscope-line me-1"></i>Servicios a realizar</p>
-<div class="mb-4">
-    <div class="mb-2">
-        <select id="service-category-filter" class="form-select form-select-sm" style="border-radius:2rem;border:1.5px solid #e2e8f0;font-size:.84rem;">
-            <option value="all">Todas las categorías</option>
-            @foreach(\App\Models\ServiceCategory::where('is_active', 1)->orderBy('name')->get() as $cat)
-                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-            @endforeach
-        </select>
-    </div>
-    <div id="services-wrap" class="row">
-        @forelse(\App\Models\Service::where('is_active', 1)->with('category')->orderBy('name')->get() as $svc)
-            <div class="col-12 col-md-6 service-item" data-category="{{ $svc->category_id }}">
-                <div class="form-check" style="padding:.3rem 0;">
-                    <input class="form-check-input svc-check" type="checkbox" value="{{ $svc->id }}" id="svc-{{ $svc->id }}">
-                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="svc-{{ $svc->id }}" style="font-size:.86rem;color:#344563;cursor:pointer;">
-                        <span>
-                            {{ $svc->name }}
-                            @if($svc->category)
-                                <small class="text-muted" style="font-size:.7rem;">({{ $svc->category->name }})</small>
-                            @endif
-                        </span>
-                    </label>
-                </div>
-            </div>
-        @empty
-            <p class="text-muted mb-0" style="font-size:.82rem;">No hay servicios activos registrados.</p>
-        @endforelse
-    </div>
-</div>
+                    <p class="section-label"><i class="ri-stethoscope-line me-1"></i>Servicios a realizar</p>
+                    <div class="mb-4">
+                        <div class="mb-2">
+                            <select id="service-category-filter" class="form-select form-select-sm" style="border-radius:2rem;border:1.5px solid #e2e8f0;font-size:.84rem;">
+                                <option value="all">Todas las categorías</option>
+                                @foreach(\App\Models\ServiceCategory::where('is_active', 1)->orderBy('name')->get() as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div id="services-wrap" class="row">
+                            @forelse(\App\Models\Service::where('is_active', 1)->with('category')->orderBy('name')->get() as $svc)
+                                <div class="col-12 col-md-6 service-item" data-category="{{ $svc->category_id }}">
+                                    <div class="form-check" style="padding:.3rem 0;">
+                                        <input class="form-check-input svc-check" type="checkbox" value="{{ $svc->id }}" id="svc-{{ $svc->id }}">
+                                        <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="svc-{{ $svc->id }}" style="font-size:.86rem;color:#344563;cursor:pointer;">
+                                            <span>
+                                                {{ $svc->name }}
+                                                @if($svc->category)
+                                                    <small class="text-muted" style="font-size:.7rem;">({{ $svc->category->name }})</small>
+                                                @endif
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-muted mb-0" style="font-size:.82rem;">No hay servicios activos registrados.</p>
+                            @endforelse
+                        </div>
+                    </div>
 
                     {{-- Sección 4: Estado (solo en edición) --}}
                     <div id="status-wrap" style="display:none;">
@@ -624,7 +617,6 @@
                             <label>Estado de la cita</label>
                         </div>
                     </div>
-
                 </form>
             </div>
             <div class="modal-footer border-0 pt-0 pb-3 px-4">
@@ -742,7 +734,7 @@ function validateDate(input) {
     const selectedDate = new Date(input.value);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (selectedDate < today) {
         input.setCustomValidity('No puedes seleccionar una fecha pasada.');
         input.classList.add('is-invalid');
@@ -781,7 +773,7 @@ let delId = null, showId = null;
 const CAL_EVENTS = [
     @foreach($appointments->getCollection() as $a)
     {
-        id        : {{ $a->id }},
+        id        : '{{ $a->id }}',
         title     : '{{ addslashes($a->patient->first_name) }} {{ \Carbon\Carbon::parse($a->appointment_time)->format("g:iA") }}',
         start     : '{{ $a->appointment_date }}T{{ $a->appointment_time }}',
         classNames: ['ev-{{ $a->status }}'],
@@ -793,7 +785,9 @@ const CAL_EVENTS = [
    BOOT
 ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function () {
-
+    // ✅ Instancias únicas de cada modal, creadas UNA sola vez.
+    // Nunca vuelvas a hacer "new bootstrap.Modal(...)" sobre estos
+    // elementos en otra parte del código: usa siempre estas variables.
     apptModal   = new bootstrap.Modal(document.getElementById('apptModal'));
     showModal   = new bootstrap.Modal(document.getElementById('showModal'));
     deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
@@ -815,16 +809,15 @@ document.addEventListener('DOMContentLoaded', function () {
         events      : CAL_EVENTS,
         eventClick  : info => openShowModal(info.event.id),
         dateClick   : function(info) {
-            // ✅ Validar que la fecha no sea pasada
             const clickedDate = new Date(info.dateStr);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             if (clickedDate < today) {
                 showToast('No puedes crear citas en días pasados.', 'error');
                 return;
             }
-            
+
             openCreateModal(info.dateStr);
         },
     });
@@ -855,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ✅ Inicializar el filtro cuando se abre el modal
+    // ✅ Inicializar el filtro cuando se abre el modal de crear/editar
     const apptModalEl = document.getElementById('apptModal');
     if (apptModalEl) {
         apptModalEl.addEventListener('show.bs.modal', function () {
@@ -866,8 +859,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     item.style.display = '';
                 });
             }
-            
-            // ✅ Resetear validación de fecha al abrir el modal
+
             const dateInput = document.getElementById('f-date');
             if (dateInput) {
                 dateInput.classList.remove('is-invalid');
@@ -1010,13 +1002,12 @@ function openCreateModal(dateStr) {
     document.getElementById('f-method').value = 'POST';
     document.getElementById('f-id').value     = '';
     document.getElementById('status-wrap').style.display = 'none';
-    
+
     if (dateStr) {
         const selectedDate = new Date(dateStr);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
-        // ✅ Si la fecha es pasada, usar la fecha de hoy
+
         if (selectedDate < today) {
             const todayStr = today.toISOString().split('T')[0];
             document.getElementById('f-date').value = todayStr;
@@ -1047,12 +1038,10 @@ async function openEditModal(id) {
         document.getElementById('f-time').value        = d.appointment_time_raw || '';
         document.getElementById('f-status').value      = d.status               || 'programada';
 
-        // Marcar los servicios que ya tiene la cita
         const selectedIds = (d.service_ids || []).map(Number);
         document.querySelectorAll('.svc-check').forEach(c => {
             c.checked = selectedIds.includes(parseInt(c.value));
         });
-
     } catch {
         showToast('Error al cargar la cita.', 'error');
     }
@@ -1069,26 +1058,24 @@ async function saveAppt() {
         return;
     }
 
-    // ✅ VALIDAR FECHA
     const dateInput = document.getElementById('f-date');
     const dateValue = dateInput.value;
     const selectedDate = new Date(dateValue);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (!dateValue) {
         document.getElementById('err-appointment_date').textContent = 'Debes seleccionar una fecha.';
         dateInput.classList.add('is-invalid');
         return;
     }
-    
+
     if (selectedDate < today) {
         document.getElementById('err-appointment_date').textContent = 'No puedes seleccionar una fecha pasada.';
         dateInput.classList.add('is-invalid');
         return;
     }
 
-    // Recoger IDs de servicios marcados
     const serviceIds = [...document.querySelectorAll('.svc-check:checked')].map(c => c.value);
 
     const payload = {
@@ -1123,7 +1110,6 @@ async function saveAppt() {
         apptModal.hide();
         showToast(data.message || 'Cita guardada.', 'success');
         setTimeout(() => location.reload(), 750);
-
     } catch {
         setAlert('Error de conexión.', 'danger');
     } finally {
@@ -1131,54 +1117,91 @@ async function saveAppt() {
     }
 }
 
+/* ══════════════════════════════════════
+   SHOW MODAL — usa SIEMPRE la instancia global "showModal"
+   creada una única vez en DOMContentLoaded. No crear otra
+   instancia de bootstrap.Modal aquí: eso era lo que hacía
+   que el modal nunca se abriera (dos instancias compitiendo
+   sobre el mismo elemento del DOM).
+══════════════════════════════════════ */
 async function openShowModal(id) {
     showId = id;
 
-    // Resetear todos los campos mientras carga
-    ['show-patient','show-doctor','show-branch','show-date','show-time','show-phone']
-        .forEach(i => document.getElementById(i).textContent = '…');
-    document.getElementById('show-av').textContent         = '…';
+    // Resetear los campos antes de mostrar el modal
+    document.getElementById('show-patient').textContent = 'Cargando...';
+    document.getElementById('show-doctor').textContent = 'Cargando...';
+    document.getElementById('show-branch').textContent = 'Cargando...';
+    document.getElementById('show-date').textContent = 'Cargando...';
+    document.getElementById('show-time').textContent = 'Cargando...';
+    document.getElementById('show-phone').textContent = 'Cargando...';
+    document.getElementById('show-av').textContent = '?';
     document.getElementById('show-status-badge').innerHTML = '';
-    document.getElementById('show-services').innerHTML     = '…';
+    document.getElementById('show-services').innerHTML = '<span class="text-muted">Cargando servicios...</span>';
 
+    // ✅ Mostrar el modal usando la instancia global (sin setTimeout ni new Modal)
     showModal.show();
 
     try {
-        const r = await fetch(urlShow(id), { headers: {'Accept':'application/json','X-CSRF-TOKEN':CSRF} });
-        if (!r.ok) throw new Error();
+        const url = urlShow(id);
+        const r = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': CSRF
+            }
+        });
+
+        if (!r.ok) {
+            const errorText = await r.text();
+            console.error('Error HTTP:', r.status, errorText);
+            throw new Error('Error ' + r.status);
+        }
+
         const d = await r.json();
 
+        if (!d || !d.patient_name) {
+            throw new Error('Datos incompletos recibidos');
+        }
+
         const ini = d.patient_name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
-        const av  = document.getElementById('show-av');
-        av.textContent    = ini;
-        av.style.width    = '50px';
-        av.style.height   = '50px';
+        const av = document.getElementById('show-av');
+        av.textContent = ini || '?';
+        av.style.width = '50px';
+        av.style.height = '50px';
         av.style.fontSize = '1.05rem';
 
-        document.getElementById('show-patient').textContent    = d.patient_name;
-        document.getElementById('show-doctor').textContent = d.doctor_name;
-        document.getElementById('show-branch').textContent     = d.branch_name;
-        document.getElementById('show-date').textContent       = d.appointment_date;
-        document.getElementById('show-time').textContent       = d.appointment_time;
-        document.getElementById('show-phone').textContent      = d.patient_phone || 'No registrado';
+        document.getElementById('show-patient').textContent = d.patient_name || '—';
+        document.getElementById('show-doctor').textContent = d.doctor_name || '—';
+        document.getElementById('show-branch').textContent = d.branch_name || '—';
+        document.getElementById('show-date').textContent = d.appointment_date || '—';
+        document.getElementById('show-time').textContent = d.appointment_time || '—';
+        document.getElementById('show-phone').textContent = d.patient_phone || 'No registrado';
 
-        // Badge de estado
-        const pillCls = {programada:'pill-programada', completada:'pill-completada', cancelada:'pill-cancelada'};
-        document.getElementById('show-status-badge').innerHTML =
-            `<span class="status-pill ${pillCls[d.status]||''}"><span class="dot-sm"></span>${d.status.charAt(0).toUpperCase()+d.status.slice(1)}</span>`;
+        const statusMap = {
+            'programada': 'pill-programada',
+            'completada': 'pill-completada',
+            'cancelada': 'pill-cancelada'
+        };
+        const statusLabel = d.status ? d.status.charAt(0).toUpperCase() + d.status.slice(1) : '—';
+        document.getElementById('show-status-badge').innerHTML = `
+            <span class="status-pill ${statusMap[d.status] || ''}">
+                <span class="dot-sm"></span>${statusLabel}
+            </span>
+        `;
 
-        // Servicios
         const svcsEl = document.getElementById('show-services');
-        if (d.services && d.services.length) {
+        if (d.services && d.services.length > 0) {
             svcsEl.innerHTML = d.services.map(s =>
-                `<span class="svc-tag">${s.name}</span>`
+                `<span class="svc-tag">${s.name || 'Servicio'}</span>`
             ).join('');
         } else {
             svcsEl.innerHTML = '<span style="color:#adb5bd;font-size:.82rem;">Sin servicios asignados</span>';
         }
-
-    } catch {
-        showToast('Error al cargar.', 'error');
+    } catch (error) {
+        console.error('Error en openShowModal:', error);
+        document.getElementById('show-patient').textContent = '⚠️ Error al cargar';
+        document.getElementById('show-status-badge').innerHTML = '<span class="text-danger">Error al cargar datos</span>';
+        document.getElementById('show-services').innerHTML = '<span class="text-danger">No se pudieron cargar los servicios</span>';
+        showToast('Error al cargar la cita: ' + error.message, 'error');
     }
 }
 
@@ -1206,7 +1229,9 @@ async function confirmDelete() {
         });
         const data = await r.json();
         deleteModal.hide();
+
         if (!r.ok) { showToast(data.message || 'Error al eliminar.', 'error'); return; }
+
         showToast(data.message || 'Cita eliminada.', 'success');
         const row = document.querySelector(`#appt-tbody tr[data-id="${delId}"]`);
         if (row) {
@@ -1228,7 +1253,6 @@ function clearForm() {
     document.getElementById('f-date').value        = '';
     document.getElementById('f-time').value        = '';
     document.getElementById('f-status').value      = 'programada';
-    // Desmarcar todos los servicios
     document.querySelectorAll('.svc-check').forEach(c => c.checked = false);
     clearErrors();
     document.getElementById('appt-alert').className = 'alert d-none';
@@ -1288,5 +1312,4 @@ function showToast(msg, type) {
 }
 </script>
 @endpush
-
 </x-app-layout>
