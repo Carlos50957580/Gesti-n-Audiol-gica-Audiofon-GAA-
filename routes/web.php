@@ -20,6 +20,10 @@ use App\Http\Controllers\DoctorFeeController;
 use App\Http\Controllers\DoctorFeePaymentController;
 use App\Http\Controllers\DoctorFeeSettingController;
 use App\Http\Controllers\Settings\CompanyController; // ← IMPORTAR EL CONTROLADOR
+use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\StockMovementController;
 
 // ============================================
 // RUTAS PÚBLICAS
@@ -32,6 +36,43 @@ Route::get('/', function () {
 // RUTAS AUTENTICADAS (con middleware active)
 // ============================================
 Route::middleware(['auth', 'active'])->group(function () {
+
+
+ // ── INVENTARIO (solo admin) ──────────────────────────────────
+    Route::middleware(['role:admin'])->group(function () {
+        
+        // Categorías
+        Route::resource('product-categories', ProductCategoryController::class)
+            ->names('product-categories');
+
+        // Proveedores
+        Route::resource('suppliers', SupplierController::class);
+
+        // Productos
+        Route::resource('products', ProductController::class);
+
+        // Movimientos
+        Route::prefix('stock-movements')->name('stock-movements.')->group(function () {
+            Route::get('/', [StockMovementController::class, 'index'])->name('index');
+            
+            Route::get('/entry/create', [StockMovementController::class, 'createEntry'])->name('entry.create');
+            Route::post('/entry', [StockMovementController::class, 'storeEntry'])->name('entry.store');
+            
+            Route::get('/exit/create', [StockMovementController::class, 'createExit'])->name('exit.create');
+            Route::post('/exit', [StockMovementController::class, 'storeExit'])->name('exit.store');
+            
+            Route::get('/transfer/create', [StockMovementController::class, 'createTransfer'])->name('transfer.create');
+            Route::post('/transfer', [StockMovementController::class, 'storeTransfer'])->name('transfer.store');
+            
+            Route::get('/{stockMovement}', [StockMovementController::class, 'show'])->name('show');
+            Route::post('/{stockMovement}/confirm', [StockMovementController::class, 'confirm'])->name('confirm');
+            Route::post('/{stockMovement}/cancel', [StockMovementController::class, 'cancel'])->name('cancel');
+        });
+
+        // API
+        Route::get('/api/product-stock', [StockMovementController::class, 'getProductStock'])
+            ->name('api.product-stock');
+    });
 
     // ── Dashboard ─────────────────────────────────────
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

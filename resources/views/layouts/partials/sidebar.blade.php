@@ -226,6 +226,42 @@
     </li>
 @endif
 
+
+
+{{-- INVENTARIO - Solo admin --}}
+@if(auth()->user()->role->name === 'admin')
+    <li class="menu-title"><i class="ri-archive-line"></i> <span data-key="t-inventario">Inventario</span></li>
+
+    {{-- Productos --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('products.*') ? 'active' : '' }}" 
+           href="{{ route('products.index') }}">
+            <i class="ri-box-3-line"></i>
+            <span data-key="t-productos">Productos</span>
+        </a>
+    </li>
+
+    {{-- Categorías --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('product-categories.*') ? 'active' : '' }}" 
+           href="{{ route('product-categories.index') }}">
+            <i class="ri-price-tag-3-line"></i>
+            <span data-key="t-categorias">Categorías</span>
+        </a>
+    </li>
+
+    {{-- Proveedores --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}" 
+           href="{{ route('suppliers.index') }}">
+            <i class="ri-truck-line"></i>
+            <span data-key="t-proveedores">Proveedores</span>
+        </a>
+    </li>
+
+    
+@endif
+
                    
 
                     {{-- Facturación --}}
