@@ -89,7 +89,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/product-invoices', [ProductInvoiceController::class, 'index']);
     Route::get('/product-invoices/create', [ProductInvoiceController::class, 'create']);
     Route::post('/product-invoices', [ProductInvoiceController::class, 'store']);
-    Route::get('/product-invoices/{productInvoice}', [ProductInvoiceController::class, 'show']);
+ Route::get('/product-invoices/{productInvoice}', [ProductInvoiceController::class, 'show'])
+    ->name('product-invoices.show');
     Route::post('/product-invoices/{productInvoice}/cancel', [ProductInvoiceController::class, 'cancel']);
     Route::get('/product-invoices/{productInvoice}/print', [ProductInvoiceController::class, 'print']);
 

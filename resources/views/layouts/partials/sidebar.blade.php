@@ -220,6 +220,19 @@
                         </li>
                     @endif
 
+                    {{-- Historias Clínicas --}}
+                    @if(($isAdmin && $user->is_doctor == 1) || $isMedicRole)
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('clinical-records.*') ? 'active' : '' }}" 
+                               href="{{ route('clinical-records.index') }}">
+                                <i class="ri-file-history-line"></i>
+                                <span data-key="t-historias">Historias Clínicas</span>
+                            </a>
+                        </li>
+                    @endif
+
+                @endif {{-- Fin módulos clínicos --}}
+
                      {{-- Facturación --}}
                     @if($isAdmin || $isReceptionist)
                         <li class="nav-item">
@@ -362,18 +375,7 @@
                         </li>
                     @endif
 
-                    {{-- Historias Clínicas --}}
-                    @if(($isAdmin && $user->is_doctor == 1) || $isMedicRole)
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ request()->routeIs('clinical-records.*') ? 'active' : '' }}" 
-                               href="{{ route('clinical-records.index') }}">
-                                <i class="ri-file-history-line"></i>
-                                <span data-key="t-historias">Historias Clínicas</span>
-                            </a>
-                        </li>
-                    @endif
-
-                @endif {{-- Fin módulos clínicos --}}
+                    
 
             </ul>
         </div>

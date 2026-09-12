@@ -97,38 +97,52 @@ class ProductInvoiceController extends Controller
      * Guardar factura
      */
     public function store(Request $request)
-    {
-        $data = $request->validate([
-            'patient_id'   => 'required|exists:patients,id',
-            'branch_id'    => 'required|exists:branches,id',
-            'items'        => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity'   => 'required|integer|min:1',
-            'items.*.price'      => 'required|numeric|min:0',
-            'discount'     => 'nullable|numeric|min:0',
-            'with_ncf'     => 'boolean',
-            'ncf'          => 'nullable|string|max:255',
-            'ncf_type'     => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
-            'customer_rnc' => 'nullable|string|max:255',
-            'customer_business_name' => 'nullable|string|max:255',
-            'notes'        => 'nullable|string',
-        ]);
+{
+    $data = $request->validate([
+        'patient_id'   => 'required|exists:patients,id',
+        'branch_id'    => 'required|exists:branches,id',
+        'items'        => 'required|array|min:1',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity'   => 'required|integer|min:1',
+        'items.*.price'      => 'required|numeric|min:0',
+        'discount'     => 'nullable|numeric|min:0',
+        'with_ncf'     => 'boolean',
+        'ncf'          => 'nullable|string|max:255',
+        'ncf_type'     => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+        'customer_rnc' => 'nullable|string|max:255',
+        'customer_business_name' => 'nullable|string|max:255',
+        'notes'        => 'nullable|string',
+    ]);
 
-        // Validar acceso por sucursal
-        $user = auth()->user();
-        if ($user->role->name !== 'admin' && $data['branch_id'] != $user->branch_id) {
-            abort(403, 'No puedes facturar en otra sucursal.');
+    $user = auth()->user();
+    if ($user->role->name !== 'admin' && $data['branch_id'] != $user->branch_id) {
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'No puedes facturar en otra sucursal.'], 403);
         }
-
-        try {
-            $invoice = $this->service->createInvoice($data);
-            return redirect()
-                ->route('product-invoices.show', $invoice)
-                ->with('success', 'Factura de productos creada exitosamente.');
-        } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage())->withInput();
-        }
+        abort(403, 'No puedes facturar en otra sucursal.');
     }
+
+    try {
+        $invoice = $this->service->createInvoice($data);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Factura de productos creada exitosamente.',
+                'redirect' => route('product-invoices.show', $invoice),
+            ]);
+        }
+
+        return redirect()
+            ->route('product-invoices.show', $invoice)
+            ->with('success', 'Factura de productos creada exitosamente.');
+    } catch (\Exception $e) {
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+        return back()->with('error', $e->getMessage())->withInput();
+    }
+}
 
     /**
      * Ver detalle
@@ -219,10 +233,7 @@ class ProductInvoiceController extends Controller
                ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$q}%"]);
         });
 
-        if (!$isAdmin) {
-            $query->where('branch_id', $user->branch_id);
-        }
-
+        
         $patients = $query->orderBy('first_name')->limit(10)->get();
 
         return response()->json($patients);
@@ -231,37 +242,54 @@ class ProductInvoiceController extends Controller
     /**
      * Obtener productos por categoría y sucursal
      */
-    public function getProductsByCategory(Request $request)
-    {
-        $request->validate([
-            'category_id' => 'required|exists:product_categories,id',
-            'branch_id'   => 'required|exists:branches,id',
-        ]);
+    /**
+ * Obtener productos por categoría/búsqueda y sucursal (AJAX)
+ */
+public function getProductsByCategory(Request $request)
+{
+    $request->validate([
+        'branch_id'   => 'required|exists:branches,id',
+        'category_id' => 'nullable|exists:product_categories,id',
+        'q'           => 'nullable|string|max:255',
+    ]);
 
-        $user = auth()->user();
-        if ($user->role->name !== 'admin' && $request->branch_id != $user->branch_id) {
-            return response()->json(['error' => 'Sin acceso a esta sucursal'], 403);
-        }
-
-        $products = Product::active()
-            ->where('category_id', $request->category_id)
-            ->with(['stocks' => fn($q) => $q->where('branch_id', $request->branch_id)])
-            ->orderBy('name')
-            ->get()
-            ->map(function ($p) {
-                $stock = $p->stocks->first();
-                return [
-                    'id'         => $p->id,
-                    'code'       => $p->code,
-                    'name'       => $p->name,
-                    'price'      => (float) $p->sale_price,
-                    'has_tax'    => (bool) $p->has_tax,
-                    'unit'       => $p->unit,
-                    'stock'      => $stock ? $stock->quantity : 0,
-                    'available'  => $stock ? max(0, $stock->quantity - $stock->reserved_quantity) : 0,
-                ];
-            });
-
-        return response()->json($products);
+    $user = auth()->user();
+    if ($user->role->name !== 'admin' && $request->branch_id != $user->branch_id) {
+        return response()->json(['error' => 'Sin acceso a esta sucursal'], 403);
     }
+
+    $query = Product::active()
+        ->with(['stocks' => fn($q) => $q->where('branch_id', $request->branch_id)]);
+
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    if ($request->filled('q')) {
+        $search = $request->q;
+        $query->where(function ($sq) use ($search) {
+            $sq->where('name', 'like', "%{$search}%")
+               ->orWhere('code', 'like', "%{$search}%");
+        });
+    }
+
+    $products = $query->orderBy('name')
+        ->limit(50)
+        ->get()
+        ->map(function ($p) {
+            $stock = $p->stocks->first();
+            return [
+                'id'         => $p->id,
+                'code'       => $p->code,
+                'name'       => $p->name,
+                'price'      => (float) $p->sale_price,
+                'has_tax'    => (bool) $p->has_tax,
+                'unit'       => $p->unit,
+                'stock'      => $stock ? $stock->quantity : 0,
+                'available'  => $stock ? max(0, $stock->quantity - $stock->reserved_quantity) : 0,
+            ];
+        });
+
+    return response()->json($products);
+}
 }

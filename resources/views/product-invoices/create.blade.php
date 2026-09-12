@@ -65,23 +65,28 @@
                         <div class="card-header"><h5 class="card-title mb-0">Productos</h5></div>
                         <div class="card-body">
                             
-                            {{-- Selector de categoría --}}
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Categoría <span class="text-danger">*</span></label>
-                                    <select id="categorySelect" class="form-select">
-                                        <option value="">Seleccionar categoría</option>
-                                        @foreach($categories as $cat)
-                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-end">
-                                    <button type="button" class="btn btn-primary" onclick="loadProducts()">
-                                        <i class="ri-search-line me-1"></i>Cargar Productos
-                                    </button>
-                                </div>
-                            </div>
+                           
+
+                            {{-- Selector de categoría + búsqueda --}}
+<div class="row g-2 mb-3">
+    <div class="col-md-5">
+        <label class="form-label">Categoría</label>
+        <select id="categorySelect" class="form-select">
+            <option value="">Todas las categorías</option>
+            @foreach($categories as $cat)
+                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div class="col-md-7">
+        <label class="form-label">Buscar producto</label>
+        <div class="position-relative">
+            <i class="ri-search-line position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#999;"></i>
+            <input type="text" id="productSearch" class="form-control ps-4"
+                   placeholder="Buscar por nombre o código..." autocomplete="off">
+        </div>
+    </div>
+</div>
 
                             {{-- Lista de productos --}}
                             <div id="productsList" class="d-none">
@@ -217,23 +222,24 @@
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const URL_SEARCH_PATIENTS = "{{ url('/api/product-invoices/patients/search') }}";
 const URL_PRODUCTS_BY_CAT = "{{ url('/api/product-invoices/products/by-category') }}";
+const URL_STORE = "{{ url('/product-invoices') }}";
+const URL_INDEX = "{{ url('/product-invoices') }}";
 
 let items = [];
-let itemCounter = 0;
 
 // ═══════════════════════════════════════════
-// BÚSQUEDA DE PACIENTES
+// BÚSQUEDA DE PACIENTES (sin cambios)
 // ═══════════════════════════════════════════
 const patientSearch = document.getElementById('patientSearch');
 const patientResults = document.getElementById('patientResults');
-let searchTimer = null;
+let patientSearchTimer = null;
 
 patientSearch.addEventListener('input', function() {
-    clearTimeout(searchTimer);
+    clearTimeout(patientSearchTimer);
     const q = this.value.trim();
     if (q.length < 2) { patientResults.classList.add('d-none'); return; }
-    
-    searchTimer = setTimeout(async () => {
+
+    patientSearchTimer = setTimeout(async () => {
         const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
         const list = await r.json();
         if (!list.length) {
@@ -267,55 +273,89 @@ function selectPatient(id, name, cedula) {
 }
 
 // ═══════════════════════════════════════════
-// CARGA DE PRODUCTOS POR CATEGORÍA
+// CARGA DE PRODUCTOS (automática + búsqueda + debounce)
 // ═══════════════════════════════════════════
-async function loadProducts() {
-    const catId = document.getElementById('categorySelect').value;
-    const branchId = document.getElementById('branchSelect').value;
-    
-    if (!catId) { alert('Selecciona una categoría'); return; }
-    if (!branchId) { alert('Selecciona una sucursal'); return; }
-    
-    const r = await fetch(URL_PRODUCTS_BY_CAT + '?category_id=' + catId + '&branch_id=' + branchId);
-    const products = await r.json();
-    
-    document.getElementById('productsList').classList.remove('d-none');
-    const tbody = document.getElementById('productsBody');
-    
-    if (!products.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay productos en esta categoría</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = products.map(p => `
-        <tr>
-            <td><code>${p.code}</code></td>
-            <td>${p.name}</td>
-            <td class="text-end">RD$ ${p.price.toFixed(2)}</td>
-            <td class="text-center">
-                <span class="badge bg-${p.stock > 0 ? 'success' : 'danger'}-subtle text-${p.stock > 0 ? 'success' : 'danger'}">
-                    ${p.stock}
-                </span>
-            </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-success" 
-                        onclick='addItem(${JSON.stringify(p)})'
-                        ${p.stock <= 0 ? 'disabled' : ''}>
-                    <i class="ri-add-line"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+let productLoadTimer = null;
+let productFetchController = null; // para cancelar peticiones viejas
+
+function scheduleLoadProducts(delay = 350) {
+    clearTimeout(productLoadTimer);
+    productLoadTimer = setTimeout(loadProducts, delay);
 }
 
+async function loadProducts() {
+    const branchId = document.getElementById('branchSelect').value;
+    const catId = document.getElementById('categorySelect').value;
+    const q = document.getElementById('productSearch').value.trim();
+
+    const productsList = document.getElementById('productsList');
+    const tbody = document.getElementById('productsBody');
+
+    if (!branchId) {
+        productsList.classList.add('d-none');
+        return;
+    }
+
+    // Cancela la petición anterior si sigue en vuelo (evita resultados "fuera de orden")
+    if (productFetchController) productFetchController.abort();
+    productFetchController = new AbortController();
+
+    const params = new URLSearchParams({ branch_id: branchId });
+    if (catId) params.append('category_id', catId);
+    if (q) params.append('q', q);
+
+    productsList.classList.remove('d-none');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Buscando...</td></tr>';
+
+    try {
+        const r = await fetch(URL_PRODUCTS_BY_CAT + '?' + params.toString(), {
+            signal: productFetchController.signal,
+        });
+        const products = await r.json();
+
+        if (!products.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No se encontraron productos</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = products.map(p => `
+            <tr>
+                <td><code>${p.code}</code></td>
+                <td>${p.name}</td>
+                <td class="text-end">RD$ ${p.price.toFixed(2)}</td>
+                <td class="text-center">
+                    <span class="badge bg-${p.stock > 0 ? 'success' : 'danger'}-subtle text-${p.stock > 0 ? 'success' : 'danger'}">
+                        ${p.stock}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-success"
+                            onclick='addItem(${JSON.stringify(p)})'
+                            ${p.stock <= 0 ? 'disabled' : ''}>
+                        <i class="ri-add-line"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar productos</td></tr>';
+        }
+    }
+}
+
+// Disparadores automáticos (sin botón)
+document.getElementById('branchSelect').addEventListener('change', () => scheduleLoadProducts(0));
+document.getElementById('categorySelect').addEventListener('change', () => scheduleLoadProducts(0));
+document.getElementById('productSearch').addEventListener('input', () => scheduleLoadProducts(350));
+
 // ═══════════════════════════════════════════
-// AGREGAR ITEM
+// AGREGAR ITEM (sin cambios)
 // ═══════════════════════════════════════════
 function addItem(product) {
-    // Verificar si ya existe
     const existing = items.find(i => i.product_id === product.id);
     if (existing) {
-        existing.quantity++;
+        if (existing.quantity < product.stock) existing.quantity++;
     } else {
         items.push({
             product_id: product.id,
@@ -332,13 +372,13 @@ function addItem(product) {
 
 function renderItems() {
     const tbody = document.getElementById('itemsBody');
-    
+
     if (!items.length) {
         tbody.innerHTML = '<tr id="noItemsRow"><td colspan="5" class="text-center text-muted py-3">No hay productos agregados</td></tr>';
         updateTotals();
         return;
     }
-    
+
     tbody.innerHTML = items.map((item, idx) => `
         <tr>
             <td>
@@ -348,7 +388,7 @@ function renderItems() {
                 <input type="hidden" name="items[${idx}][price]" value="${item.price}">
             </td>
             <td>
-                <input type="number" name="items[${idx}][quantity]" class="form-control form-control-sm" 
+                <input type="number" name="items[${idx}][quantity]" class="form-control form-control-sm"
                        value="${item.quantity}" min="1" max="${item.max_stock}"
                        onchange="updateQuantity(${idx}, this.value)">
             </td>
@@ -361,7 +401,7 @@ function renderItems() {
             </td>
         </tr>
     `).join('');
-    
+
     updateTotals();
 }
 
@@ -376,32 +416,29 @@ function removeItem(idx) {
 }
 
 // ═══════════════════════════════════════════
-// CÁLCULO DE TOTALES
+// TOTALES (sin cambios)
 // ═══════════════════════════════════════════
 function updateTotals() {
     let subtotal = 0;
     let tax = 0;
-    
     const taxRate = {{ (float) \App\Models\Setting::get('company_tax_rate', 18) }};
-    
+
     items.forEach(item => {
         const itemSubtotal = item.price * item.quantity;
         subtotal += itemSubtotal;
-        if (item.has_tax) {
-            tax += itemSubtotal * (taxRate / 100);
-        }
+        if (item.has_tax) tax += itemSubtotal * (taxRate / 100);
     });
-    
+
     const discount = parseFloat(document.getElementById('discountInput').value) || 0;
     const total = subtotal + tax - discount;
-    
+
     document.getElementById('sumSubtotal').textContent = 'RD$ ' + subtotal.toFixed(2);
     document.getElementById('sumTax').textContent = 'RD$ ' + tax.toFixed(2);
     document.getElementById('sumTotal').textContent = 'RD$ ' + total.toFixed(2);
 }
 
 // ═══════════════════════════════════════════
-// NCF
+// NCF (sin cambios)
 // ═══════════════════════════════════════════
 function toggleNcf() {
     const checked = document.getElementById('withNcf').checked;
@@ -409,27 +446,60 @@ function toggleNcf() {
 }
 
 // ═══════════════════════════════════════════
-// VALIDACIÓN
+// ENVÍO DEL FORMULARIO VÍA AJAX (sin recargar página)
 // ═══════════════════════════════════════════
-document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+const invoiceForm = document.getElementById('invoiceForm');
+
+invoiceForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
     if (!document.getElementById('patientId').value) {
-        e.preventDefault();
         alert('Debes seleccionar un paciente.');
         return;
     }
     if (!items.length) {
-        e.preventDefault();
         alert('Debes agregar al menos un producto.');
         return;
     }
-});
 
-// Re-cargar productos cuando cambia la sucursal
-document.getElementById('branchSelect').addEventListener('change', function() {
-    if (document.getElementById('categorySelect').value) {
-        loadProducts();
+    const submitBtn = invoiceForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+    try {
+        const formData = new FormData(invoiceForm);
+
+        const r = await fetch(URL_STORE, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': CSRF,
+            },
+            body: formData,
+        });
+
+        const data = await r.json().catch(() => null);
+
+        if (r.ok && data?.success) {
+            window.location.href = data.redirect;
+            return;
+        }
+
+        // Errores de validación (422) u otros
+        let message = data?.message || 'Ocurrió un error al guardar la factura.';
+        if (data?.errors) {
+            message = Object.values(data.errors).flat().join('\n');
+        }
+        alert(message);
+    } catch (err) {
+        alert('Error de conexión. Intenta de nuevo.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 });
 </script>
+
 @endpush
 </x-app-layout>

@@ -65,7 +65,7 @@ class ProductReceiptController extends Controller
         }
 
         if ($productInvoice->status !== 'pendiente') {
-            return redirect()->route('product-invoices.show', $productInvoice)
+            return redirect()->route('product-invoices', $productInvoice)
                 ->with('error', 'Esta factura no está pendiente de pago.');
         }
 
