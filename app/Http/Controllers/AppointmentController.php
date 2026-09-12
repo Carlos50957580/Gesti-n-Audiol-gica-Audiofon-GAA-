@@ -100,10 +100,7 @@ class AppointmentController extends Controller
                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$q}%"]);
             });
 
-        // ✅ Si no es admin, solo busca pacientes de su sucursal
-        if (!$isAdmin) {
-            $query->where('branch_id', $user->branch_id);
-        }
+      
 
         $patients = $query->orderBy('first_name')->limit(8)->get(['id', 'first_name', 'last_name', 'cedula']);
 

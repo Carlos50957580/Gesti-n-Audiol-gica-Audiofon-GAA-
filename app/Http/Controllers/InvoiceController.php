@@ -378,34 +378,31 @@ class InvoiceController extends Controller
     // ============================================
 
     public function searchPatients(Request $request)
-    {
-        $query = $request->get('q', '');
+{
+    $query = $request->get('q', '');
 
-        $patientsQuery = Patient::where(function($q) use ($query) {
+    $patients = Patient::where(function ($q) use ($query) {
             $q->where('first_name', 'LIKE', "%{$query}%")
               ->orWhere('last_name', 'LIKE', "%{$query}%")
               ->orWhere('cedula', 'LIKE', "%{$query}%")
               ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
-        });
+        })
+        ->with('insurance')
+        ->limit(20)
+        ->get();
 
-        if (auth()->user()->role->name === 'recepcionista') {
-            $patientsQuery->where('branch_id', auth()->user()->branch_id);
-        }
-
-        $patients = $patientsQuery->with('insurance')->limit(20)->get();
-
-        return response()->json($patients->map(function($patient) {
-            return [
-                'id' => $patient->id,
-                'full_name' => $patient->full_name,
-                'cedula' => $patient->cedula,
-                'phone' => $patient->phone,
-                'insurance_id' => $patient->insurance_id,
-                'insurance_name' => $patient->insurance?->name,
-                'insurance_coverage' => $patient->insurance?->coverage_percentage,
-            ];
-        }));
-    }
+    return response()->json($patients->map(function ($patient) {
+        return [
+            'id' => $patient->id,
+            'full_name' => $patient->full_name,
+            'cedula' => $patient->cedula,
+            'phone' => $patient->phone,
+            'insurance_id' => $patient->insurance_id,
+            'insurance_name' => $patient->insurance?->name,
+            'insurance_coverage' => $patient->insurance?->coverage_percentage,
+        ];
+    }));
+}
 
     public function storePatient(Request $request)
     {

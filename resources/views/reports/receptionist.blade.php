@@ -132,6 +132,12 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
+                <!-- 🆕 Botón para imprimir cuadre de caja -->
+                <a href="{{ route('receptionist.reports.print') }}" 
+                   class="btn btn-sm btn-primary d-flex align-items-center gap-1"
+                   target="_blank">
+                    <i class="ri-printer-fill"></i> Cuadre PDF
+                </a>
                 <button class="btn btn-sm btn-light d-flex align-items-center gap-1" onclick="window.print()">
                     <i class="ri-printer-line"></i> Imprimir
                 </button>
@@ -260,15 +266,15 @@
             </div>
         </div>
 
-        {{-- Por audiólogo --}}
+        {{-- Por Médico (antes Audiólogo) --}}
         <div class="chart-card mb-3">
             <div class="chart-card-header">
                 <i class="ri-user-star-line"></i>
-                <h6>Facturación por Audiólogo</h6>
+                <h6>Facturación por Médico</h6>
             </div>
             <div class="chart-card-body">
                 <div class="table-responsive">
-                    <table class="inv-table w-100" id="table-by-audiologist"></table>
+                    <table class="inv-table w-100" id="table-by-doctor"></table>
                 </div>
             </div>
         </div>
@@ -304,7 +310,7 @@
                             <th>Hora</th>
                             <th>Factura</th>
                             <th>Paciente</th>
-                            <th>Audiólogo</th>
+                            <th>Médico</th>
                             <th>Servicios</th>
                             <th>Subtotal</th>
                             <th>Desc.</th>
@@ -569,28 +575,28 @@ function renderSummary(d) {
         'Facturas', '#405189'
     );
 
-    // Por audiólogo
-    const maxAud = Math.max(...d.by_audiologist.map(r => parseFloat(r.total)), 1);
-    document.getElementById('table-by-audiologist').innerHTML =
+    // Por Médico (antes Audiólogo)
+    const maxDoctor = Math.max(...d.by_doctor.map(r => parseFloat(r.total)), 1);
+    document.getElementById('table-by-doctor').innerHTML =
         '<thead><tr>' +
-            ['Audiólogo','Facturas','Total','Participación'].map(c => `<th>${c}</th>`).join('') +
+            ['Médico','Facturas','Total','Participación'].map(c => `<th>${c}</th>`).join('') +
         '</tr></thead>' +
-        '<tbody>' + d.by_audiologist.map((r,i) => `
+        '<tbody>' + d.by_doctor.map((r,i) => `
             <tr>
                 <td>
                     <span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#405189,#0ab39c);
                         color:#fff;font-size:.68rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-right:.5rem;">
                         ${i+1}
                     </span>
-                    <span class="fw-semibold">${r.audiologist}</span>
+                    <span class="fw-semibold">${r.doctor}</span>
                 </td>
                 <td>${r.count}</td>
                 <td class="fw-bold text-success">RD$ ${fmtNum(r.total)}</td>
                 <td style="min-width:130px;">
                     <div class="prog-bar-wrap">
-                        <div class="prog-bar" style="width:${Math.round(parseFloat(r.total)/maxAud*100)}%"></div>
+                        <div class="prog-bar" style="width:${Math.round(parseFloat(r.total)/maxDoctor*100)}%"></div>
                     </div>
-                    <span style="font-size:.72rem;color:#8098bb;">${Math.round(parseFloat(r.total)/maxAud*100)}%</span>
+                    <span style="font-size:.72rem;color:#8098bb;">${Math.round(parseFloat(r.total)/maxDoctor*100)}%</span>
                 </td>
             </tr>`).join('') +
         '</tbody>';
@@ -632,14 +638,14 @@ function renderInvTable(invoices) {
             cancelada: `<span class="badge-cancelada">Cancelada</span>`,
         }[inv.status] || inv.status;
 
-        return `<tr data-search="${(inv.patient+inv.number+inv.audiologist+inv.services).toLowerCase()}">
+        return `<tr data-search="${(inv.patient+inv.number+inv.doctor+inv.services).toLowerCase()}">
             <td style="font-family:monospace;color:#8098bb;">${inv.time}</td>
             <td><span style="font-family:monospace;font-weight:700;color:#405189;">${inv.number}</span></td>
             <td>
                 <div class="fw-semibold" style="font-size:.87rem;">${inv.patient}</div>
                 <div class="text-muted" style="font-size:.75rem;">${inv.cedula}</div>
             </td>
-            <td style="font-size:.84rem;">${inv.audiologist}</td>
+            <td style="font-size:.84rem;">${inv.doctor}</td>
             <td style="font-size:.78rem;color:#6b7a99;max-width:160px;">${inv.services || '—'}</td>
             <td>RD$ ${inv.subtotal}</td>
             <td class="text-warning">RD$ ${inv.descuento}</td>
@@ -654,7 +660,7 @@ function filterInvTable() {
     const q = document.getElementById('inv-search').value.toLowerCase().trim();
     if (!q) { renderInvTable(allInvoices); return; }
     renderInvTable(allInvoices.filter(inv =>
-        (inv.patient + inv.number + inv.audiologist + inv.services + inv.cedula)
+        (inv.patient + inv.number + inv.doctor + inv.services + inv.cedula)
             .toLowerCase().includes(q)
     ));
 }

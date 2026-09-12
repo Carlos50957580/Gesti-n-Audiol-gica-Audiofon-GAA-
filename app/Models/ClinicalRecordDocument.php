@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class ClinicalRecordDocument extends Model
 {
@@ -18,10 +17,15 @@ class ClinicalRecordDocument extends Model
         'file_name',
         'file_type',
         'file_size',
+        'mime_type',
         'uploaded_by',
+        'description',
     ];
 
-    // ── Relaciones ────────────────────────────────────────
+    // ============================================
+    // RELACIONES
+    // ============================================
+    
     public function clinicalRecord()
     {
         return $this->belongsTo(ClinicalRecord::class);
@@ -32,40 +36,31 @@ class ClinicalRecordDocument extends Model
         return $this->belongsTo(Patient::class);
     }
 
-    public function uploadedBy()
+    public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    // ── Helpers ───────────────────────────────────────────
-    public function getUrlAttribute(): string
+    // ============================================
+    // ACCESORES
+    // ============================================
+    
+    public function getFileUrlAttribute()
     {
         return asset('storage/' . $this->file_path);
     }
 
-    public function getFileSizeFormattedAttribute(): string
+    public function getFileSizeFormattedAttribute()
     {
         $bytes = $this->file_size;
-        if ($bytes < 1024)       return $bytes . ' B';
-        if ($bytes < 1048576)    return round($bytes / 1024, 1) . ' KB';
-        return round($bytes / 1048576, 1) . ' MB';
-    }
-
-    public function getFileIconAttribute(): string
-    {
-        return match(strtolower($this->file_type)) {
-            'pdf'  => 'ri-file-pdf-line',
-            'doc', 'docx' => 'ri-file-word-line',
-            default => 'ri-file-line',
-        };
-    }
-
-    public function getFileIconColorAttribute(): string
-    {
-        return match(strtolower($this->file_type)) {
-            'pdf'  => 'text-danger',
-            'doc', 'docx' => 'text-primary',
-            default => 'text-secondary',
-        };
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = 0;
+        
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+        
+        return round($bytes, 2) . ' ' . $units[$i];
     }
 }
