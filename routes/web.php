@@ -24,7 +24,8 @@ use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StockMovementController;
-
+use App\Http\Controllers\ProductInvoiceController;
+use App\Http\Controllers\ProductReceiptController;
 // ============================================
 // RUTAS PÚBLICAS
 // ============================================
@@ -74,6 +75,30 @@ Route::middleware(['auth', 'active'])->group(function () {
             ->name('api.product-stock');
     });
 
+// ============================================
+// FACTURACIÓN DE PRODUCTOS (admin + recepcionista)
+// ============================================
+
+    // ── API: Búsqueda de pacientes ─────────────────────
+    Route::get('/api/product-invoices/patients/search', [ProductInvoiceController::class, 'searchPatients']);
+
+    // ── API: Productos por categoría ───────────────────
+    Route::get('/api/product-invoices/products/by-category', [ProductInvoiceController::class, 'getProductsByCategory']);
+
+    // ── FACTURAS DE PRODUCTOS ─────────────────────────
+    Route::get('/product-invoices', [ProductInvoiceController::class, 'index']);
+    Route::get('/product-invoices/create', [ProductInvoiceController::class, 'create']);
+    Route::post('/product-invoices', [ProductInvoiceController::class, 'store']);
+    Route::get('/product-invoices/{productInvoice}', [ProductInvoiceController::class, 'show']);
+    Route::post('/product-invoices/{productInvoice}/cancel', [ProductInvoiceController::class, 'cancel']);
+    Route::get('/product-invoices/{productInvoice}/print', [ProductInvoiceController::class, 'print']);
+
+    // ── PAGOS DE PRODUCTOS ─────────────────────────
+    Route::get('/product-receipts', [ProductReceiptController::class, 'index']);
+    Route::get('/product-receipts/create/{productInvoice}', [ProductReceiptController::class, 'create']);
+    Route::post('/product-receipts/{productInvoice}', [ProductReceiptController::class, 'store']);
+    Route::get('/product-receipts/{productReceipt}', [ProductReceiptController::class, 'show']);
+    Route::get('/product-receipts/{productReceipt}/print', [ProductReceiptController::class, 'print']);
     // ── Dashboard ─────────────────────────────────────
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

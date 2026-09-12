@@ -220,6 +220,26 @@
                         </li>
                     @endif
 
+                     {{-- Facturación --}}
+                    @if($isAdmin || $isReceptionist)
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" 
+                               href="{{ route('invoices.index') }}">
+                                <i class="ri-bill-line"></i>
+                                <span data-key="t-facturacion">Facturación</span>
+                            </a>
+                        </li>
+
+                        {{-- Pagar --}}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('receipts.*') ? 'active' : '' }}" 
+                               href="{{ route('receipts.index') }}">
+                                <i class="ri-bank-card-line"></i>
+                                <span data-key="t-pagar">Pagar</span>
+                            </a>
+                        </li>
+                    @endif
+
                     {{-- 📦 INVENTARIO COMPLETO - Solo admin --}}
                     @if(auth()->user()->role->name === 'admin')
                         <li class="menu-title"><i class="ri-archive-line"></i> <span data-key="t-inventario">Inventario</span></li>
@@ -293,25 +313,43 @@
                         </li>
                     @endif
 
-                    {{-- Facturación --}}
-                    @if($isAdmin || $isReceptionist)
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" 
-                               href="{{ route('invoices.index') }}">
-                                <i class="ri-bill-line"></i>
-                                <span data-key="t-facturacion">Facturación</span>
-                            </a>
-                        </li>
+                    {{-- ═══════════════════════════════════════════ --}}
+{{-- VENTAS DE PRODUCTOS (admin + recepcionista)  --}}
+{{-- ═══════════════════════════════════════════ --}}
+@if(in_array(auth()->user()->role->name, ['admin', 'recepcionista']))
+    <li class="menu-title">
+        <i class="ri-shopping-bag-3-line"></i> 
+        <span data-key="t-ventas">Ventas de Productos</span>
+    </li>
 
-                        {{-- Pagar --}}
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ request()->routeIs('receipts.*') ? 'active' : '' }}" 
-                               href="{{ route('receipts.index') }}">
-                                <i class="ri-bank-card-line"></i>
-                                <span data-key="t-pagar">Pagar</span>
-                            </a>
-                        </li>
-                    @endif
+    {{-- Nueva Factura de Productos --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('product-invoices/create') ? 'active' : '' }}" 
+           href="{{ url('/product-invoices/create') }}">
+            <i class="ri-add-circle-line"></i>
+            <span data-key="t-nueva-venta">Nueva Venta</span>
+        </a>
+    </li>
+
+    {{-- Facturas de Productos --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('product-invoices') && !request()->is('product-invoices/create') ? 'active' : '' }}" 
+           href="{{ url('/product-invoices') }}">
+            <i class="ri-file-list-3-line"></i>
+            <span data-key="t-facturas-productos">Facturas de Productos</span>
+        </a>
+    </li>
+
+    {{-- Pagos de Productos --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('product-receipts*') ? 'active' : '' }}" 
+           href="{{ url('/product-receipts') }}">
+            <i class="ri-bank-card-line"></i>
+            <span data-key="t-pagos-productos">Pagos de Productos</span>
+        </a>
+    </li>
+@endif
+
 
                     {{-- Reportes Recepcionista --}}
                     @if($isReceptionist)
