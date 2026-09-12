@@ -54,7 +54,17 @@ class StockMovementController extends Controller
         $suppliers = Supplier::active()->orderBy('name')->get();
         $branches = Branch::where('is_active', 1)->get();
 
-        return view('inventory.movements.create-entry', compact('products', 'suppliers', 'branches'));
+        // ✅ Datos formateados para JS (evita el error de parseo de Blade)
+        $productsData = $products->map(function ($p) {
+            return [
+                'id'   => $p->id,
+                'name' => $p->name,
+                'code' => $p->code,
+                'cost' => (float) $p->cost_price,
+            ];
+        })->values()->toArray();
+
+        return view('inventory.movements.create-entry', compact('products', 'suppliers', 'branches', 'productsData'));
     }
 
     public function storeEntry(Request $request)
@@ -84,7 +94,17 @@ class StockMovementController extends Controller
         $products = Product::active()->with('stocks')->orderBy('name')->get();
         $branches = Branch::where('is_active', 1)->get();
 
-        return view('inventory.movements.create-exit', compact('products', 'branches'));
+        // ✅ Datos formateados para JS
+        $productsData = $products->map(function ($p) {
+            return [
+                'id'     => $p->id,
+                'name'   => $p->name,
+                'code'   => $p->code,
+                'stocks' => $p->stocks->pluck('quantity', 'branch_id')->toArray(),
+            ];
+        })->values()->toArray();
+
+        return view('inventory.movements.create-exit', compact('products', 'branches', 'productsData'));
     }
 
     public function storeExit(Request $request)
@@ -112,7 +132,17 @@ class StockMovementController extends Controller
         $products = Product::active()->with('stocks')->orderBy('name')->get();
         $branches = Branch::where('is_active', 1)->get();
 
-        return view('inventory.movements.create-transfer', compact('products', 'branches'));
+        // ✅ Datos formateados para JS
+        $productsData = $products->map(function ($p) {
+            return [
+                'id'     => $p->id,
+                'name'   => $p->name,
+                'code'   => $p->code,
+                'stocks' => $p->stocks->pluck('quantity', 'branch_id')->toArray(),
+            ];
+        })->values()->toArray();
+
+        return view('inventory.movements.create-transfer', compact('products', 'branches', 'productsData'));
     }
 
     public function storeTransfer(Request $request)
@@ -157,7 +187,7 @@ class StockMovementController extends Controller
     {
         try {
             $this->inventory->cancelMovement($stockMovement);
-            return redirect()->route('stock-movements.show', $stockMovement)
+            return redirect()->route('inventory.stock-movements.show', $stockMovement)
                 ->with('success', 'Movimiento cancelado.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());

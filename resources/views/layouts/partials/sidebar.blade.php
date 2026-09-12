@@ -174,8 +174,7 @@
                 @endif {{-- Fin admin --}}
 
                 {{-- ============================ --}}
-                {{-- MÓDULOS CLÍNICOS            --}}
-                {{-- (Admin, Recepcionista y Médicos con is_doctor) --}}
+                {{-- MÓDULOS CLÍNICOS             --}}
                 {{-- ============================ --}}
                 @php
                     $user = auth()->user();
@@ -185,7 +184,6 @@
                     $isMedicRole = $user->role->name === 'medico';
                 @endphp
 
-                {{-- Mostrar para: Admin, Recepcionista, y cualquier usuario con is_doctor --}}
                 @if($isAdmin || $isReceptionist || $isDoctor || $isMedicRole)
                     <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-clinica">Clínica</span></li>
 
@@ -211,18 +209,89 @@
                         </li>
                     @endif
 
-{{-- Mis Citas (Médicos) --}}
-@if(auth()->user()->is_doctor == 1)
-    <li class="nav-item">
-        <a class="nav-link menu-link {{ request()->routeIs('doctor.appointments.*') ? 'active' : '' }}" 
-           href="{{ route('doctor.appointments.index') }}">
-            <i class="ri-calendar-line"></i>
-            <span data-key="t-mis-citas">Mis Citas</span>
-        </a>
-    </li>
-@endif
+                    {{-- Mis Citas (Médicos) --}}
+                    @if(auth()->user()->is_doctor == 1)
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('doctor.appointments.*') ? 'active' : '' }}" 
+                               href="{{ route('doctor.appointments.index') }}">
+                                <i class="ri-calendar-line"></i>
+                                <span data-key="t-mis-citas">Mis Citas</span>
+                            </a>
+                        </li>
+                    @endif
 
-                   
+                    {{-- 📦 INVENTARIO COMPLETO - Solo admin --}}
+                    @if(auth()->user()->role->name === 'admin')
+                        <li class="menu-title"><i class="ri-archive-line"></i> <span data-key="t-inventario">Inventario</span></li>
+
+                        {{-- Productos --}}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('products.*') ? 'active' : '' }}" 
+                               href="{{ route('products.index') }}">
+                                <i class="ri-box-3-line"></i>
+                                <span data-key="t-productos">Productos</span>
+                            </a>
+                        </li>
+
+                        {{-- Categorías --}}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('product-categories.*') ? 'active' : '' }}" 
+                               href="{{ route('product-categories.index') }}">
+                                <i class="ri-price-tag-3-line"></i>
+                                <span data-key="t-categorias">Categorías</span>
+                            </a>
+                        </li>
+
+                        {{-- Proveedores --}}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}" 
+                               href="{{ route('suppliers.index') }}">
+                                <i class="ri-truck-line"></i>
+                                <span data-key="t-proveedores">Proveedores</span>
+                            </a>
+                        </li>
+
+                        {{-- Movimientos de Stock (Menú Desplegable con las nuevas rutas) --}}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('stock-movements.*') ? '' : 'collapsed' }}" 
+                               href="#sidebarStockMovements" 
+                               data-bs-toggle="collapse" 
+                               role="button" 
+                               aria-expanded="{{ request()->routeIs('stock-movements.*') ? 'true' : 'false' }}" 
+                               aria-controls="sidebarStockMovements">
+                                <i class="ri-exchange-box-line"></i>
+                                <span data-key="t-stock-movements">Movimientos Stock</span>
+                            </a>
+                            <div class="collapse menu-dropdown {{ request()->routeIs('stock-movements.*') ? 'show' : '' }}" id="sidebarStockMovements">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="{{ route('stock-movements.index') }}" 
+                                           class="nav-link {{ request()->routeIs('stock-movements.index') ? 'active' : '' }}">
+                                            Listado General
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('stock-movements.entry.create') }}" 
+                                           class="nav-link {{ request()->routeIs('stock-movements.entry.create') ? 'active' : '' }}">
+                                            Nueva Entrada
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('stock-movements.exit.create') }}" 
+                                           class="nav-link {{ request()->routeIs('stock-movements.exit.create') ? 'active' : '' }}">
+                                            Nueva Salida
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('stock-movements.transfer.create') }}" 
+                                           class="nav-link {{ request()->routeIs('stock-movements.transfer.create') ? 'active' : '' }}">
+                                            Nueva Transferencia
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                    @endif
 
                     {{-- Facturación --}}
                     @if($isAdmin || $isReceptionist)
@@ -255,10 +324,7 @@
                         </li>
                     @endif
 
-                    {{-- ============================================ --}}
-                    {{-- 🆕 HISTORIAS CLÍNICAS                      --}}
-                    {{-- Solo Admin con is_doctor y Médicos (rol 3) --}}
-                    {{-- ============================================ --}}
+                    {{-- Historias Clínicas --}}
                     @if(($isAdmin && $user->is_doctor == 1) || $isMedicRole)
                         <li class="nav-item">
                             <a class="nav-link menu-link {{ request()->routeIs('clinical-records.*') ? 'active' : '' }}" 
