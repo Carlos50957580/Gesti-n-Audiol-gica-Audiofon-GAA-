@@ -104,9 +104,9 @@
                                         @php
                                             $colors = ['pendiente' => 'warning', 'pagada' => 'success', 'cancelada' => 'danger'];
                                         @endphp
-                                        <span class="badge bg-{{ $colors[$inv->status] }}-subtle text-{{ $colors[$inv->status] }}">
-                                            {{ $inv->status_label }}
-                                        </span>
+                                        <span class="badge bg-{{ $inv->status_color }}-subtle text-{{ $inv->status_color }}">
+    {{ $inv->status_label }}
+</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-1 justify-content-center">

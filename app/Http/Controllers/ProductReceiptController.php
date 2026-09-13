@@ -57,19 +57,28 @@ class ProductReceiptController extends Controller
     /**
      * Formulario de pago (desde una factura pendiente)
      */
-    public function create(ProductInvoice $productInvoice)
+  public function create(ProductInvoice $productInvoice)
 {
     $user = auth()->user();
     if ($user->role->name !== 'admin' && $productInvoice->branch_id != $user->branch_id) {
         abort(403);
     }
 
-    if ($productInvoice->status !== 'pendiente') {
+    $canPay = in_array($productInvoice->status, ['pendiente', 'pagada_parcial'])
+              && (float) $productInvoice->balance > 0.01;
+
+    if (!$canPay) {
+        $message = match($productInvoice->status) {
+            'pagada'    => 'Esta factura ya está completamente pagada.',
+            'cancelada' => 'No se puede pagar una factura cancelada.',
+            default     => 'Esta factura no tiene balance pendiente.',
+        };
+
         return redirect(url('/product-invoices/' . $productInvoice->id))
-            ->with('error', 'Esta factura no está pendiente de pago.');
+            ->with('error', $message);
     }
 
-    $productInvoice->load(['patient', 'items.product']);
+    $productInvoice->load(['patient', 'items.product', 'receipts']);
 
     return view('product-receipts.create', compact('productInvoice'));
 }
@@ -80,12 +89,12 @@ class ProductReceiptController extends Controller
     public function store(Request $request, ProductInvoice $productInvoice)
     {
         $data = $request->validate([
-            'cash_amount'        => 'nullable|numeric|min:0',
-            'card_amount'        => 'nullable|numeric|min:0',
-            'transfer_amount'    => 'nullable|numeric|min:0',
-            'card_reference'     => 'nullable|string|max:100',
-            'transfer_reference' => 'nullable|string|max:100',
-            'notes'              => 'nullable|string|max:500',
+        'cash_amount'        => 'nullable|numeric|min:0',
+        'card_amount'        => 'nullable|numeric|min:0',
+        'transfer_amount'    => 'nullable|numeric|min:0',
+        'card_reference'     => 'nullable|string|max:100',
+        'transfer_reference' => 'nullable|string|max:100',
+        'notes'              => 'nullable|string|max:500',
         ]);
 
         $user = auth()->user();

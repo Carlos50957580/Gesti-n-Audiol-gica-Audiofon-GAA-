@@ -98,7 +98,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/product-receipts', [ProductReceiptController::class, 'index']);
     Route::get('/product-receipts/create/{productInvoice}', [ProductReceiptController::class, 'create']);
     Route::post('/product-receipts/{productInvoice}', [ProductReceiptController::class, 'store']);
-    Route::get('/product-receipts/{productReceipt}', [ProductReceiptController::class, 'show']);
+    Route::get('/product-receipts/{productReceipt}', [ProductReceiptController::class, 'show'])
+    ->name('product-receipts.show');
     Route::get('/product-receipts/{productReceipt}/print', [ProductReceiptController::class, 'print']);
     // ── Dashboard ─────────────────────────────────────
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

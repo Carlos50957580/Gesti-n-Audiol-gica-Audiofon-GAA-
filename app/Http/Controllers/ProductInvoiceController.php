@@ -154,7 +154,7 @@ class ProductInvoiceController extends Controller
             abort(403);
         }
 
-        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipt']);
+        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user']);
 
         $company = [
             'name'  => Setting::get('company_name', 'Mi Clínica'),
@@ -197,7 +197,7 @@ class ProductInvoiceController extends Controller
             abort(403);
         }
 
-        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipt']);
+        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user']);
 
         $company = [
             'name'  => Setting::get('company_name', 'Mi Clínica'),

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductInvoice;
-use App\Models\ProductInvoiceItem;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
 use Illuminate\Support\Facades\DB;
@@ -30,19 +29,18 @@ class ProductInvoiceService
                 $itemSubtotal = $qty * $price;
                 $taxAmount    = 0;
 
-                // Aplicar ITBIS si el producto lo requiere
                 if ($product->has_tax) {
                     $taxRate   = (float) (\App\Models\Setting::get('company_tax_rate', 18) ?? 18);
                     $taxAmount = $itemSubtotal * ($taxRate / 100);
                 }
 
                 $items[] = [
-                    'product_id'      => $product->id,
-                    'quantity'        => $qty,
-                    'price'           => $price,
-                    'subtotal'        => $itemSubtotal,
-                    'tax_amount'      => $taxAmount,
-                    'total_with_tax'  => $itemSubtotal + $taxAmount,
+                    'product_id'     => $product->id,
+                    'quantity'       => $qty,
+                    'price'          => $price,
+                    'subtotal'       => $itemSubtotal,
+                    'tax_amount'     => $taxAmount,
+                    'total_with_tax' => $itemSubtotal + $taxAmount,
                 ];
 
                 $subtotal += $itemSubtotal;
@@ -53,7 +51,6 @@ class ProductInvoiceService
             $discount     = $data['discount'] ?? 0;
             $total        = $totalWithTax - $discount;
 
-            // Crear factura
             $invoice = ProductInvoice::create([
                 'number'               => ProductInvoice::generateNumber(),
                 'patient_id'           => $data['patient_id'],
@@ -64,6 +61,8 @@ class ProductInvoiceService
                 'total_with_tax'       => $totalWithTax,
                 'discount'             => $discount,
                 'total'                => $total,
+                'paid_amount'          => 0,
+                'balance'              => $total,
                 'status'               => 'pendiente',
                 'with_ncf'             => $data['with_ncf'] ?? false,
                 'ncf'                  => $data['ncf'] ?? null,
@@ -97,7 +96,7 @@ class ProductInvoiceService
             'movement_date' => now()->toDateString(),
             'notes'         => 'Venta de productos - Factura ' . $invoice->number,
             'total'         => 0,
-            'status'        => 'confirmado', // Se confirma automáticamente
+            'status'        => 'confirmado',
         ]);
 
         foreach ($invoice->items as $item) {
@@ -118,26 +117,35 @@ class ProductInvoiceService
                 'new_stock'      => $previousStock - $item->quantity,
             ]);
 
-            // Descontar del stock
             $stock->quantity = $previousStock - $item->quantity;
             $stock->save();
         }
     }
 
     /**
-     * Registrar pago de factura
+     * Registrar pago de factura (permite pagos parciales)
      */
     public function registerPayment(ProductInvoice $invoice, array $data): \App\Models\ProductReceipt
     {
         return DB::transaction(function () use ($invoice, $data) {
+            // Verificar que no esté pagada ni cancelada
+            if ($invoice->status === 'pagada') {
+                throw new \Exception('Esta factura ya está completamente pagada.');
+            }
+            if ($invoice->status === 'cancelada') {
+                throw new \Exception('No se puede pagar una factura cancelada.');
+            }
+
             $cash     = (float) ($data['cash_amount'] ?? 0);
             $card     = (float) ($data['card_amount'] ?? 0);
             $transfer = (float) ($data['transfer_amount'] ?? 0);
             $total    = round($cash + $card + $transfer, 2);
 
-            if ($total < (float) $invoice->total - 0.01) {
-                throw new \Exception('El monto pagado es menor al total de la factura.');
+            if ($total <= 0) {
+                throw new \Exception('Debes ingresar al menos un monto de pago.');
             }
+
+           
 
             $receipt = \App\Models\ProductReceipt::create([
                 'number'             => \App\Models\ProductReceipt::generateNumber(),
@@ -147,13 +155,14 @@ class ProductInvoiceService
                 'cash_amount'        => $cash > 0 ? $cash : null,
                 'card_amount'        => $card > 0 ? $card : null,
                 'transfer_amount'    => $transfer > 0 ? $transfer : null,
-                'total_paid'         => $invoice->total,
+                'total_paid'         => $total,
                 'card_reference'     => $data['card_reference'] ?? null,
                 'transfer_reference' => $data['transfer_reference'] ?? null,
                 'notes'              => $data['notes'] ?? null,
             ]);
 
-            $invoice->update(['status' => 'pagada']);
+            // Recalcular el balance y estado automáticamente
+            $invoice->recalculateBalance();
 
             return $receipt;
         });

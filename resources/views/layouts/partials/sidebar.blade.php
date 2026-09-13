@@ -253,6 +253,18 @@
                         </li>
                     @endif
 
+
+                       {{-- Reportes Recepcionista --}}
+                    @if($isReceptionist)
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ request()->routeIs('receptionist.reports.*') ? 'active' : '' }}" 
+                               href="{{ route('receptionist.reports.index') }}">
+                                <i class="ri-bar-chart-line"></i>
+                                <span data-key="t-reportes-recep">Reportes</span>
+                            </a>
+                        </li>
+                    @endif
+
                     {{-- 📦 INVENTARIO COMPLETO - Solo admin --}}
                     @if(auth()->user()->role->name === 'admin')
                         <li class="menu-title"><i class="ri-archive-line"></i> <span data-key="t-inventario">Inventario</span></li>
@@ -364,16 +376,7 @@
 @endif
 
 
-                    {{-- Reportes Recepcionista --}}
-                    @if($isReceptionist)
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ request()->routeIs('receptionist.reports.*') ? 'active' : '' }}" 
-                               href="{{ route('receptionist.reports.index') }}">
-                                <i class="ri-bar-chart-line"></i>
-                                <span data-key="t-reportes-recep">Reportes</span>
-                            </a>
-                        </li>
-                    @endif
+                 
 
                     
 

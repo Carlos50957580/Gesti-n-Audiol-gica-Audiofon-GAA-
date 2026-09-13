@@ -17,6 +17,10 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+
         <div class="row">
             <div class="col-lg-8">
                 <div class="card">
@@ -52,11 +56,89 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Estado de la factura --}}
+                <div class="card">
+                    <div class="card-header"><h5 class="card-title mb-0">Estado de la Factura</h5></div>
+                    <div class="card-body">
+                        @php $invoice = $productReceipt->invoice; @endphp
+                        
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="p-3 rounded text-center" style="background:#f0f4ff;">
+                                    <small class="text-muted d-block">Total Factura</small>
+                                    <strong class="fs-4">RD$ {{ number_format($invoice->total, 2) }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 rounded text-center" style="background:#e8f8f0;">
+                                    <small class="text-muted d-block">Total Pagado</small>
+                                    <strong class="fs-4 text-success">RD$ {{ number_format($invoice->paid_amount, 2) }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 rounded text-center" style="background:{{ $invoice->balance > 0 ? '#fff8e1' : '#e8f8f0' }};">
+                                    <small class="text-muted d-block">Balance Pendiente</small>
+                                    <strong class="fs-4 {{ $invoice->balance > 0 ? 'text-danger' : 'text-success' }}">
+                                        RD$ {{ number_format($invoice->balance, 2) }}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Estado --}}
+                        <div class="text-center mt-3">
+                            @php
+                                $statusColors = ['pendiente' => 'warning', 'pagada_parcial' => 'info', 'pagada' => 'success', 'cancelada' => 'danger'];
+                            @endphp
+                            <span class="badge bg-{{ $statusColors[$invoice->status] }}-subtle text-{{ $statusColors[$invoice->status] }} fs-6 px-3 py-2">
+                                {{ $invoice->status_label }}
+                            </span>
+                        </div>
+
+                        @if($invoice->balance > 0)
+                            <div class="d-grid mt-3">
+                                <a href="{{ url('/product-receipts/create/'.$invoice->id) }}" class="btn btn-primary">
+                                    <i class="ri-add-circle-line me-1"></i>Registrar Otro Pago
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Historial de pagos --}}
+                @if($invoice->receipts->count() > 1)
+                    <div class="card">
+                        <div class="card-header"><h5 class="card-title mb-0">Historial de Pagos</h5></div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Recibo</th>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Cobrado por</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($invoice->receipts as $rec)
+                                        <tr>
+                                            <td><code>{{ $rec->number }}</code></td>
+                                            <td>{{ $rec->created_at->format('d/m/Y H:i') }}</td>
+                                            <td class="text-end fw-semibold">RD$ {{ number_format($rec->total_paid, 2) }}</td>
+                                            <td>{{ $rec->user->name }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             <div class="col-lg-4">
                 <div class="card">
-                    <div class="card-header"><h5 class="card-title mb-0">Detalle de Pago</h5></div>
+                    <div class="card-header"><h5 class="card-title mb-0">Detalle de Este Pago</h5></div>
                     <div class="card-body">
                         @if($productReceipt->cash_amount)
                             <div class="d-flex justify-content-between mb-2">
@@ -78,7 +160,7 @@
                         @endif
                         <hr>
                         <div class="d-flex justify-content-between">
-                            <span class="fw-bold fs-5">TOTAL:</span>
+                            <span class="fw-bold fs-5">PAGADO:</span>
                             <span class="fw-bold fs-4 text-success">RD$ {{ number_format($productReceipt->total_paid, 2) }}</span>
                         </div>
 
