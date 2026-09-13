@@ -67,7 +67,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text">RD$</span>
                                     <input type="number" step="0.01" name="cash_amount" id="cashAmount"
-                                           class="form-control" value="0" min="0" onchange="updatePaid()">
+                                           class="form-control" value="0" min="0" oninput="updatePaid()">
                                 </div>
                             </div>
 
@@ -79,7 +79,7 @@
                                 <div class="input-group mb-2">
                                     <span class="input-group-text">RD$</span>
                                     <input type="number" step="0.01" name="card_amount" id="cardAmount"
-                                           class="form-control" value="0" min="0" onchange="updatePaid()">
+                                           class="form-control" value="0" min="0" oninput="updatePaid()">
                                 </div>
                                 <input type="text" name="card_reference" class="form-control" 
                                        placeholder="Referencia de tarjeta (opcional)">
@@ -93,7 +93,7 @@
                                 <div class="input-group mb-2">
                                     <span class="input-group-text">RD$</span>
                                     <input type="number" step="0.01" name="transfer_amount" id="transferAmount"
-                                           class="form-control" value="0" min="0" onchange="updatePaid()">
+                                           class="form-control" value="0" min="0" oninput="updatePaid()">
                                 </div>
                                 <input type="text" name="transfer_reference" class="form-control" 
                                        placeholder="Referencia de transferencia (opcional)">
@@ -137,16 +137,20 @@ function updatePaid() {
     const cash = parseFloat(document.getElementById('cashAmount').value) || 0;
     const card = parseFloat(document.getElementById('cardAmount').value) || 0;
     const transfer = parseFloat(document.getElementById('transferAmount').value) || 0;
-    
+
     const paid = cash + card + transfer;
     const change = paid - total;
-    
+
     document.getElementById('paidAmount').textContent = 'RD$ ' + paid.toFixed(2);
     document.getElementById('changeAmount').textContent = 'RD$ ' + Math.max(0, change).toFixed(2);
-    
+
     // Habilitar/deshabilitar botón
     document.getElementById('submitBtn').disabled = paid < total - 0.01;
 }
+
+// Ejecutar una vez al cargar la página por si los navegadores
+// restauran valores de los inputs (por ejemplo al volver con el botón "atrás")
+document.addEventListener('DOMContentLoaded', updatePaid);
 </script>
 @endpush
 </x-app-layout>

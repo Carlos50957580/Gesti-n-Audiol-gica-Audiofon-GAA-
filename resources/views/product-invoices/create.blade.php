@@ -1,8 +1,10 @@
 <x-app-layout>
+
 @section('title', 'Nueva Venta de Productos')
 
 <div class="page-content">
     <div class="container-fluid">
+        <!-- Título y Breadcrumb -->
         <div class="row mb-3">
             <div class="col-12">
                 <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -24,11 +26,14 @@
         <form action="{{ url('/product-invoices') }}" method="POST" id="invoiceForm">
             @csrf
             <div class="row">
+                <!-- Columna Izquierda: Datos, Productos y NCF -->
                 <div class="col-lg-8">
 
-                    {{-- Datos básicos --}}
+                    <!-- Datos Básicos -->
                     <div class="card">
-                        <div class="card-header"><h5 class="card-title mb-0">Datos de la Venta</h5></div>
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Datos de la Venta</h5>
+                        </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -60,35 +65,34 @@
                         </div>
                     </div>
 
-                    {{-- Selección de productos --}}
+                    <!-- Selección de Productos -->
                     <div class="card">
-                        <div class="card-header"><h5 class="card-title mb-0">Productos</h5></div>
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Productos</h5>
+                        </div>
                         <div class="card-body">
-                            
-                           
+                            <!-- Selector de categoría + búsqueda -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label">Categoría</label>
+                                    <select id="categorySelect" class="form-select">
+                                        <option value="">Todas las categorías</option>
+                                        @foreach($categories as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">Buscar producto</label>
+                                    <div class="position-relative">
+                                        <i class="ri-search-line position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#999;"></i>
+                                        <input type="text" id="productSearch" class="form-control ps-4"
+                                               placeholder="Buscar por nombre o código..." autocomplete="off">
+                                    </div>
+                                </div>
+                            </div>
 
-                            {{-- Selector de categoría + búsqueda --}}
-<div class="row g-2 mb-3">
-    <div class="col-md-5">
-        <label class="form-label">Categoría</label>
-        <select id="categorySelect" class="form-select">
-            <option value="">Todas las categorías</option>
-            @foreach($categories as $cat)
-                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-            @endforeach
-        </select>
-    </div>
-    <div class="col-md-7">
-        <label class="form-label">Buscar producto</label>
-        <div class="position-relative">
-            <i class="ri-search-line position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#999;"></i>
-            <input type="text" id="productSearch" class="form-control ps-4"
-                   placeholder="Buscar por nombre o código..." autocomplete="off">
-        </div>
-    </div>
-</div>
-
-                            {{-- Lista de productos --}}
+                            <!-- Lista de productos -->
                             <div id="productsList" class="d-none">
                                 <h6 class="mb-2">Productos disponibles</h6>
                                 <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
@@ -107,7 +111,7 @@
                                 </div>
                             </div>
 
-                            {{-- Items agregados --}}
+                            <!-- Items agregados -->
                             <hr class="my-4">
                             <h6 class="mb-2">Items en la factura</h6>
                             <div class="table-responsive">
@@ -131,7 +135,7 @@
                         </div>
                     </div>
 
-                    {{-- NCF opcional --}}
+                    <!-- NCF Opcional -->
                     <div class="card">
                         <div class="card-header">
                             <h5 class="card-title mb-0">
@@ -170,12 +174,15 @@
                             </div>
                         </div>
                     </div>
+
                 </div>
 
-                {{-- Resumen lateral --}}
+                <!-- Columna Derecha: Resumen Lateral -->
                 <div class="col-lg-4">
                     <div class="card" style="position:sticky;top:80px;">
-                        <div class="card-header"><h5 class="card-title mb-0">Resumen</h5></div>
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Resumen</h5>
+                        </div>
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">Subtotal:</span>
@@ -188,7 +195,7 @@
                             <div class="mb-3">
                                 <label class="form-label small">Descuento</label>
                                 <input type="number" name="discount" id="discountInput" class="form-control form-control-sm" 
-                                       value="0" min="0" step="0.01" onchange="updateTotals()">
+                                       value="0" min="0" step="0.01" oninput="updateTotals()">
                             </div>
                             <hr>
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -212,6 +219,7 @@
                         </div>
                     </div>
                 </div>
+
             </div>
         </form>
     </div>
@@ -219,287 +227,303 @@
 
 @push('scripts')
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]').content;
-const URL_SEARCH_PATIENTS = "{{ url('/api/product-invoices/patients/search') }}";
-const URL_PRODUCTS_BY_CAT = "{{ url('/api/product-invoices/products/by-category') }}";
-const URL_STORE = "{{ url('/product-invoices') }}";
-const URL_INDEX = "{{ url('/product-invoices') }}";
+    const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+    const URL_SEARCH_PATIENTS = "{{ url('/api/product-invoices/patients/search') }}";
+    const URL_PRODUCTS_BY_CAT = "{{ url('/api/product-invoices/products/by-category') }}";
+    const URL_STORE = "{{ url('/product-invoices') }}";
+    const URL_INDEX = "{{ url('/product-invoices') }}";
 
-let items = [];
+    let items = [];
 
-// ═══════════════════════════════════════════
-// BÚSQUEDA DE PACIENTES (sin cambios)
-// ═══════════════════════════════════════════
-const patientSearch = document.getElementById('patientSearch');
-const patientResults = document.getElementById('patientResults');
-let patientSearchTimer = null;
+    // -----------------------------------------
+    // BÚSQUEDA DE PACIENTES
+    // -----------------------------------------
+    const patientSearch = document.getElementById('patientSearch');
+    const patientResults = document.getElementById('patientResults');
+    let patientSearchTimer = null;
 
-patientSearch.addEventListener('input', function() {
-    clearTimeout(patientSearchTimer);
-    const q = this.value.trim();
-    if (q.length < 2) { patientResults.classList.add('d-none'); return; }
+    patientSearch.addEventListener('input', function() {
+        clearTimeout(patientSearchTimer);
+        const q = this.value.trim();
+        if (q.length < 2) { patientResults.classList.add('d-none'); return; }
 
-    patientSearchTimer = setTimeout(async () => {
-        const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
-        const list = await r.json();
-        if (!list.length) {
-            patientResults.innerHTML = '<div class="p-3 text-muted">Sin resultados</div>';
-        } else {
-            patientResults.innerHTML = list.map(p => `
-                <div class="p-2 border-bottom" style="cursor:pointer;"
-                     onclick="selectPatient(${p.id}, '${p.first_name} ${p.last_name}', '${p.cedula || ''}')">
-                    <div class="fw-semibold">${p.first_name} ${p.last_name}</div>
-                    <small class="text-muted">${p.cedula || 'Sin cédula'}</small>
-                </div>
-            `).join('');
+        patientSearchTimer = setTimeout(async () => {
+            const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
+            const list = await r.json();
+            if (!list.length) {
+                patientResults.innerHTML = '<div class="p-3 text-muted">Sin resultados</div>';
+            } else {
+                patientResults.innerHTML = list.map(p => `
+                    <div class="p-2 border-bottom" style="cursor:pointer;"
+                         onclick="selectPatient(${p.id}, '${p.first_name} ${p.last_name}', '${p.cedula || ''}')">
+                        <div class="fw-semibold">${p.first_name} ${p.last_name}</div>
+                        <small class="text-muted">${p.cedula || 'Sin cédula'}</small>
+                    </div>
+                `).join('');
+            }
+            patientResults.classList.remove('d-none');
+        }, 300);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#patientSearch') && !e.target.closest('#patientResults')) {
+            patientResults.classList.add('d-none');
         }
-        patientResults.classList.remove('d-none');
-    }, 300);
-});
+    });
 
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('#patientSearch') && !e.target.closest('#patientResults')) {
+    function selectPatient(id, name, cedula) {
+        document.getElementById('patientId').value = id;
+        document.getElementById('patientName').textContent = name;
+        document.getElementById('patientCedula').textContent = cedula ? 'Cédula: ' + cedula : '';
+        document.getElementById('patientSelected').classList.remove('d-none');
+        patientSearch.value = name;
         patientResults.classList.add('d-none');
     }
-});
 
-function selectPatient(id, name, cedula) {
-    document.getElementById('patientId').value = id;
-    document.getElementById('patientName').textContent = name;
-    document.getElementById('patientCedula').textContent = cedula ? 'Cédula: ' + cedula : '';
-    document.getElementById('patientSelected').classList.remove('d-none');
-    patientSearch.value = name;
-    patientResults.classList.add('d-none');
-}
+    // -----------------------------------------
+    // CARGA DE PRODUCTOS
+    // -----------------------------------------
+    let productLoadTimer = null;
+    let productFetchController = null;
 
-// ═══════════════════════════════════════════
-// CARGA DE PRODUCTOS (automática + búsqueda + debounce)
-// ═══════════════════════════════════════════
-let productLoadTimer = null;
-let productFetchController = null; // para cancelar peticiones viejas
-
-function scheduleLoadProducts(delay = 350) {
-    clearTimeout(productLoadTimer);
-    productLoadTimer = setTimeout(loadProducts, delay);
-}
-
-async function loadProducts() {
-    const branchId = document.getElementById('branchSelect').value;
-    const catId = document.getElementById('categorySelect').value;
-    const q = document.getElementById('productSearch').value.trim();
-
-    const productsList = document.getElementById('productsList');
-    const tbody = document.getElementById('productsBody');
-
-    if (!branchId) {
-        productsList.classList.add('d-none');
-        return;
+    function scheduleLoadProducts(delay = 350) {
+        clearTimeout(productLoadTimer);
+        productLoadTimer = setTimeout(loadProducts, delay);
     }
 
-    // Cancela la petición anterior si sigue en vuelo (evita resultados "fuera de orden")
-    if (productFetchController) productFetchController.abort();
-    productFetchController = new AbortController();
+    async function loadProducts() {
+        const branchId = document.getElementById('branchSelect').value;
+        const catId = document.getElementById('categorySelect').value;
+        const q = document.getElementById('productSearch').value.trim();
 
-    const params = new URLSearchParams({ branch_id: branchId });
-    if (catId) params.append('category_id', catId);
-    if (q) params.append('q', q);
+        const productsList = document.getElementById('productsList');
+        const tbody = document.getElementById('productsBody');
 
-    productsList.classList.remove('d-none');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Buscando...</td></tr>';
-
-    try {
-        const r = await fetch(URL_PRODUCTS_BY_CAT + '?' + params.toString(), {
-            signal: productFetchController.signal,
-        });
-        const products = await r.json();
-
-        if (!products.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No se encontraron productos</td></tr>';
+        if (!branchId) {
+            productsList.classList.add('d-none');
             return;
         }
 
-        tbody.innerHTML = products.map(p => `
+        if (productFetchController) productFetchController.abort();
+        productFetchController = new AbortController();
+
+        const params = new URLSearchParams({ branch_id: branchId });
+        if (catId) params.append('category_id', catId);
+        if (q) params.append('q', q);
+
+        productsList.classList.remove('d-none');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Buscando...</td></tr>';
+
+        try {
+            const r = await fetch(URL_PRODUCTS_BY_CAT + '?' + params.toString(), {
+                signal: productFetchController.signal,
+            });
+            const products = await r.json();
+
+            if (!products.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No se encontraron productos</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = products.map(p => `
+                <tr>
+                    <td><code>${p.code}</code></td>
+                    <td>${p.name}</td>
+                    <td class="text-end">RD$ ${p.price.toFixed(2)}</td>
+                    <td class="text-center">
+                        <span class="badge bg-${p.stock > 0 ? 'success' : 'danger'}-subtle text-${p.stock > 0 ? 'success' : 'danger'}">
+                            ${p.stock}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-success"
+                                onclick='addItem(${JSON.stringify(p)})'
+                                ${p.stock <= 0 ? 'disabled' : ''}>
+                            <i class="ri-add-line"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar productos</td></tr>';
+            }
+        }
+    }
+
+    document.getElementById('branchSelect').addEventListener('change', () => scheduleLoadProducts(0));
+    document.getElementById('categorySelect').addEventListener('change', () => scheduleLoadProducts(0));
+    document.getElementById('productSearch').addEventListener('input', () => scheduleLoadProducts(350));
+
+    // -----------------------------------------
+    // AGREGAR ITEM
+    // -----------------------------------------
+    function addItem(product) {
+        const existing = items.find(i => i.product_id === product.id);
+        if (existing) {
+            if (existing.quantity < product.stock) existing.quantity++;
+        } else {
+            items.push({
+                product_id: product.id,
+                code: product.code,
+                name: product.name,
+                price: product.price,
+                has_tax: product.has_tax,
+                quantity: 1,
+                max_stock: product.stock,
+            });
+        }
+        renderItems();
+    }
+
+    function renderItems() {
+        const tbody = document.getElementById('itemsBody');
+
+        if (!items.length) {
+            tbody.innerHTML = '<tr id="noItemsRow"><td colspan="5" class="text-center text-muted py-3">No hay productos agregados</td></tr>';
+            updateTotals();
+            return;
+        }
+
+        tbody.innerHTML = items.map((item, idx) => `
             <tr>
-                <td><code>${p.code}</code></td>
-                <td>${p.name}</td>
-                <td class="text-end">RD$ ${p.price.toFixed(2)}</td>
-                <td class="text-center">
-                    <span class="badge bg-${p.stock > 0 ? 'success' : 'danger'}-subtle text-${p.stock > 0 ? 'success' : 'danger'}">
-                        ${p.stock}
-                    </span>
+                <td>
+                    <div class="fw-semibold">${item.name}</div>
+                    <small class="text-muted">${item.code}</small>
+                    <input type="hidden" name="items[${idx}][product_id]" value="${item.product_id}">
+                    <input type="hidden" name="items[${idx}][price]" value="${item.price}">
                 </td>
+                <td>
+                    <input type="number" name="items[${idx}][quantity]" class="form-control form-control-sm"
+                           value="${item.quantity}" min="1" max="${item.max_stock}"
+                           oninput="updateQuantity(${idx}, this.value)">
+                </td>
+                <td class="text-end">RD$ ${item.price.toFixed(2)}</td>
+                <td class="text-end fw-semibold" id="subtotal-${idx}">RD$ ${(item.price * item.quantity).toFixed(2)}</td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-success"
-                            onclick='addItem(${JSON.stringify(p)})'
-                            ${p.stock <= 0 ? 'disabled' : ''}>
-                        <i class="ri-add-line"></i>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${idx})">
+                        <i class="ri-delete-bin-line"></i>
                     </button>
                 </td>
             </tr>
         `).join('');
-    } catch (err) {
-        if (err.name !== 'AbortError') {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar productos</td></tr>';
-        }
-    }
-}
 
-// Disparadores automáticos (sin botón)
-document.getElementById('branchSelect').addEventListener('change', () => scheduleLoadProducts(0));
-document.getElementById('categorySelect').addEventListener('change', () => scheduleLoadProducts(0));
-document.getElementById('productSearch').addEventListener('input', () => scheduleLoadProducts(350));
-
-// ═══════════════════════════════════════════
-// AGREGAR ITEM (sin cambios)
-// ═══════════════════════════════════════════
-function addItem(product) {
-    const existing = items.find(i => i.product_id === product.id);
-    if (existing) {
-        if (existing.quantity < product.stock) existing.quantity++;
-    } else {
-        items.push({
-            product_id: product.id,
-            code: product.code,
-            name: product.name,
-            price: product.price,
-            has_tax: product.has_tax,
-            quantity: 1,
-            max_stock: product.stock,
-        });
-    }
-    renderItems();
-}
-
-function renderItems() {
-    const tbody = document.getElementById('itemsBody');
-
-    if (!items.length) {
-        tbody.innerHTML = '<tr id="noItemsRow"><td colspan="5" class="text-center text-muted py-3">No hay productos agregados</td></tr>';
         updateTotals();
-        return;
     }
 
-    tbody.innerHTML = items.map((item, idx) => `
-        <tr>
-            <td>
-                <div class="fw-semibold">${item.name}</div>
-                <small class="text-muted">${item.code}</small>
-                <input type="hidden" name="items[${idx}][product_id]" value="${item.product_id}">
-                <input type="hidden" name="items[${idx}][price]" value="${item.price}">
-            </td>
-            <td>
-                <input type="number" name="items[${idx}][quantity]" class="form-control form-control-sm"
-                       value="${item.quantity}" min="1" max="${item.max_stock}"
-                       onchange="updateQuantity(${idx}, this.value)">
-            </td>
-            <td class="text-end">RD$ ${item.price.toFixed(2)}</td>
-            <td class="text-end fw-semibold" id="subtotal-${idx}">RD$ ${(item.price * item.quantity).toFixed(2)}</td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${idx})">
-                    <i class="ri-delete-bin-line"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    function updateQuantity(idx, qty) {
+        let value = parseInt(qty);
 
-    updateTotals();
-}
+        if (isNaN(value) || value < 1) {
+            items[idx].quantity = qty === '' ? '' : value;
+        } else {
+            if (value > items[idx].max_stock) value = items[idx].max_stock;
+            items[idx].quantity = value;
+        }
 
-function updateQuantity(idx, qty) {
-    items[idx].quantity = parseInt(qty) || 1;
-    renderItems();
-}
+        const subtotalCell = document.getElementById(`subtotal-${idx}`);
+        const qtyForCalc = parseFloat(items[idx].quantity) || 0;
+        subtotalCell.textContent = 'RD$ ' + (items[idx].price * qtyForCalc).toFixed(2);
 
-function removeItem(idx) {
-    items.splice(idx, 1);
-    renderItems();
-}
-
-// ═══════════════════════════════════════════
-// TOTALES (sin cambios)
-// ═══════════════════════════════════════════
-function updateTotals() {
-    let subtotal = 0;
-    let tax = 0;
-    const taxRate = {{ (float) \App\Models\Setting::get('company_tax_rate', 18) }};
-
-    items.forEach(item => {
-        const itemSubtotal = item.price * item.quantity;
-        subtotal += itemSubtotal;
-        if (item.has_tax) tax += itemSubtotal * (taxRate / 100);
-    });
-
-    const discount = parseFloat(document.getElementById('discountInput').value) || 0;
-    const total = subtotal + tax - discount;
-
-    document.getElementById('sumSubtotal').textContent = 'RD$ ' + subtotal.toFixed(2);
-    document.getElementById('sumTax').textContent = 'RD$ ' + tax.toFixed(2);
-    document.getElementById('sumTotal').textContent = 'RD$ ' + total.toFixed(2);
-}
-
-// ═══════════════════════════════════════════
-// NCF (sin cambios)
-// ═══════════════════════════════════════════
-function toggleNcf() {
-    const checked = document.getElementById('withNcf').checked;
-    document.getElementById('ncfFields').classList.toggle('d-none', !checked);
-}
-
-// ═══════════════════════════════════════════
-// ENVÍO DEL FORMULARIO VÍA AJAX (sin recargar página)
-// ═══════════════════════════════════════════
-const invoiceForm = document.getElementById('invoiceForm');
-
-invoiceForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    if (!document.getElementById('patientId').value) {
-        alert('Debes seleccionar un paciente.');
-        return;
-    }
-    if (!items.length) {
-        alert('Debes agregar al menos un producto.');
-        return;
+        updateTotals();
     }
 
-    const submitBtn = invoiceForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+    function removeItem(idx) {
+        items.splice(idx, 1);
+        renderItems();
+    }
 
-    try {
-        const formData = new FormData(invoiceForm);
+    // -----------------------------------------
+    // TOTALES
+    // -----------------------------------------
+    function updateTotals() {
+        let subtotal = 0;
+        let tax = 0;
+        const taxRate = {{ (float) \App\Models\Setting::get('company_tax_rate', 18) }};
 
-        const r = await fetch(URL_STORE, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': CSRF,
-            },
-            body: formData,
+        items.forEach(item => {
+            const qty = parseFloat(item.quantity) || 0;
+            const itemSubtotal = item.price * qty;
+            subtotal += itemSubtotal;
+            if (item.has_tax) tax += itemSubtotal * (taxRate / 100);
         });
 
-        const data = await r.json().catch(() => null);
+        const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+        const total = subtotal + tax - discount;
 
-        if (r.ok && data?.success) {
-            window.location.href = data.redirect;
+        document.getElementById('sumSubtotal').textContent = 'RD$ ' + subtotal.toFixed(2);
+        document.getElementById('sumTax').textContent = 'RD$ ' + tax.toFixed(2);
+        document.getElementById('sumTotal').textContent = 'RD$ ' + total.toFixed(2);
+    }
+
+    // -----------------------------------------
+    // NCF
+    // -----------------------------------------
+    function toggleNcf() {
+        const checked = document.getElementById('withNcf').checked;
+        document.getElementById('ncfFields').classList.toggle('d-none', !checked);
+    }
+
+    // -----------------------------------------
+    // ENVÍO DEL FORMULARIO
+    // -----------------------------------------
+    const invoiceForm = document.getElementById('invoiceForm');
+
+    invoiceForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        if (!document.getElementById('patientId').value) {
+            alert('Debes seleccionar un paciente.');
+            return;
+        }
+        if (!items.length) {
+            alert('Debes agregar al menos un producto.');
             return;
         }
 
-        // Errores de validación (422) u otros
-        let message = data?.message || 'Ocurrió un error al guardar la factura.';
-        if (data?.errors) {
-            message = Object.values(data.errors).flat().join('\n');
+        const invalidItem = items.find(i => !i.quantity || parseInt(i.quantity) < 1);
+        if (invalidItem) {
+            alert(`La cantidad de "${invalidItem.name}" debe ser al menos 1.`);
+            return;
         }
-        alert(message);
-    } catch (err) {
-        alert('Error de conexión. Intenta de nuevo.');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-    }
-});
-</script>
 
+        const submitBtn = invoiceForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+        try {
+            const formData = new FormData(invoiceForm);
+
+            const r = await fetch(URL_STORE, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': CSRF,
+                },
+                body: formData,
+            });
+
+            const data = await r.json().catch(() => null);
+
+            if (r.ok && data?.success) {
+                window.location.href = data.redirect;
+                return;
+            }
+
+            let message = data?.message || 'Ocurrió un error al guardar la factura.';
+            if (data?.errors) {
+                message = Object.values(data.errors).flat().join('\n');
+            }
+            alert(message);
+        } catch (err) {
+            alert('Error de conexión. Intenta de nuevo.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+</script>
 @endpush
+
 </x-app-layout>

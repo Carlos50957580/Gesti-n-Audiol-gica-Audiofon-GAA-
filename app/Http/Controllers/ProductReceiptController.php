@@ -58,21 +58,21 @@ class ProductReceiptController extends Controller
      * Formulario de pago (desde una factura pendiente)
      */
     public function create(ProductInvoice $productInvoice)
-    {
-        $user = auth()->user();
-        if ($user->role->name !== 'admin' && $productInvoice->branch_id != $user->branch_id) {
-            abort(403);
-        }
-
-        if ($productInvoice->status !== 'pendiente') {
-            return redirect()->route('product-invoices', $productInvoice)
-                ->with('error', 'Esta factura no está pendiente de pago.');
-        }
-
-        $productInvoice->load(['patient', 'items.product']);
-
-        return view('product-receipts.create', compact('productInvoice'));
+{
+    $user = auth()->user();
+    if ($user->role->name !== 'admin' && $productInvoice->branch_id != $user->branch_id) {
+        abort(403);
     }
+
+    if ($productInvoice->status !== 'pendiente') {
+        return redirect(url('/product-invoices/' . $productInvoice->id))
+            ->with('error', 'Esta factura no está pendiente de pago.');
+    }
+
+    $productInvoice->load(['patient', 'items.product']);
+
+    return view('product-receipts.create', compact('productInvoice'));
+}
 
     /**
      * Guardar pago
