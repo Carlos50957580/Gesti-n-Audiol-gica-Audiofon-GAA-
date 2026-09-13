@@ -273,7 +273,7 @@
                         <li class="nav-item">
                             <a class="nav-link menu-link {{ request()->routeIs('products.*') ? 'active' : '' }}" 
                                href="{{ route('products.index') }}">
-                                <i class="ri-box-3-line"></i>
+                                <i class="ri-shopping-cart-2-line"></i>
                                 <span data-key="t-productos">Productos</span>
                             </a>
                         </li>
@@ -373,6 +373,28 @@
             <span data-key="t-pagos-productos">Pagos de Productos</span>
         </a>
     </li>
+
+    {{-- Reportes de Productos --}}
+@if(auth()->user()->role->name === 'admin')
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('product-reports') && !request()->is('product-reports/cashier*') ? 'active' : '' }}" 
+           href="{{ url('/product-reports') }}">
+            <i class="ri-bar-chart-2-line"></i>
+            <span data-key="t-reportes-productos">Reporte de Ventas</span>
+        </a>
+    </li>
+@endif
+
+{{-- Cuadre de Caja (admin y recepcionista) --}}
+@if(in_array(auth()->user()->role->name, ['admin', 'recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('product-reports/cashier*') ? 'active' : '' }}" 
+           href="{{ url('/product-reports/cashier') }}">
+            <i class="ri-money-dollar-circle-line"></i>
+            <span data-key="t-cuadre-productos">Cuadre de Caja</span>
+        </a>
+    </li>
+@endif
 @endif
 
 

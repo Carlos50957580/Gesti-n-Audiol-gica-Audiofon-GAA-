@@ -11,7 +11,6 @@ use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReceptionistReportController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DoctorAppointmentController;
 use App\Http\Controllers\ServiceCategoryController;
 use App\Http\Controllers\TaxController;
@@ -19,13 +18,18 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DoctorFeeController;
 use App\Http\Controllers\DoctorFeePaymentController;
 use App\Http\Controllers\DoctorFeeSettingController;
-use App\Http\Controllers\Settings\CompanyController; // ← IMPORTAR EL CONTROLADOR
+use App\Http\Controllers\Settings\CompanyController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\ProductInvoiceController;
 use App\Http\Controllers\ProductReceiptController;
+use App\Http\Controllers\ClinicalRecordController;
+use App\Http\Controllers\ProductReportController;
+use App\Http\Controllers\AdminReportController;
+
+
 // ============================================
 // RUTAS PÚBLICAS
 // ============================================
@@ -290,7 +294,6 @@ Route::middleware(['auth'])->prefix('doctor')->name('doctor.')->group(function (
     Route::patch('appointments/{appointment}/notes', [DoctorAppointmentController::class, 'updateNotes'])->name('appointments.notes');
 });
 
-use App\Http\Controllers\AdminReportController;
 
 // ── REPORTES ADMIN ─────────────────────────────────────
 Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
@@ -303,7 +306,19 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.
     Route::get('/export', [AdminReportController::class, 'export'])->name('export');
 });
 
-use App\Http\Controllers\ClinicalRecordController;
+
+
+// ── Reportes de Ventas de Productos ──────────────
+Route::middleware(['auth', 'active', 'role:admin'])->group(function () {
+    Route::get('/product-reports', [ProductReportController::class, 'index']);
+});
+
+Route::middleware(['auth', 'active', 'role:admin,recepcionista'])->group(function () {
+    Route::get('/product-reports/cashier', [ProductReportController::class, 'cashier']);
+    Route::get('/product-reports/cashier/print', [ProductReportController::class, 'cashierPrint']);
+});
+
+
 
 // ============================================
 // HISTORIAS CLÍNICAS
@@ -330,5 +345,8 @@ Route::get('/clinical-records/{clinicalRecord}/print', [ClinicalRecordController
             ->name('clinical-records.pending-invoices');
     });
 });
+
+
+
 
 require __DIR__.'/auth.php';

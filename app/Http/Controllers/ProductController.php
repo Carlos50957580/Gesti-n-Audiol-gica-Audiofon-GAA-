@@ -47,46 +47,47 @@ class ProductController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $data = $request->validate([
-            'category_id'  => 'nullable|exists:product_categories,id',
-            'code'         => 'required|string|max:50|unique:products,code',
-            'barcode'      => 'nullable|string|max:100|unique:products,barcode',
-            'name'         => 'required|string|max:255',
-            'description'  => 'nullable|string',
-            'unit'         => 'required|string|max:20',
-            'cost_price'   => 'required|numeric|min:0',
-            'sale_price'   => 'required|numeric|min:0',
-            'min_stock'    => 'required|integer|min:0',
-            'max_stock'    => 'nullable|integer|min:0',
-            'has_tax'      => 'boolean',
-            'is_active'    => 'boolean',
-            'image'        => 'nullable|image|max:2048',
-            'initial_stocks' => 'nullable|array', // [branch_id => quantity]
-        ]);
+{
+    $data = $request->validate([
+        'category_id'  => 'nullable|exists:product_categories,id',
+        'code'         => 'required|string|max:50|unique:products,code',
+        'barcode'      => 'nullable|string|max:100|unique:products,barcode',
+        'name'         => 'required|string|max:255',
+        'description'  => 'nullable|string',
+        'unit'         => 'required|string|max:20',
+        'cost_price'   => 'required|numeric|min:0',
+        'sale_price'   => 'required|numeric|min:0',
+        'min_stock'    => 'required|integer|min:0',
+        'max_stock'    => 'nullable|integer|min:0',
+        'image'        => 'nullable|image|max:2048',
+        'initial_stocks' => 'nullable|array',
+    ]);
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
-        }
+    // ✅ Igual aquí
+    $data['has_tax']   = $request->boolean('has_tax');
+    $data['is_active'] = $request->boolean('is_active');
 
-        $product = Product::create($data);
+    if ($request->hasFile('image')) {
+        $data['image'] = $request->file('image')->store('products', 'public');
+    }
 
-        // Crear stocks iniciales por sucursal
-        if (!empty($data['initial_stocks'])) {
-            foreach ($data['initial_stocks'] as $branchId => $quantity) {
-                if ($quantity > 0) {
-                    ProductStock::create([
-                        'product_id' => $product->id,
-                        'branch_id'  => $branchId,
-                        'quantity'   => $quantity,
-                    ]);
-                }
+    $product = Product::create($data);
+
+    if (!empty($data['initial_stocks'])) {
+        foreach ($data['initial_stocks'] as $branchId => $quantity) {
+            if ($quantity > 0) {
+                ProductStock::create([
+                    'product_id' => $product->id,
+                    'branch_id'  => $branchId,
+                    'quantity'   => $quantity,
+                ]);
             }
         }
-
-        return redirect()->route('products.index')
-            ->with('success', 'Producto creado exitosamente.');
     }
+
+    return redirect()->route('products.index')
+        ->with('success', 'Producto creado exitosamente.');
+}
 
     public function show(Product $product)
     {
@@ -104,32 +105,34 @@ class ProductController extends Controller
     }
 
     public function update(Request $request, Product $product)
-    {
-        $data = $request->validate([
-            'category_id'  => 'nullable|exists:product_categories,id',
-            'code'         => 'required|string|max:50|unique:products,code,' . $product->id,
-            'barcode'      => 'nullable|string|max:100|unique:products,barcode,' . $product->id,
-            'name'         => 'required|string|max:255',
-            'description'  => 'nullable|string',
-            'unit'         => 'required|string|max:20',
-            'cost_price'   => 'required|numeric|min:0',
-            'sale_price'   => 'required|numeric|min:0',
-            'min_stock'    => 'required|integer|min:0',
-            'max_stock'    => 'nullable|integer|min:0',
-            'has_tax'      => 'boolean',
-            'is_active'    => 'boolean',
-            'image'        => 'nullable|image|max:2048',
-        ]);
+{
+    $data = $request->validate([
+        'category_id'  => 'nullable|exists:product_categories,id',
+        'code'         => 'required|string|max:50|unique:products,code,' . $product->id,
+        'barcode'      => 'nullable|string|max:100|unique:products,barcode,' . $product->id,
+        'name'         => 'required|string|max:255',
+        'description'  => 'nullable|string',
+        'unit'         => 'required|string|max:20',
+        'cost_price'   => 'required|numeric|min:0',
+        'sale_price'   => 'required|numeric|min:0',
+        'min_stock'    => 'required|integer|min:0',
+        'max_stock'    => 'nullable|integer|min:0',
+        'image'        => 'nullable|image|max:2048',
+    ]);
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
-        }
+    // ✅ Forzar booleanos explícitamente (checkboxes desmarcados no llegan en el request)
+    $data['has_tax']   = $request->boolean('has_tax');
+    $data['is_active'] = $request->boolean('is_active');
 
-        $product->update($data);
-
-        return redirect()->route('products.index')
-            ->with('success', 'Producto actualizado exitosamente.');
+    if ($request->hasFile('image')) {
+        $data['image'] = $request->file('image')->store('products', 'public');
     }
+
+    $product->update($data);
+
+    return redirect()->route('products.index')
+        ->with('success', 'Producto actualizado exitosamente.');
+}
 
     public function destroy(Product $product)
     {
