@@ -171,6 +171,17 @@
                         </a>
                     </li>
 
+                    {{-- Gestión de NCF --}}
+@if(auth()->user()->role->name === 'admin')
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('ncf-sequences*') ? 'active' : '' }}" 
+           href="{{ url('/ncf-sequences') }}">
+            <i class="ri-file-shield-2-line"></i>
+            <span data-key="t-ncf">Comprobantes NCF</span>
+        </a>
+    </li>
+@endif
+
                 @endif {{-- Fin admin --}}
 
                 {{-- ============================ --}}
@@ -395,6 +406,9 @@
         </a>
     </li>
 @endif
+
+
+
 @endif
 
 

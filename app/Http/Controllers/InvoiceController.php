@@ -13,6 +13,7 @@ use App\Models\Insurance;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
@@ -108,8 +109,7 @@ class InvoiceController extends Controller
         'insurance_id' => 'nullable|exists:insurances,id',
         'authorization_number' => 'nullable|string|max:255',
         'with_ncf' => 'nullable|boolean',
-        'ncf' => 'nullable|string|max:255',
-        'ncf_type' => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+        'ncf_type' => 'nullable|required_if:with_ncf,1|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
         'customer_rnc' => 'nullable|string|max:255',
         'customer_business_name' => 'nullable|string|max:255',
         'services' => 'required|array|min:1',
@@ -120,12 +120,10 @@ class InvoiceController extends Controller
         'services.*.cov_type' => 'nullable|in:pct,amt',
     ]);
 
-    // Validar que la sucursal sea correcta según el rol
+    // Validar sucursal según rol
     if (auth()->user()->role->name === 'recepcionista') {
         if ($request->branch_id != auth()->user()->branch_id) {
-            return redirect()
-                ->back()
-                ->withInput()
+            return redirect()->back()->withInput()
                 ->with('error', 'No puedes facturar en otra sucursal.');
         }
     }
@@ -133,12 +131,57 @@ class InvoiceController extends Controller
     DB::beginTransaction();
 
     try {
+        // ── CONSUMIR NCF SI APLICA ──────────────────────────────
+        $ncfCode = null;
+        $ncfSequenceId = null;
+
+        if ($request->with_ncf && $request->filled('ncf_type')) {
+            $typeCodeMap = [
+                'consumidor_final' => 'B02',
+                'credito_fiscal'   => 'B01',
+                'gubernamental'    => 'B15',
+                'regimen_especial' => 'B14',
+            ];
+
+            $typeCode = $typeCodeMap[$request->ncf_type];
+            $ncfType = \App\Models\NcfType::where('code', $typeCode)->first();
+
+            if (!$ncfType) {
+                throw new \Exception('Tipo de NCF no configurado.');
+            }
+
+            $sequence = \App\Models\NcfSequence::active()
+                ->where('ncf_type_id', $ncfType->id)
+                ->where(function ($q) use ($request) {
+                    $q->where('branch_id', $request->branch_id)
+                      ->orWhereNull('branch_id');
+                })
+                ->where('valid_until', '>=', now()->toDateString())
+                ->where('valid_from', '<=', now()->toDateString())
+                ->whereRaw('CAST(current_number AS UNSIGNED) <= CAST(end_number AS UNSIGNED)')
+                ->orderByRaw('CASE WHEN branch_id = ? THEN 0 ELSE 1 END', [$request->branch_id])
+                ->orderBy('valid_until')
+                ->first();
+
+            if (!$sequence) {
+                throw new \Exception('No hay una secuencia NCF activa para este tipo de comprobante.');
+            }
+
+            if (!$sequence->canIssue()) {
+                throw new \Exception('La secuencia NCF no puede emitir más comprobantes (' . $sequence->status_label . ').');
+            }
+
+            // Consumir el NCF (avanza el contador)
+            $ncfCode = $sequence->issueNext();
+            $ncfSequenceId = $sequence->id;
+        }
+
+        // ── PROCESAR SERVICIOS ──────────────────────────────────
         $subtotal = 0;
         $totalTax = 0;
         $insuranceDiscount = 0;
         $items = [];
 
-        // Obtener el seguro seleccionado
         $insurance = $request->filled('insurance_id') ? Insurance::find($request->insurance_id) : null;
 
         foreach ($request->services as $serviceData) {
@@ -147,36 +190,28 @@ class InvoiceController extends Controller
             $price = $serviceData['custom_price'] ?? $service->price;
             $subtotalItem = $price * $quantity;
 
-            // Calcular impuestos del servicio
             $taxCalculation = $service->calculateTaxes($subtotalItem);
             $taxAmount = $taxCalculation['total_tax'];
             $totalTax += $taxAmount;
 
-            // ✅ Calcular cobertura con prioridad
             $coveragePercentage = 0;
             $insuranceAmount = 0;
             $patientAmount = $subtotalItem;
-            $coverageSource = 'Sin cobertura';
 
             if ($insurance) {
-                // Verificar si el servicio tiene cobertura específica
                 $specificCoverage = $service->getCoverageForInsurance($insurance);
                 
                 if ($specificCoverage) {
-                    // ✅ Usar cobertura específica del servicio
                     $calculation = $specificCoverage->calculateCoverage($subtotalItem);
                     $coveragePercentage = $calculation['percentage'];
                     $insuranceAmount = $calculation['insurance_amount'];
                     $patientAmount = $subtotalItem - $insuranceAmount;
-                    $coverageSource = 'Específica del servicio';
                 } else {
-                    // ✅ Usar cobertura global del seguro
                     $globalCoverage = $insurance->coverage_percentage;
                     if ($globalCoverage > 0) {
                         $coveragePercentage = $globalCoverage;
                         $insuranceAmount = $subtotalItem * ($globalCoverage / 100);
                         $patientAmount = $subtotalItem - $insuranceAmount;
-                        $coverageSource = 'Seguro global';
                     }
                 }
                 
@@ -202,7 +237,7 @@ class InvoiceController extends Controller
         $totalWithTax = $subtotal + $totalTax;
         $total = $totalWithTax - $insuranceDiscount;
 
-        // Crear factura
+        // ── CREAR FACTURA ──────────────────────────────────────
         $invoice = Invoice::create([
             'patient_id' => $request->patient_id,
             'user_id' => auth()->id(),
@@ -217,8 +252,9 @@ class InvoiceController extends Controller
             'status' => 'pendiente',
             'authorization_number' => $request->authorization_number,
             'with_ncf' => $request->has('with_ncf'),
-            'ncf' => $request->ncf,
+            'ncf' => $ncfCode,                          // ✅ NCF consumido de la secuencia
             'ncf_type' => $request->ncf_type,
+            'ncf_sequence_id' => $ncfSequenceId,        // ✅ Referencia a la secuencia usada
             'customer_rnc' => $request->customer_rnc,
             'customer_business_name' => $request->customer_business_name,
             'tax_details' => [
@@ -227,7 +263,6 @@ class InvoiceController extends Controller
             ]
         ]);
 
-        // Crear items
         foreach ($items as $item) {
             $invoice->items()->create($item);
         }
@@ -240,10 +275,33 @@ class InvoiceController extends Controller
 
     } catch (\Exception $e) {
         DB::rollBack();
-        return redirect()
-            ->back()
-            ->withInput()
+        return redirect()->back()->withInput()
             ->with('error', 'Error al crear la factura: ' . $e->getMessage());
+    }
+}
+
+public function consultRnc($rnc)
+{
+    try {
+
+        $rnc = preg_replace('/[^0-9]/', '', $rnc);
+
+        $response = Http::timeout(15)
+            ->get('https://rnc.megaplus.com.do/api/consulta', [
+                'rnc' => $rnc
+            ]);
+
+        return response()->json(
+            $response->json(),
+            $response->status()
+        );
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'error' => true,
+            'mensaje' => $e->getMessage()
+        ], 500);
     }
 }
     /**

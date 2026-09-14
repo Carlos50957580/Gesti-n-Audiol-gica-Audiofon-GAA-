@@ -24,6 +24,7 @@ class Invoice extends Model
         'with_ncf',
         'ncf',
         'ncf_type',
+        'ncf_sequence_id',
         'customer_rnc',
         'customer_business_name',
         'tax_details'
@@ -144,5 +145,10 @@ class Invoice extends Model
     {
         $currency = \App\Models\Setting::get('company_currency', 'DOP');
         return $currency . ' ' . number_format($this->total, 2, ',', '.');
+    }
+
+        public function ncfSequence()
+    {
+        return $this->belongsTo(NcfSequence::class, 'ncf_sequence_id');
     }
 }

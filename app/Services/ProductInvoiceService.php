@@ -83,6 +83,8 @@ class ProductInvoiceService
         });
     }
 
+    
+
     /**
      * Registrar salida de stock por la venta
      */

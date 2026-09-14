@@ -135,45 +135,84 @@
                         </div>
                     </div>
 
-                    <!-- NCF Opcional -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="ri-file-shield-line me-1"></i>Comprobante Fiscal (Opcional)
-                            </h5>
+                    {{-- NCF Opcional --}}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="ri-file-shield-line me-1"></i>Comprobante Fiscal (Opcional)
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" name="with_ncf" value="1" 
+                   id="withNcf" onchange="toggleNcf()">
+            <label class="form-check-label" for="withNcf">Emitir con NCF</label>
+        </div>
+
+        <div id="ncfFields" class="d-none">
+            {{-- Tipo de NCF --}}
+            <div class="mb-3">
+                <label class="form-label">Tipo de NCF</label>
+                <select name="ncf_type" id="ncfType" class="form-select" onchange="loadNextNcf()">
+                    <option value="">Seleccionar tipo</option>
+                    <option value="consumidor_final">Consumidor Final (B02)</option>
+                    <option value="credito_fiscal">Crédito Fiscal (B01)</option>
+                    <option value="gubernamental">Gubernamental (B15)</option>
+                    <option value="regimen_especial">Régimen Especial (B14)</option>
+                </select>
+            </div>
+
+            {{-- RNC del cliente --}}
+            <div class="mb-3">
+                <label class="form-label">RNC del Cliente</label>
+                <div class="input-group">
+                    <input type="text" name="customer_rnc" id="customerRnc" class="form-control" 
+                           placeholder="000-0000000-0">
+                    <button type="button" class="btn btn-primary" onclick="searchRnc()">
+                        <i class="ri-search-line"></i>
+                    </button>
+                </div>
+                <div id="rncStatus" class="mt-1 small"></div>
+            </div>
+
+            {{-- Razón Social --}}
+            <div class="mb-3">
+                <label class="form-label">Razón Social</label>
+                <input type="text" name="customer_business_name" id="customerBusinessName" 
+                       class="form-control" readonly>
+            </div>
+
+            {{-- NCF a emitir --}}
+            <div id="ncfPreviewBox" class="d-none">
+                <label class="form-label small">NCF a emitir</label>
+                <div class="p-3 rounded" style="background:#f0f4ff;border:1px solid #c7d2fe;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <code id="ncfPreview" style="font-size:1.05rem;font-weight:700;color:#405189;">—</code>
+                            <small class="d-block text-muted mt-1" id="ncfSequenceName">—</small>
                         </div>
-                        <div class="card-body">
-                            <div class="form-check form-switch mb-3">
-                                <input class="form-check-input" type="checkbox" name="with_ncf" value="1" id="withNcf" onchange="toggleNcf()">
-                                <label class="form-check-label" for="withNcf">Emitir con NCF</label>
-                            </div>
-                            <div id="ncfFields" class="d-none">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Tipo de NCF</label>
-                                        <select name="ncf_type" class="form-select">
-                                            <option value="consumidor_final">Consumidor Final</option>
-                                            <option value="credito_fiscal">Crédito Fiscal</option>
-                                            <option value="gubernamental">Gubernamental</option>
-                                            <option value="regimen_especial">Régimen Especial</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">NCF</label>
-                                        <input type="text" name="ncf" class="form-control" placeholder="B0100000001">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">RNC del Cliente</label>
-                                        <input type="text" name="customer_rnc" class="form-control">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Razón Social</label>
-                                        <input type="text" name="customer_business_name" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadNextNcf()">
+                            <i class="ri-refresh-line"></i>
+                        </button>
                     </div>
+                    <div class="mt-2 small">
+                        <span class="text-muted">Disponibles:</span>
+                        <strong id="ncfRemaining">—</strong>
+                    </div>
+                    <div id="ncfAlert" class="alert alert-warning mt-2 mb-0 d-none" style="font-size:.8rem;padding:.4rem .6rem;">
+                        <i class="ri-alert-line me-1"></i>
+                        <span id="ncfAlertText"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ncfLoading" class="text-center py-2 d-none">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                <small class="text-muted">Consultando secuencia NCF...</small>
+            </div>
+        </div>
+    </div>
+</div>
 
                 </div>
 
@@ -459,10 +498,112 @@
     // -----------------------------------------
     // NCF
     // -----------------------------------------
-    function toggleNcf() {
-        const checked = document.getElementById('withNcf').checked;
-        document.getElementById('ncfFields').classList.toggle('d-none', !checked);
+    // ═══════════════════════════════════════════
+// NCF
+// ═══════════════════════════════════════════
+function toggleNcf() {
+    const checked = document.getElementById('withNcf').checked;
+    document.getElementById('ncfFields').classList.toggle('d-none', !checked);
+
+    if (checked) {
+        // Cargar automáticamente el primer NCF disponible
+        const branchId = document.getElementById('branchSelect').value;
+        const ncfType = document.getElementById('ncfType').value;
+        if (branchId && ncfType) {
+            loadNextNcf();
+        }
+    } else {
+        document.getElementById('ncfPreviewBox').classList.add('d-none');
     }
+}
+
+/**
+ * Consultar el próximo NCF disponible
+ */
+async function loadNextNcf() {
+    const ncfType = document.getElementById('ncfType').value;
+    const branchId = document.getElementById('branchSelect').value;
+
+    if (!ncfType) {
+        document.getElementById('ncfPreviewBox').classList.add('d-none');
+        return;
+    }
+
+    // Mostrar loading
+    document.getElementById('ncfLoading').classList.remove('d-none');
+    document.getElementById('ncfPreviewBox').classList.add('d-none');
+
+    try {
+        const params = new URLSearchParams({ ncf_type: ncfType });
+        if (branchId) params.append('branch_id', branchId);
+
+        const r = await fetch('/api/ncf/next-available?' + params.toString(), {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+        });
+        const data = await r.json();
+
+        if (!data.success) {
+            document.getElementById('ncfPreviewBox').classList.add('d-none');
+            showToast(data.message || 'No hay NCF disponible.', 'error');
+            return;
+        }
+
+        // Mostrar preview
+        document.getElementById('ncfPreview').textContent = data.ncf;
+        document.getElementById('ncfSequenceName').textContent = data.sequence_name;
+        document.getElementById('ncfRemaining').textContent = data.remaining;
+        document.getElementById('ncfPreviewBox').classList.remove('d-none');
+
+        // Alerta si está bajo
+        const alertBox = document.getElementById('ncfAlert');
+        const alertText = document.getElementById('ncfAlertText');
+        if (data.is_low) {
+            alertBox.classList.remove('d-none');
+            alertText.textContent = `¡Atención! Solo quedan ${data.remaining} NCF en esta secuencia.`;
+        } else {
+            alertBox.classList.add('d-none');
+        }
+
+    } catch (error) {
+        console.error('Error consultando NCF:', error);
+        showToast('Error al consultar la secuencia NCF.', 'error');
+    } finally {
+        document.getElementById('ncfLoading').classList.add('d-none');
+    }
+}
+
+/**
+ * Búsqueda de RNC
+ */
+async function searchRnc() {
+    const rnc = document.getElementById('customerRnc').value.trim();
+    if (!rnc) {
+        showToast('Ingrese un RNC.', 'error');
+        return;
+    }
+    const status = document.getElementById('rncStatus');
+    status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Consultando...</span>';
+    try {
+        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
+        const data = await response.json();
+        if (data.error) {
+            status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
+            document.getElementById('customerBusinessName').value = '';
+            return;
+        }
+        document.getElementById('customerBusinessName').value = data.nombre_razon_social ?? '';
+        status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
+    } catch (e) {
+        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
+    }
+}
+
+// Detectar cambios en sucursal para recargar NCF
+document.getElementById('branchSelect').addEventListener('change', function() {
+    if (document.getElementById('withNcf').checked && document.getElementById('ncfType').value) {
+        loadNextNcf();
+    }
+});
 
     // -----------------------------------------
     // ENVÍO DEL FORMULARIO

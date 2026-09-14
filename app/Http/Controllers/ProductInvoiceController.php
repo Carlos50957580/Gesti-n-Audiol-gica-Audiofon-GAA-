@@ -107,8 +107,7 @@ class ProductInvoiceController extends Controller
         'items.*.price'      => 'required|numeric|min:0',
         'discount'     => 'nullable|numeric|min:0',
         'with_ncf'     => 'boolean',
-        'ncf'          => 'nullable|string|max:255',
-        'ncf_type'     => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+        'ncf_type'     => 'nullable|required_if:with_ncf,1|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',  // ✅ required_if
         'customer_rnc' => 'nullable|string|max:255',
         'customer_business_name' => 'nullable|string|max:255',
         'notes'        => 'nullable|string',
@@ -154,7 +153,7 @@ class ProductInvoiceController extends Controller
             abort(403);
         }
 
-        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user']);
+        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user', 'ncfSequence']);
 
         $company = [
             'name'  => Setting::get('company_name', 'Mi Clínica'),

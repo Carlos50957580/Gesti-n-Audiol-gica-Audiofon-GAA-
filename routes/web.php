@@ -318,6 +318,31 @@ Route::middleware(['auth', 'active', 'role:admin,recepcionista'])->group(functio
     Route::get('/product-reports/cashier/print', [ProductReportController::class, 'cashierPrint']);
 });
 
+use App\Http\Controllers\NcfSequenceController;
+
+// ── Gestión de NCF (solo admin) ─────────────────
+Route::middleware(['auth', 'active', 'role:admin'])->group(function () {
+    Route::get('/ncf-sequences', [NcfSequenceController::class, 'index']);
+    Route::get('/ncf-sequences/create', [NcfSequenceController::class, 'create']);
+    Route::post('/ncf-sequences', [NcfSequenceController::class, 'store']);
+    Route::get('/ncf-sequences/{ncfSequence}', [NcfSequenceController::class, 'show']);
+    Route::get('/ncf-sequences/{ncfSequence}/edit', [NcfSequenceController::class, 'edit']);
+    Route::put('/ncf-sequences/{ncfSequence}', [NcfSequenceController::class, 'update']);
+    Route::delete('/ncf-sequences/{ncfSequence}', [NcfSequenceController::class, 'destroy']);
+    Route::post('/ncf-sequences/{ncfSequence}/toggle', [NcfSequenceController::class, 'toggle']);
+
+    // API
+    Route::get('/api/ncf-sequences/next-available', [NcfSequenceController::class, 'getNextAvailable']);
+});
+
+
+use App\Http\Controllers\NcfLookupController;
+
+// ── API: Consulta de NCF ─────────────────────────
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/api/ncf/next-available', [NcfLookupController::class, 'nextAvailable']);
+});
+
 
 
 // ============================================

@@ -13,7 +13,7 @@ class ProductInvoice extends Model
         'number', 'patient_id', 'user_id', 'branch_id',
         'subtotal', 'tax_amount', 'total_with_tax', 'discount', 'total',
         'paid_amount', 'balance',
-        'status', 'with_ncf', 'ncf', 'ncf_type',
+        'status', 'with_ncf', 'ncf', 'ncf_type', 'ncf_sequence_id',
         'customer_rnc', 'customer_business_name', 'notes',
     ];
 
@@ -150,4 +150,13 @@ public function receipt()
         $this->save();
         return $this;
     }
+
+    /**
+ * Secuencia NCF usada en esta factura
+ */
+public function ncfSequence()
+{
+    return $this->belongsTo(NcfSequence::class, 'ncf_sequence_id');
+}
+
 }
