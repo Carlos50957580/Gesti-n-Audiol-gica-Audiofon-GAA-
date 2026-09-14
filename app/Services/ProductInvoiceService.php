@@ -7,6 +7,8 @@ use App\Models\ProductStock;
 use App\Models\ProductInvoice;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
+use App\Models\NcfType;
+use App\Models\NcfSequence;
 use Illuminate\Support\Facades\DB;
 
 class ProductInvoiceService
@@ -17,6 +19,56 @@ class ProductInvoiceService
     public function createInvoice(array $data): ProductInvoice
     {
         return DB::transaction(function () use ($data) {
+            // ── CONSUMIR NCF SI APLICA ──────────────────────────────
+            $ncfCode = null;
+            $ncfSequenceId = null;
+
+            if (!empty($data['with_ncf']) && !empty($data['ncf_type'])) {
+                $typeCodeMap = [
+                    'consumidor_final' => 'B02',
+                    'credito_fiscal'   => 'B01',
+                    'gubernamental'    => 'B15',
+                    'regimen_especial' => 'B14',
+                ];
+
+                $typeCode = $typeCodeMap[$data['ncf_type']] ?? null;
+                if (!$typeCode) {
+                    throw new \Exception('Tipo de NCF inválido.');
+                }
+
+                $ncfType = NcfType::where('code', $typeCode)->first();
+                if (!$ncfType) {
+                    throw new \Exception('Tipo de NCF no configurado en el sistema.');
+                }
+
+                // Buscar secuencia activa: primero la específica de la sucursal, luego la general
+                $sequence = NcfSequence::active()
+                    ->where('ncf_type_id', $ncfType->id)
+                    ->where(function ($q) use ($data) {
+                        $q->where('branch_id', $data['branch_id'])
+                          ->orWhereNull('branch_id');
+                    })
+                    ->where('valid_until', '>=', now()->toDateString())
+                    ->where('valid_from', '<=', now()->toDateString())
+                    ->whereRaw('CAST(current_number AS UNSIGNED) <= CAST(end_number AS UNSIGNED)')
+                    ->orderByRaw('CASE WHEN branch_id = ? THEN 0 ELSE 1 END', [$data['branch_id']])
+                    ->orderBy('valid_until')
+                    ->first();
+
+                if (!$sequence) {
+                    throw new \Exception('No hay una secuencia NCF activa para este tipo de comprobante.');
+                }
+
+                if (!$sequence->canIssue()) {
+                    throw new \Exception('La secuencia NCF no puede emitir más comprobantes (' . $sequence->status_label . ').');
+                }
+
+                // ✅ Consumir el NCF (avanza el contador de la secuencia)
+                $ncfCode = $sequence->issueNext();
+                $ncfSequenceId = $sequence->id;
+            }
+
+            // ── PROCESAR ITEMS ──────────────────────────────────────
             $subtotal = 0;
             $totalTax = 0;
             $items = [];
@@ -51,25 +103,27 @@ class ProductInvoiceService
             $discount     = $data['discount'] ?? 0;
             $total        = $totalWithTax - $discount;
 
+            // ── CREAR FACTURA ──────────────────────────────────────
             $invoice = ProductInvoice::create([
-                'number'               => ProductInvoice::generateNumber(),
-                'patient_id'           => $data['patient_id'],
-                'user_id'              => auth()->id(),
-                'branch_id'            => $data['branch_id'],
-                'subtotal'             => $subtotal,
-                'tax_amount'           => $totalTax,
-                'total_with_tax'       => $totalWithTax,
-                'discount'             => $discount,
-                'total'                => $total,
-                'paid_amount'          => 0,
-                'balance'              => $total,
-                'status'               => 'pendiente',
-                'with_ncf'             => $data['with_ncf'] ?? false,
-                'ncf'                  => $data['ncf'] ?? null,
-                'ncf_type'             => $data['ncf_type'] ?? null,
-                'customer_rnc'         => $data['customer_rnc'] ?? null,
+                'number'                 => ProductInvoice::generateNumber(),
+                'patient_id'             => $data['patient_id'],
+                'user_id'                => auth()->id(),
+                'branch_id'              => $data['branch_id'],
+                'subtotal'               => $subtotal,
+                'tax_amount'             => $totalTax,
+                'total_with_tax'         => $totalWithTax,
+                'discount'               => $discount,
+                'total'                  => $total,
+                'paid_amount'            => 0,
+                'balance'                => $total,
+                'status'                 => 'pendiente',
+                'with_ncf'               => $data['with_ncf'] ?? false,
+                'ncf'                    => $ncfCode,              // ✅ NCF automático
+                'ncf_type'               => $data['ncf_type'] ?? null,
+                'ncf_sequence_id'        => $ncfSequenceId,        // ✅ NUEVO
+                'customer_rnc'           => $data['customer_rnc'] ?? null,
                 'customer_business_name' => $data['customer_business_name'] ?? null,
-                'notes'                => $data['notes'] ?? null,
+                'notes'                  => $data['notes'] ?? null,
             ]);
 
             foreach ($items as $item) {
@@ -82,8 +136,6 @@ class ProductInvoiceService
             return $invoice;
         });
     }
-
-    
 
     /**
      * Registrar salida de stock por la venta
@@ -146,8 +198,6 @@ class ProductInvoiceService
             if ($total <= 0) {
                 throw new \Exception('Debes ingresar al menos un monto de pago.');
             }
-
-           
 
             $receipt = \App\Models\ProductReceipt::create([
                 'number'             => \App\Models\ProductReceipt::generateNumber(),

@@ -15,6 +15,8 @@
         .title h2 { font-size:16px; text-transform:uppercase; border-bottom:2px solid #000; display:inline-block; padding-bottom:3px; }
         .section { margin-bottom:15px; }
         .section-title { background:#f0f0f0; padding:5px 8px; font-weight:700; font-size:12px; text-transform:uppercase; border-bottom:1px solid #000; margin-bottom:8px; }
+        .section-fiscal { border:1px solid #405189; border-radius:4px; overflow:hidden; }
+        .section-fiscal .section-title { background:#405189; color:#fff; border-bottom:none; }
         .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:5px 8px; }
         .info-grid .lbl { font-weight:700; }
         table { width:100%; border-collapse:collapse; font-size:11px; }
@@ -69,6 +71,28 @@
                 <div><span class="lbl">Atendido por:</span> {{ $productInvoice->user->name }}</div>
             </div>
         </div>
+
+        {{-- Datos Fiscales (NCF) --}}
+        @if($productInvoice->with_ncf && $productInvoice->ncf)
+            <div class="section section-fiscal">
+                <div class="section-title">Comprobante Fiscal</div>
+                <div class="info-grid">
+                    <div><span class="lbl">NCF:</span> <strong style="font-family:monospace;">{{ $productInvoice->ncf }}</strong></div>
+                    <div><span class="lbl">Tipo:</span> {{ ucfirst(str_replace('_', ' ', $productInvoice->ncf_type ?? '—')) }}</div>
+                    @if($productInvoice->customer_rnc)
+                        <div><span class="lbl">RNC Cliente:</span> {{ $productInvoice->customer_rnc }}</div>
+                    @endif
+                    @if($productInvoice->customer_business_name)
+                        <div><span class="lbl">Razón Social:</span> {{ $productInvoice->customer_business_name }}</div>
+                    @endif
+                    @if($productInvoice->ncfSequence)
+                        <div style="grid-column: span 2;">
+                            <span class="lbl">Secuencia:</span> {{ $productInvoice->ncfSequence->name }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- Items --}}
         <div class="section">

@@ -137,44 +137,108 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-header"><h5 class="card-title mb-0">Detalle de Este Pago</h5></div>
-                    <div class="card-body">
-                        @if($productReceipt->cash_amount)
-                            <div class="d-flex justify-content-between mb-2">
-                                <span><i class="ri-money-bill-line text-success me-1"></i>Efectivo:</span>
-                                <strong>RD$ {{ number_format($productReceipt->cash_amount, 2) }}</strong>
-                            </div>
-                        @endif
-                        @if($productReceipt->card_amount)
-                            <div class="d-flex justify-content-between mb-2">
-                                <span><i class="ri-bank-card-line text-primary me-1"></i>Tarjeta:</span>
-                                <strong>RD$ {{ number_format($productReceipt->card_amount, 2) }}</strong>
-                            </div>
-                        @endif
-                        @if($productReceipt->transfer_amount)
-                            <div class="d-flex justify-content-between mb-2">
-                                <span><i class="ri-exchange-dollar-line text-info me-1"></i>Transferencia:</span>
-                                <strong>RD$ {{ number_format($productReceipt->transfer_amount, 2) }}</strong>
-                            </div>
-                        @endif
-                        <hr>
-                        <div class="d-flex justify-content-between">
-                            <span class="fw-bold fs-5">PAGADO:</span>
-                            <span class="fw-bold fs-4 text-success">RD$ {{ number_format($productReceipt->total_paid, 2) }}</span>
-                        </div>
-
-                        <div class="d-grid gap-2 mt-3">
-                            <a href="{{ url('/product-receipts/'.$productReceipt->id.'/print') }}" target="_blank" class="btn btn-primary">
-                                <i class="ri-printer-line me-1"></i>Imprimir
-                            </a>
-                            <a href="{{ url('/product-receipts') }}" class="btn btn-secondary">
-                                <i class="ri-arrow-left-line me-1"></i>Volver
-                            </a>
-                        </div>
-                    </div>
-                </div>
+    {{-- Resumen de la factura (Subtotal, ITBIS, Total, Pagado, Balance) --}}
+    <div class="card border-primary">
+        <div class="card-header bg-primary-subtle">
+            <h5 class="card-title mb-0">
+                <i class="ri-file-list-3-line me-1 text-primary"></i>Resumen de la Factura
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Subtotal:</span>
+                <strong>RD$ {{ number_format($productReceipt->invoice->subtotal, 2) }}</strong>
             </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">ITBIS:</span>
+                <strong>RD$ {{ number_format($productReceipt->invoice->tax_amount, 2) }}</strong>
+            </div>
+            @if($productReceipt->invoice->discount > 0)
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Descuento:</span>
+                    <strong class="text-danger">- RD$ {{ number_format($productReceipt->invoice->discount, 2) }}</strong>
+                </div>
+            @endif
+            <hr>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="fw-bold">Total Factura:</span>
+                <strong class="fs-5">RD$ {{ number_format($productReceipt->invoice->total, 2) }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-success">Total Pagado:</span>
+                <strong class="text-success">RD$ {{ number_format($productReceipt->invoice->paid_amount, 2) }}</strong>
+            </div>
+            <div class="d-flex justify-content-between p-2 rounded"
+                 style="background:{{ $productReceipt->invoice->balance > 0.01 ? '#fff8e1' : '#e8f8f0' }};">
+                <span class="fw-bold">Balance:</span>
+                <strong class="{{ $productReceipt->invoice->balance > 0.01 ? 'text-danger' : 'text-success' }}">
+                    RD$ {{ number_format($productReceipt->invoice->balance, 2) }}
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    {{-- Detalle de Este Pago --}}
+    <div class="card">
+        <div class="card-header"><h5 class="card-title mb-0">Detalle de Este Pago</h5></div>
+        <div class="card-body">
+            @if($productReceipt->cash_amount)
+                <div class="d-flex justify-content-between mb-2">
+                    <span><i class="ri-money-bill-line text-success me-1"></i>Efectivo:</span>
+                    <strong>RD$ {{ number_format($productReceipt->cash_amount, 2) }}</strong>
+                </div>
+            @endif
+            @if($productReceipt->card_amount)
+                <div class="d-flex justify-content-between mb-2">
+                    <span><i class="ri-bank-card-line text-primary me-1"></i>Tarjeta:</span>
+                    <strong>RD$ {{ number_format($productReceipt->card_amount, 2) }}</strong>
+                </div>
+            @endif
+            @if($productReceipt->transfer_amount)
+                <div class="d-flex justify-content-between mb-2">
+                    <span><i class="ri-exchange-dollar-line text-info me-1"></i>Transferencia:</span>
+                    <strong>RD$ {{ number_format($productReceipt->transfer_amount, 2) }}</strong>
+                </div>
+            @endif
+            <hr>
+            <div class="d-flex justify-content-between">
+                <span class="fw-bold fs-5">PAGADO:</span>
+                <span class="fw-bold fs-4 text-success">RD$ {{ number_format($productReceipt->total_paid, 2) }}</span>
+            </div>
+
+            @if($productReceipt->card_reference || $productReceipt->transfer_reference || $productReceipt->notes)
+                <hr>
+                @if($productReceipt->card_reference)
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Ref. Tarjeta:</small>
+                        <code>{{ $productReceipt->card_reference }}</code>
+                    </div>
+                @endif
+                @if($productReceipt->transfer_reference)
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Ref. Transferencia:</small>
+                        <code>{{ $productReceipt->transfer_reference }}</code>
+                    </div>
+                @endif
+                @if($productReceipt->notes)
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Notas:</small>
+                        <p class="mb-0">{{ $productReceipt->notes }}</p>
+                    </div>
+                @endif
+            @endif
+
+            <div class="d-grid gap-2 mt-3">
+                <a href="{{ url('/product-receipts/'.$productReceipt->id.'/print') }}" target="_blank" class="btn btn-primary">
+                    <i class="ri-printer-line me-1"></i>Imprimir
+                </a>
+                <a href="{{ url('/product-receipts') }}" class="btn btn-secondary">
+                    <i class="ri-arrow-left-line me-1"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 </div>

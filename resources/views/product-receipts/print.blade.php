@@ -82,29 +82,93 @@
         </table>
 
         <div class="totals">
-            @if($productReceipt->cash_amount)
-                <div class="row">
-                    <span>Efectivo:</span>
-                    <span>RD$ {{ number_format($productReceipt->cash_amount, 2) }}</span>
-                </div>
-            @endif
-            @if($productReceipt->card_amount)
-                <div class="row">
-                    <span>Tarjeta:</span>
-                    <span>RD$ {{ number_format($productReceipt->card_amount, 2) }}</span>
-                </div>
-            @endif
-            @if($productReceipt->transfer_amount)
-                <div class="row">
-                    <span>Transferencia:</span>
-                    <span>RD$ {{ number_format($productReceipt->transfer_amount, 2) }}</span>
-                </div>
-            @endif
-            <div class="row grand">
-                <span>TOTAL PAGADO:</span>
-                <span>RD$ {{ number_format($productReceipt->total_paid, 2) }}</span>
-            </div>
+    {{-- Subtotal de la factura --}}
+    <div class="row">
+        <span>Subtotal Factura:</span>
+        <span>RD$ {{ number_format($productReceipt->invoice->subtotal, 2) }}</span>
+    </div>
+
+    {{-- ITBIS --}}
+    @if($productReceipt->invoice->tax_amount > 0)
+        <div class="row">
+            <span>ITBIS:</span>
+            <span>RD$ {{ number_format($productReceipt->invoice->tax_amount, 2) }}</span>
         </div>
+    @endif
+
+    {{-- Descuento --}}
+    @if($productReceipt->invoice->discount > 0)
+        <div class="row">
+            <span>Descuento:</span>
+            <span>- RD$ {{ number_format($productReceipt->invoice->discount, 2) }}</span>
+        </div>
+    @endif
+
+    {{-- Total Factura --}}
+    <div class="row" style="border-top:1px solid #000; margin-top:5px; padding-top:5px;">
+        <span style="font-weight:700;">Total Factura:</span>
+        <span style="font-weight:700;">RD$ {{ number_format($productReceipt->invoice->total, 2) }}</span>
+    </div>
+
+    {{-- Separador --}}
+    <div style="border-top:1px dashed #666; margin:8px 0;"></div>
+
+    {{-- Métodos de pago de ESTE recibo --}}
+    <div style="font-weight:700; text-transform:uppercase; font-size:10px; margin-bottom:5px;">Este Pago</div>
+
+    @if($productReceipt->cash_amount)
+        <div class="row">
+            <span>Efectivo:</span>
+            <span>RD$ {{ number_format($productReceipt->cash_amount, 2) }}</span>
+        </div>
+    @endif
+    @if($productReceipt->card_amount)
+        <div class="row">
+            <span>Tarjeta:</span>
+            <span>RD$ {{ number_format($productReceipt->card_amount, 2) }}</span>
+        </div>
+    @endif
+    @if($productReceipt->transfer_amount)
+        <div class="row">
+            <span>Transferencia:</span>
+            <span>RD$ {{ number_format($productReceipt->transfer_amount, 2) }}</span>
+        </div>
+    @endif
+
+    {{-- Total pagado en este recibo --}}
+    <div class="row grand">
+        <span>TOTAL PAGADO:</span>
+        <span>RD$ {{ number_format($productReceipt->total_paid, 2) }}</span>
+    </div>
+
+    {{-- Estado de la factura después del pago --}}
+    <div style="border-top:1px dashed #666; margin:8px 0;"></div>
+
+    <div class="row">
+        <span>Total Pagado (acumulado):</span>
+        <span>RD$ {{ number_format($productReceipt->invoice->paid_amount, 2) }}</span>
+    </div>
+    <div class="row">
+        <span style="font-weight:700;">Balance Pendiente:</span>
+        <span style="font-weight:700;">RD$ {{ number_format($productReceipt->invoice->balance, 2) }}</span>
+    </div>
+
+    {{-- Badge de estado --}}
+    <div style="text-align:center; margin-top:10px;">
+        @php
+            $statusText = match($productReceipt->invoice->status) {
+                'pendiente'      => 'PENDIENTE DE PAGO',
+                'pagada_parcial' => 'PAGO PARCIAL',
+                'pagada'         => 'PAGADA COMPLETA',
+                'cancelada'      => 'CANCELADA',
+                default          => strtoupper($productReceipt->invoice->status),
+            };
+        @endphp
+        <span style="display:inline-block; border:2px solid #000; padding:3px 12px; font-weight:700; font-size:11px;">
+            {{ $statusText }}
+        </span>
+    </div>
+</div>
 
         <div class="footer">
             <div>Gracias por su preferencia</div>

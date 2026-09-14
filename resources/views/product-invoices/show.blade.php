@@ -95,19 +95,54 @@
                                     {{ $productInvoice->status_label }}
                                 </span>
                             </div>
-                            @if($productInvoice->with_ncf && $productInvoice->ncf)
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Creado por</small>
+                                <strong>{{ $productInvoice->user->name }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Datos Fiscales (NCF) --}}
+                @if($productInvoice->with_ncf && $productInvoice->ncf)
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary-subtle">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-file-shield-2-line me-1 text-primary"></i>Comprobante Fiscal
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
                                 <div class="col-md-6">
                                     <small class="text-muted d-block">NCF</small>
-                                    <strong><code>{{ $productInvoice->ncf }}</code></strong>
+                                    <strong><code style="font-size:1.05rem;color:#405189;">{{ $productInvoice->ncf }}</code></strong>
                                 </div>
                                 <div class="col-md-6">
-                                    <small class="text-muted d-block">Tipo NCF</small>
-                                    <strong>{{ ucfirst(str_replace('_', ' ', $productInvoice->ncf_type)) }}</strong>
+                                    <small class="text-muted d-block">Tipo de Comprobante</small>
+                                    <strong>{{ ucfirst(str_replace('_', ' ', $productInvoice->ncf_type ?? '—')) }}</strong>
                                 </div>
+
+                                @if($productInvoice->ncfSequence)
+                                    <div class="col-md-6">
+                                        <small class="text-muted d-block">Secuencia</small>
+                                        <span class="badge bg-info-subtle text-info">
+                                            <i class="ri-bookmark-line me-1"></i>{{ $productInvoice->ncfSequence->name }}
+                                        </span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted d-block">Rango NCF</small>
+                                        <strong style="font-size:.85rem;">
+                                            {{ $productInvoice->ncfSequence->prefix }}{{ $productInvoice->ncfSequence->serie }}
+                                            {{ (int) $productInvoice->ncfSequence->start_number }} -
+                                            {{ (int) $productInvoice->ncfSequence->end_number }}
+                                        </strong>
+                                    </div>
+                                @endif
+
                                 @if($productInvoice->customer_rnc)
                                     <div class="col-md-6">
-                                        <small class="text-muted d-block">RNC Cliente</small>
-                                        <strong>{{ $productInvoice->customer_rnc }}</strong>
+                                        <small class="text-muted d-block">RNC del Cliente</small>
+                                        <strong><code>{{ $productInvoice->customer_rnc }}</code></strong>
                                     </div>
                                 @endif
                                 @if($productInvoice->customer_business_name)
@@ -116,10 +151,10 @@
                                         <strong>{{ $productInvoice->customer_business_name }}</strong>
                                     </div>
                                 @endif
-                            @endif
+                            </div>
                         </div>
                     </div>
-                </div>
+                @endif
 
                 {{-- Productos --}}
                 <div class="card">

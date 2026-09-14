@@ -196,8 +196,7 @@ class ProductInvoiceController extends Controller
             abort(403);
         }
 
-        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user']);
-
+$productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user', 'ncfSequence']);
         $company = [
             'name'  => Setting::get('company_name', 'Mi Clínica'),
             'rnc'   => Setting::get('company_rnc', ''),
