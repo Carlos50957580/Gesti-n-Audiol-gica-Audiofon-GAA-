@@ -280,27 +280,80 @@
 @endif
 
 {{-- ══════════════════════════════════
-     KPI FILA
+     KPI FILA - SERVICIOS Y PRODUCTOS
 ══════════════════════════════════ --}}
 <div class="row g-3">
+    {{-- Ingresos totales del mes --}}
     <div class="col-xl-3 col-md-6 fa0">
         <div class="kpi kp-t">
             <div class="kpi-ico"><i class="ri-money-dollar-circle-line"></i></div>
-            <div class="kpi-val">RD$ {{ number_format($revenueThisMonth, 0, ',', '.') }}</div>
+            <div class="kpi-val">RD$ {{ number_format($totalRevenueThisMonth, 0, ',', '.') }}</div>
             <div class="kpi-lbl">Ingresos del mes</div>
             <div class="kpi-foot">
-                @if($revenueGrowth > 0)
-                    <span class="up"><i class="ri-arrow-up-line"></i>{{ $revenueGrowth }}%</span> vs. mes anterior
-                @elseif($revenueGrowth < 0)
-                    <span class="down"><i class="ri-arrow-down-line"></i>{{ abs($revenueGrowth) }}%</span> vs. mes anterior
-                @else
-                    <span style="color:var(--muted)">Sin cambios vs. mes anterior</span>
-                @endif
+                <i class="ri-wallet-3-line"></i>
+                Total cobrado (servicios + productos)
             </div>
             <div class="kpi-ghost"><i class="ri-money-dollar-circle-fill"></i></div>
         </div>
     </div>
+
+    {{-- Ingresos de servicios --}}
     <div class="col-xl-3 col-md-6 fa1">
+        <div class="kpi kp-p">
+            <div class="kpi-ico"><i class="ri-stethoscope-line"></i></div>
+            <div class="kpi-val">RD$ {{ number_format($revenueThisMonth, 0, ',', '.') }}</div>
+            <div class="kpi-lbl">Ingresos por servicios</div>
+            <div class="kpi-foot">
+                @if($revenueGrowth > 0)
+                    <span class="up"><i class="ri-arrow-up-line"></i>{{ $revenueGrowth }}%</span> vs mes anterior
+                @elseif($revenueGrowth < 0)
+                    <span class="down"><i class="ri-arrow-down-line"></i>{{ abs($revenueGrowth) }}%</span> vs mes anterior
+                @else
+                    <span style="color:var(--muted)">Sin cambios</span>
+                @endif
+            </div>
+            <div class="kpi-ghost"><i class="ri-stethoscope-fill"></i></div>
+        </div>
+    </div>
+
+    {{-- Ingresos de productos --}}
+    <div class="col-xl-3 col-md-6 fa2">
+        <div class="kpi kp-v">
+            <div class="kpi-ico"><i class="ri-shopping-bag-3-line"></i></div>
+            <div class="kpi-val">RD$ {{ number_format($productRevenueThisMonth, 0, ',', '.') }}</div>
+            <div class="kpi-lbl">Ingresos por productos</div>
+            <div class="kpi-foot">
+                @if($productRevenueGrowth > 0)
+                    <span class="up"><i class="ri-arrow-up-line"></i>{{ $productRevenueGrowth }}%</span> vs mes anterior
+                @elseif($productRevenueGrowth < 0)
+                    <span class="down"><i class="ri-arrow-down-line"></i>{{ abs($productRevenueGrowth) }}%</span> vs mes anterior
+                @else
+                    <span style="color:var(--muted)">Sin cambios</span>
+                @endif
+            </div>
+            <div class="kpi-ghost"><i class="ri-shopping-bag-3-fill"></i></div>
+        </div>
+    </div>
+
+    {{-- Facturas pendientes --}}
+    <div class="col-xl-3 col-md-6 fa3">
+        <div class="kpi kp-a">
+            <div class="kpi-ico"><i class="ri-file-list-3-line"></i></div>
+            <div class="kpi-val">{{ $pendingInvoices + $productPendingInvoices }}</div>
+            <div class="kpi-lbl">Facturas pendientes</div>
+            <div class="kpi-foot">
+                <i class="ri-coins-line"></i>
+                RD$ {{ number_format($pendingAmount + $productPendingAmount, 0, ',', '.') }} por cobrar
+            </div>
+            <div class="kpi-ghost"><i class="ri-file-list-fill"></i></div>
+        </div>
+    </div>
+</div>
+
+{{-- Segunda fila de KPIs --}}
+<div class="row g-3">
+    {{-- Citas hoy --}}
+    <div class="col-xl-3 col-md-6 fa0">
         <div class="kpi kp-p">
             <div class="kpi-ico"><i class="ri-calendar-check-line"></i></div>
             <div class="kpi-val">{{ $apptToday }}</div>
@@ -312,19 +365,9 @@
             <div class="kpi-ghost"><i class="ri-calendar-fill"></i></div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6 fa2">
-        <div class="kpi kp-a">
-            <div class="kpi-ico"><i class="ri-file-list-3-line"></i></div>
-            <div class="kpi-val">{{ $pendingInvoices }}</div>
-            <div class="kpi-lbl">Facturas pendientes</div>
-            <div class="kpi-foot">
-                <i class="ri-coins-line"></i>
-                RD$ {{ number_format($pendingAmount, 0, ',', '.') }} por cobrar
-            </div>
-            <div class="kpi-ghost"><i class="ri-file-list-fill"></i></div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-md-6 fa3">
+
+    {{-- Pacientes --}}
+    <div class="col-xl-3 col-md-6 fa1">
         <div class="kpi kp-v">
             <div class="kpi-ico"><i class="ri-team-line"></i></div>
             <div class="kpi-val">{{ $totalPatients }}</div>
@@ -334,6 +377,34 @@
                 +{{ $newPatientsMonth }} nuevos · {{ $patientsWithIns }} con seguro
             </div>
             <div class="kpi-ghost"><i class="ri-team-fill"></i></div>
+        </div>
+    </div>
+
+    {{-- Ventas de productos del mes --}}
+    <div class="col-xl-3 col-md-6 fa2">
+        <div class="kpi kp-b">
+            <div class="kpi-ico"><i class="ri-shopping-cart-2-line"></i></div>
+            <div class="kpi-val">{{ $productInvoicesThisMonth ?? 0 }}</div>
+            <div class="kpi-lbl">Ventas de productos</div>
+            <div class="kpi-foot">
+                <i class="ri-money-dollar-circle-line"></i>
+                Facturado: RD$ {{ number_format($productInvoicedThisMonth ?? 0, 0, ',', '.') }}
+            </div>
+            <div class="kpi-ghost"><i class="ri-shopping-cart-2-fill"></i></div>
+        </div>
+    </div>
+
+    {{-- Citas completadas --}}
+    <div class="col-xl-3 col-md-6 fa3">
+        <div class="kpi kp-t">
+            <div class="kpi-ico"><i class="ri-checkbox-circle-line"></i></div>
+            <div class="kpi-val">{{ $apptCompleted }}</div>
+            <div class="kpi-lbl">Citas completadas</div>
+            <div class="kpi-foot">
+                <i class="ri-percent-line"></i>
+                {{ $apptThisMonth > 0 ? round($apptCompleted / $apptThisMonth * 100) : 0 }}% del total del mes
+            </div>
+            <div class="kpi-ghost"><i class="ri-checkbox-circle-fill"></i></div>
         </div>
     </div>
 </div>
@@ -424,6 +495,140 @@
             </div>
         </div>
     </div>
+
+    {{-- Donut citas --}}
+    <div class="col-xl-4 fa1">
+        <div class="dc h-100">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(112,102,224,.1);color:var(--dv)"><i class="ri-pie-chart-2-line"></i></div>
+                <h6>Estado de citas — este mes</h6>
+                <span style="font-size:.8rem;font-weight:700;color:var(--ink);">{{ $apptThisMonth }}</span>
+            </div>
+            <div class="dc-body">
+                <div class="donut-wrap mb-3">
+                    <div class="donut-cvs"><canvas id="apptDonut"></canvas></div>
+                    <div style="flex:1;">
+                        @foreach([
+                            ['programada','Programadas','#405189'],
+                            ['completada','Completadas','#0ab39c'],
+                            ['cancelada', 'Canceladas', '#f06548'],
+                        ] as [$key,$lbl,$col])
+                        <div class="leg-item">
+                            <div class="leg-dot" style="background:{{ $col }}"></div>
+                            <span class="leg-lbl">{{ $lbl }}</span>
+                            <span class="leg-val">{{ $apptByStatus[$key] ?? 0 }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="mini-stat" style="background:rgba(10,179,156,.06);">
+                            <div class="mini-val" style="color:var(--dt);">{{ $apptCompleted }}</div>
+                            <div class="mini-lbl">Completadas</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mini-stat" style="background:rgba(247,184,75,.08);">
+                            <div class="mini-val" style="color:var(--da);">{{ $apptPending }}</div>
+                            <div class="mini-lbl">Pendientes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Médicos --}}
+    <div class="col-xl-4 fa2">
+        <div class="dc h-100">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(247,184,75,.12);color:var(--da)"><i class="ri-user-star-line"></i></div>
+                <h6>Médicos — citas este mes</h6>
+            </div>
+            <div class="dc-body" style="padding-top:.35rem;">
+                @forelse($topDoctors as $i => $doc)
+                    @php
+                        $ini = strtoupper(collect(explode(' ',$doc->name))->map(fn($w)=>$w[0]??'')->take(2)->join(''));
+                        $pct = $maxAppts > 0 ? round($doc->appts_month / $maxAppts * 100) : 0;
+                    @endphp
+                    <div class="doctor-row">
+                        <div class="doctor-rank">#{{ $i+1 }}</div>
+                        <div class="doctor-av av{{ $i % 6 }}">{{ $ini }}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="doctor-name">{{ $doc->name }}</div>
+                            <div class="doctor-bar mt-1"><div class="doctor-bar-fill" style="width:{{ $pct }}%"></div></div>
+                        </div>
+                        <div>
+                            <div class="doctor-count">{{ $doc->appts_month }}</div>
+                            <div class="doctor-done">{{ $doc->appts_completed }} ✓</div>
+                        </div>
+                    </div>
+                @empty
+                    <div style="text-align:center;color:var(--muted);font-size:.83rem;padding:2rem 0;">
+                        <i class="ri-user-line" style="font-size:1.8rem;opacity:.25;display:block;margin-bottom:.4rem;"></i>
+                        Sin médicos asignados
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════
+     TOP PRODUCTOS VENDIDOS
+══════════════════════════════════ --}}
+@if(isset($topProducts) && $topProducts->count() > 0)
+<div class="row g-3 mt-2">
+    <div class="col-12">
+        <div class="dc">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(112,102,224,.1);color:var(--dv)"><i class="ri-trophy-line"></i></div>
+                <h6>Top 5 productos más vendidos — este mes</h6>
+                <a href="{{ url('/product-reports') }}" class="see-all">Ver reporte →</a>
+            </div>
+            <div class="dc-body">
+                <div class="row g-3">
+                    @foreach($topProducts as $i => $prod)
+                        @php
+                            $pct = $maxProductRevenue > 0 ? ($prod->revenue / $maxProductRevenue * 100) : 0;
+                            $colors = ['#f7b84b', '#405189', '#0ab39c', '#7066e0', '#299cdb'];
+                        @endphp
+                        <div class="col-md-6 col-lg-4">
+                            <div style="background:var(--surface);border-radius:.65rem;padding:1rem;border:1px solid var(--border);">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span style="width:28px;height:28px;border-radius:50%;background:{{ $colors[$i] }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;">
+                                        #{{ $i+1 }}
+                                    </span>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:.83rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            {{ $prod->name }}
+                                        </div>
+                                        <div style="font-size:.7rem;color:var(--muted);">
+                                            <code>{{ $prod->code }}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span style="font-size:.75rem;color:var(--muted);">Vendidos:</span>
+                                    <strong style="font-size:.85rem;">{{ $prod->qty }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span style="font-size:.75rem;color:var(--muted);">Ingresos:</span>
+                                    <strong style="font-size:.85rem;color:var(--dt);">RD$ {{ number_format($prod->revenue, 0, ',', '.') }}</strong>
+                                </div>
+                                <div class="sb-track">
+                                    <div class="sb-fill" style="width:{{ round($pct) }}%;background:linear-gradient(90deg,{{ $colors[$i] }},var(--dt));"></div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
     {{-- Donut citas --}}
     <div class="col-xl-4 fa1">
@@ -684,7 +889,7 @@
 <script>
 const CP='#405189',CT='#0ab39c',CA='#f7b84b',CR='#f06548',CBORDER='#edf0f7',CMUTED='#6b7a99';
 
-// ── Revenue bar chart ────────────────────────────────────
+// ── Revenue bar chart (servicios + productos) ────────────
 const revData = @json($last14Days);
 const revCtx  = document.getElementById('revChart').getContext('2d');
 
@@ -692,31 +897,66 @@ new Chart(revCtx, {
     type: 'bar',
     data: {
         labels  : revData.map(d => d.label),
-        datasets: [{
-            data           : revData.map(d => d.total),
-            backgroundColor: revData.map(d => d.total > 0 ? 'rgba(64,81,137,.72)' : 'rgba(64,81,137,.12)'),
-            borderColor    : revData.map(d => d.total > 0 ? CP : 'transparent'),
-            borderWidth    : 1.5,
-            borderRadius   : 5,
-            borderSkipped  : false,
-        }]
+        datasets: [
+            {
+                label: 'Servicios',
+                data: revData.map(d => d.services || 0),
+                backgroundColor: 'rgba(64,81,137,.75)',
+                borderColor: CP,
+                borderWidth: 1.5,
+                borderRadius: 0,
+                borderSkipped: false,
+                stack: 'revenue',
+            },
+            {
+                label: 'Productos',
+                data: revData.map(d => d.products || 0),
+                backgroundColor: 'rgba(112,102,224,.75)',
+                borderColor: '#7066e0',
+                borderWidth: 1.5,
+                borderRadius: 5,
+                borderSkipped: false,
+                stack: 'revenue',
+            }
+        ]
     },
     options: {
         responsive:true, maintainAspectRatio:false,
         plugins: {
-            legend: {display:false},
+            legend: {
+                display: true,
+                position: 'top',
+                align: 'end',
+                labels: {
+                    boxWidth: 12,
+                    padding: 10,
+                    font: { size: 11, weight: '600' },
+                    color: '#6b7a99',
+                }
+            },
             tooltip: {
                 backgroundColor:'#fff', borderColor:CBORDER, borderWidth:1,
                 titleColor:'#1e2535', bodyColor:CMUTED, padding:10,
-                callbacks: { label: c => ' RD$ '+c.parsed.y.toLocaleString('es-DO',{minimumFractionDigits:2}) }
+                callbacks: {
+                    label: c => ' ' + c.dataset.label + ': RD$ ' + c.parsed.y.toLocaleString('es-DO',{minimumFractionDigits:2})
+                }
             }
         },
         scales: {
-            x: { grid:{display:false}, border:{display:false}, ticks:{color:CMUTED, font:{size:10,weight:'600'}} },
+            x: {
+                stacked: true,
+                grid:{display:false},
+                border:{display:false},
+                ticks:{color:CMUTED, font:{size:10,weight:'600'}}
+            },
             y: {
-                grid:{color:CBORDER}, border:{display:false, dash:[3,3]},
-                ticks:{ color:CMUTED, font:{size:10},
-                    callback: v => v>=1000 ? 'RD$'+(v/1000).toFixed(0)+'k' : 'RD$'+v }
+                stacked: true,
+                grid:{color:CBORDER},
+                border:{display:false, dash:[3,3]},
+                ticks:{
+                    color:CMUTED, font:{size:10},
+                    callback: v => v>=1000 ? 'RD$'+(v/1000).toFixed(0)+'k' : 'RD$'+v
+                }
             }
         }
     }

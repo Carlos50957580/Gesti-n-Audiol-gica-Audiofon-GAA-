@@ -213,16 +213,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="company_tax_rate" class="form-label">Tasa de Impuesto (%)</label>
-                                <input type="number" step="0.01" class="form-control @error('company_tax_rate') is-invalid @enderror" 
-                                       id="company_tax_rate" name="company_tax_rate" 
-                                       value="{{ old('company_tax_rate', $company['tax_rate']) }}" 
-                                       placeholder="18">
-                                <div class="form-text">ITBIS / IVA</div>
-                            </div>
-                        </div>
+                       
 
                         <div class="col-md-3">
                             <div class="mb-3">
@@ -258,16 +249,6 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="company_ncf_sequence" class="form-label">Secuencia NCF Actual</label>
-                                <input type="number" class="form-control @error('company_ncf_sequence') is-invalid @enderror" 
-                                       id="company_ncf_sequence" name="company_ncf_sequence" 
-                                       value="{{ old('company_ncf_sequence', $company['ncf_sequence']) }}" 
-                                       placeholder="1" min="1">
-                                <div class="form-text">Número de secuencia para la próxima factura</div>
-                            </div>
-                        </div>
 
                         <div class="col-md-4">
                             <div class="mb-3">

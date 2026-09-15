@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Models\ProductInvoice;
 use App\Models\Patient;
 use App\Models\Appointment;
 use App\Models\User;
@@ -27,22 +28,22 @@ class DashboardController extends Controller
         $lastMonth = Carbon::now()->subMonth()->startOfMonth();
         $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
 
-        // ── PRIORIDAD: Si es ADMIN (aunque sea doctor), va al dashboard de admin ──
+        // ── PRIORIDAD: Si es ADMIN ──────────────────────────────
         if ($isAdmin) {
             return $this->adminDashboard($user, $today, $thisMonth, $lastMonth, $lastMonthEnd, $branchId);
         }
 
-        // ── Si es MÉDICO (y NO es admin), solo ve sus datos personales ──────
+        // ── MÉDICO ──────────────────────────────────────────────
         if ($isDoctor) {
             return $this->doctorDashboard($user, $today, $thisMonth, $lastMonth, $lastMonthEnd);
         }
 
-        // ── Si es RECEPCIONISTA, ve datos de su sucursal ────────────
+        // ── RECEPCIONISTA ───────────────────────────────────────
         return $this->receptionistDashboard($user, $today, $thisMonth, $lastMonth, $lastMonthEnd, $branchId);
     }
 
     /**
-     * Dashboard para Administradores (incluye los que tienen is_doctor = 1)
+     * Dashboard para Administradores
      */
     private function adminDashboard($user, $today, $thisMonth, $lastMonth, $lastMonthEnd, $branchId)
     {
@@ -51,10 +52,13 @@ class DashboardController extends Controller
         $isDoctor = false;
 
         $invQ = Invoice::query();
+        $prodInvQ = ProductInvoice::query();
         $apptQ = Appointment::query();
         $patQ = Patient::query();
 
-        // ── KPI: Ingresos ────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // INGRESOS DE SERVICIOS
+        // ═══════════════════════════════════════════════════════
         $revenueThisMonth = (clone $invQ)->where('status', 'pagada')
             ->whereBetween('created_at', [$thisMonth, now()])->sum('total');
 
@@ -65,12 +69,56 @@ class DashboardController extends Controller
             ? round((($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100, 1)
             : ($revenueThisMonth > 0 ? 100 : 0);
 
-        // ── KPI: Facturas ────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // INGRESOS DE PRODUCTOS
+        // ═══════════════════════════════════════════════════════
+        // Ingresos de productos = suma de lo COBRADO (paid_amount) del mes
+        $productRevenueThisMonth = (clone $prodInvQ)
+            ->whereBetween('created_at', [$thisMonth, now()])
+            ->where('status', '!=', 'cancelada')
+            ->sum('paid_amount');
+
+        $productRevenueLastMonth = (clone $prodInvQ)
+            ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])
+            ->where('status', '!=', 'cancelada')
+            ->sum('paid_amount');
+
+        $productRevenueGrowth = $productRevenueLastMonth > 0
+            ? round((($productRevenueThisMonth - $productRevenueLastMonth) / $productRevenueLastMonth) * 100, 1)
+            : ($productRevenueThisMonth > 0 ? 100 : 0);
+
+        // Facturado (pendiente de cobro)
+        $productInvoicedThisMonth = (clone $prodInvQ)
+            ->whereBetween('created_at', [$thisMonth, now()])
+            ->where('status', '!=', 'cancelada')
+            ->sum('total');
+
+        $productPendingInvoices = (clone $prodInvQ)
+            ->whereIn('status', ['pendiente', 'pagada_parcial'])
+            ->count();
+
+        $productPendingAmount = (clone $prodInvQ)
+            ->whereIn('status', ['pendiente', 'pagada_parcial'])
+            ->sum('balance');
+
+        $productInvoicesThisMonth = (clone $prodInvQ)
+            ->whereBetween('created_at', [$thisMonth, now()])
+            ->where('status', '!=', 'cancelada')
+            ->count();
+
+        // Total ingresos combinados (servicios + productos cobrados)
+        $totalRevenueThisMonth = $revenueThisMonth + $productRevenueThisMonth;
+
+        // ═══════════════════════════════════════════════════════
+        // FACTURAS DE SERVICIOS
+        // ═══════════════════════════════════════════════════════
         $invoicesThisMonth = (clone $invQ)->whereBetween('created_at', [$thisMonth, now()])->count();
         $pendingInvoices = (clone $invQ)->where('status', 'pendiente')->count();
         $pendingAmount = (clone $invQ)->where('status', 'pendiente')->sum('total');
 
-        // ── KPI: Citas ───────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // CITAS
+        // ═══════════════════════════════════════════════════════
         $apptToday = (clone $apptQ)->whereDate('appointment_date', $today)->count();
         $apptThisMonth = (clone $apptQ)->whereBetween('appointment_date', [$thisMonth, now()])->count();
         $apptCompleted = (clone $apptQ)->whereBetween('appointment_date', [$thisMonth, now()])
@@ -78,15 +126,26 @@ class DashboardController extends Controller
         $apptPending = (clone $apptQ)->where('status', 'programada')
             ->where('appointment_date', '>=', $today)->count();
 
-        // ── KPI: Pacientes ───────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // PACIENTES
+        // ═══════════════════════════════════════════════════════
         $totalPatients = (clone $patQ)->count();
         $newPatientsMonth = (clone $patQ)->whereBetween('created_at', [$thisMonth, now()])->count();
         $patientsWithIns = (clone $patQ)->whereNotNull('insurance_id')->count();
 
-        // ── Gráfico: ingresos por día ──────────────────────────────────────
-        $rawRevenue = (clone $invQ)->where('status', 'pagada')
+        // ═══════════════════════════════════════════════════════
+        // GRÁFICO: Ingresos últimos 14 días (servicios + productos)
+        // ═══════════════════════════════════════════════════════
+        $rawServiceRevenue = (clone $invQ)->where('status', 'pagada')
             ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
             ->selectRaw('DATE(created_at) as date, SUM(total) as total')
+            ->groupBy('date')->orderBy('date')
+            ->pluck('total', 'date')->toArray();
+
+        $rawProductRevenue = (clone $prodInvQ)
+            ->where('status', '!=', 'cancelada')
+            ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
+            ->selectRaw('DATE(created_at) as date, SUM(paid_amount) as total')
             ->groupBy('date')->orderBy('date')
             ->pluck('total', 'date')->toArray();
 
@@ -94,19 +153,25 @@ class DashboardController extends Controller
         for ($i = 13; $i >= 0; $i--) {
             $d = Carbon::now()->subDays($i)->format('Y-m-d');
             $last14Days[] = [
-                'label' => Carbon::now()->subDays($i)->locale('es')->isoFormat('D MMM'),
-                'total' => (float) ($rawRevenue[$d] ?? 0),
+                'label'    => Carbon::now()->subDays($i)->locale('es')->isoFormat('D MMM'),
+                'services' => (float) ($rawServiceRevenue[$d] ?? 0),
+                'products' => (float) ($rawProductRevenue[$d] ?? 0),
+                'total'    => (float) (($rawServiceRevenue[$d] ?? 0) + ($rawProductRevenue[$d] ?? 0)),
             ];
         }
 
-        // ── Gráfico: citas por estado ──────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // GRÁFICO: Citas por estado
+        // ═══════════════════════════════════════════════════════
         $apptByStatus = (clone $apptQ)
             ->whereBetween('appointment_date', [$thisMonth, now()])
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')->toArray();
 
-        // ── Top 5 servicios ──────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // TOP 5 SERVICIOS
+        // ═══════════════════════════════════════════════════════
         $topServices = DB::table('invoice_items')
             ->join('services', 'invoice_items.service_id', '=', 'services.id')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -119,19 +184,54 @@ class DashboardController extends Controller
 
         $maxServiceRevenue = $topServices->max('revenue') ?: 1;
 
-        // ── Citas de hoy ─────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // TOP 5 PRODUCTOS MÁS VENDIDOS (por ingresos)
+        // ═══════════════════════════════════════════════════════
+        $topProducts = DB::table('product_invoice_items')
+            ->join('products', 'product_invoice_items.product_id', '=', 'products.id')
+            ->join('product_invoices', 'product_invoice_items.product_invoice_id', '=', 'product_invoices.id')
+            ->where('product_invoices.created_at', '>=', $thisMonth)
+            ->where('product_invoices.status', '!=', 'cancelada')
+            ->selectRaw('
+                products.id,
+                products.code,
+                products.name,
+                SUM(product_invoice_items.quantity) as qty,
+                SUM(product_invoice_items.total_with_tax) as revenue
+            ')
+            ->groupBy('products.id', 'products.code', 'products.name')
+            ->orderByDesc('revenue')
+            ->limit(5)
+            ->get();
+
+        $maxProductRevenue = $topProducts->max('revenue') ?: 1;
+
+        // ═══════════════════════════════════════════════════════
+        // CITAS DE HOY
+        // ═══════════════════════════════════════════════════════
         $todayAppointments = (clone $apptQ)
             ->with(['patient', 'doctor'])
             ->whereDate('appointment_date', $today)
             ->orderBy('appointment_time')
             ->limit(8)->get();
 
-        // ── Facturas recientes ──────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // FACTURAS RECIENTES (servicios)
+        // ═══════════════════════════════════════════════════════
         $recentInvoices = (clone $invQ)
             ->with(['patient', 'branch'])
             ->latest()->limit(7)->get();
 
-        // ── Stats por sucursal (solo admin) ──────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // FACTURAS DE PRODUCTOS RECIENTES
+        // ═══════════════════════════════════════════════════════
+        $recentProductInvoices = (clone $prodInvQ)
+            ->with(['patient', 'branch'])
+            ->latest()->limit(7)->get();
+
+        // ═══════════════════════════════════════════════════════
+        // STATS POR SUCURSAL
+        // ═══════════════════════════════════════════════════════
         $branchStats = Branch::withCount(['invoices as invoices_month' => fn($q) =>
             $q->whereBetween('created_at', [$thisMonth, now()])
         ])
@@ -145,7 +245,9 @@ class DashboardController extends Controller
         ->orderByDesc('revenue_month')
         ->get();
 
-        // ── Top médicos este mes ─────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // TOP MÉDICOS
+        // ═══════════════════════════════════════════════════════
         $topDoctors = User::where('is_doctor', 1)
             ->withCount(['appointments as appts_month' => fn($q) =>
                 $q->whereBetween('appointment_date', [$thisMonth, now()])
@@ -158,39 +260,34 @@ class DashboardController extends Controller
 
         $maxAppts = $topDoctors->max('appts_month') ?: 1;
 
-        // ── Historias Clínicas ──────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // HISTORIAS CLÍNICAS
+        // ═══════════════════════════════════════════════════════
         $clinicalRecords = ClinicalRecord::count();
         $clinicalRecordsMonth = ClinicalRecord::whereBetween('created_at', [$thisMonth, now()])->count();
 
         return view('dashboard', compact(
-            'user',
-            'isAdmin',
-            'isReceptionist',
-            'isDoctor',
-            'revenueThisMonth',
-            'revenueLastMonth',
-            'revenueGrowth',
-            'invoicesThisMonth',
-            'pendingInvoices',
-            'pendingAmount',
-            'apptToday',
-            'apptThisMonth',
-            'apptCompleted',
-            'apptPending',
-            'totalPatients',
-            'newPatientsMonth',
-            'patientsWithIns',
-            'last14Days',
-            'apptByStatus',
-            'topServices',
-            'maxServiceRevenue',
-            'todayAppointments',
-            'recentInvoices',
-            'branchStats',
-            'topDoctors',
-            'maxAppts',
-            'clinicalRecords',
-            'clinicalRecordsMonth'
+            'user', 'isAdmin', 'isReceptionist', 'isDoctor',
+            // Servicios
+            'revenueThisMonth', 'revenueLastMonth', 'revenueGrowth',
+            'invoicesThisMonth', 'pendingInvoices', 'pendingAmount',
+            // Productos
+            'productRevenueThisMonth', 'productRevenueLastMonth', 'productRevenueGrowth',
+            'productInvoicedThisMonth', 'productPendingInvoices', 'productPendingAmount',
+            'productInvoicesThisMonth', 'totalRevenueThisMonth',
+            // Citas
+            'apptToday', 'apptThisMonth', 'apptCompleted', 'apptPending',
+            'apptByStatus', 'todayAppointments',
+            // Pacientes
+            'totalPatients', 'newPatientsMonth', 'patientsWithIns',
+            // Gráficos y tops
+            'last14Days', 'topServices', 'maxServiceRevenue',
+            'topProducts', 'maxProductRevenue',
+            // Facturas recientes
+            'recentInvoices', 'recentProductInvoices',
+            // Extras
+            'branchStats', 'topDoctors', 'maxAppts',
+            'clinicalRecords', 'clinicalRecordsMonth'
         ));
     }
 
@@ -204,10 +301,13 @@ class DashboardController extends Controller
         $isDoctor = false;
 
         $invQ = Invoice::where('branch_id', $branchId);
+        $prodInvQ = ProductInvoice::where('branch_id', $branchId);
         $apptQ = Appointment::where('branch_id', $branchId);
         $patQ = Patient::where('branch_id', $branchId);
 
-        // ── KPI: Ingresos ────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // INGRESOS DE SERVICIOS
+        // ═══════════════════════════════════════════════════════
         $revenueThisMonth = (clone $invQ)->where('status', 'pagada')
             ->whereBetween('created_at', [$thisMonth, now()])->sum('total');
 
@@ -218,12 +318,43 @@ class DashboardController extends Controller
             ? round((($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100, 1)
             : ($revenueThisMonth > 0 ? 100 : 0);
 
-        // ── KPI: Facturas ────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // INGRESOS DE PRODUCTOS
+        // ═══════════════════════════════════════════════════════
+        $productRevenueThisMonth = (clone $prodInvQ)
+            ->whereBetween('created_at', [$thisMonth, now()])
+            ->where('status', '!=', 'cancelada')
+            ->sum('paid_amount');
+
+        $productRevenueLastMonth = (clone $prodInvQ)
+            ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])
+            ->where('status', '!=', 'cancelada')
+            ->sum('paid_amount');
+
+        $productRevenueGrowth = $productRevenueLastMonth > 0
+            ? round((($productRevenueThisMonth - $productRevenueLastMonth) / $productRevenueLastMonth) * 100, 1)
+            : ($productRevenueThisMonth > 0 ? 100 : 0);
+
+        $productPendingInvoices = (clone $prodInvQ)
+            ->whereIn('status', ['pendiente', 'pagada_parcial'])
+            ->count();
+
+        $productPendingAmount = (clone $prodInvQ)
+            ->whereIn('status', ['pendiente', 'pagada_parcial'])
+            ->sum('balance');
+
+        $totalRevenueThisMonth = $revenueThisMonth + $productRevenueThisMonth;
+
+        // ═══════════════════════════════════════════════════════
+        // FACTURAS DE SERVICIOS
+        // ═══════════════════════════════════════════════════════
         $invoicesThisMonth = (clone $invQ)->whereBetween('created_at', [$thisMonth, now()])->count();
         $pendingInvoices = (clone $invQ)->where('status', 'pendiente')->count();
         $pendingAmount = (clone $invQ)->where('status', 'pendiente')->sum('total');
 
-        // ── KPI: Citas ───────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // CITAS
+        // ═══════════════════════════════════════════════════════
         $apptToday = (clone $apptQ)->whereDate('appointment_date', $today)->count();
         $apptThisMonth = (clone $apptQ)->whereBetween('appointment_date', [$thisMonth, now()])->count();
         $apptCompleted = (clone $apptQ)->whereBetween('appointment_date', [$thisMonth, now()])
@@ -231,15 +362,26 @@ class DashboardController extends Controller
         $apptPending = (clone $apptQ)->where('status', 'programada')
             ->where('appointment_date', '>=', $today)->count();
 
-        // ── KPI: Pacientes ───────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // PACIENTES
+        // ═══════════════════════════════════════════════════════
         $totalPatients = (clone $patQ)->count();
         $newPatientsMonth = (clone $patQ)->whereBetween('created_at', [$thisMonth, now()])->count();
         $patientsWithIns = (clone $patQ)->whereNotNull('insurance_id')->count();
 
-        // ── Gráfico: ingresos por día ──────────────────────────────────────
-        $rawRevenue = (clone $invQ)->where('status', 'pagada')
+        // ═══════════════════════════════════════════════════════
+        // GRÁFICO: Ingresos últimos 14 días
+        // ═══════════════════════════════════════════════════════
+        $rawServiceRevenue = (clone $invQ)->where('status', 'pagada')
             ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
             ->selectRaw('DATE(created_at) as date, SUM(total) as total')
+            ->groupBy('date')->orderBy('date')
+            ->pluck('total', 'date')->toArray();
+
+        $rawProductRevenue = (clone $prodInvQ)
+            ->where('status', '!=', 'cancelada')
+            ->where('created_at', '>=', Carbon::now()->subDays(13)->startOfDay())
+            ->selectRaw('DATE(created_at) as date, SUM(paid_amount) as total')
             ->groupBy('date')->orderBy('date')
             ->pluck('total', 'date')->toArray();
 
@@ -247,19 +389,25 @@ class DashboardController extends Controller
         for ($i = 13; $i >= 0; $i--) {
             $d = Carbon::now()->subDays($i)->format('Y-m-d');
             $last14Days[] = [
-                'label' => Carbon::now()->subDays($i)->locale('es')->isoFormat('D MMM'),
-                'total' => (float) ($rawRevenue[$d] ?? 0),
+                'label'    => Carbon::now()->subDays($i)->locale('es')->isoFormat('D MMM'),
+                'services' => (float) ($rawServiceRevenue[$d] ?? 0),
+                'products' => (float) ($rawProductRevenue[$d] ?? 0),
+                'total'    => (float) (($rawServiceRevenue[$d] ?? 0) + ($rawProductRevenue[$d] ?? 0)),
             ];
         }
 
-        // ── Gráfico: citas por estado ──────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // GRÁFICO: Citas por estado
+        // ═══════════════════════════════════════════════════════
         $apptByStatus = (clone $apptQ)
             ->whereBetween('appointment_date', [$thisMonth, now()])
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')->toArray();
 
-        // ── Top 5 servicios ──────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // TOP 5 SERVICIOS
+        // ═══════════════════════════════════════════════════════
         $topServices = DB::table('invoice_items')
             ->join('services', 'invoice_items.service_id', '=', 'services.id')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -273,19 +421,52 @@ class DashboardController extends Controller
 
         $maxServiceRevenue = $topServices->max('revenue') ?: 1;
 
-        // ── Citas de hoy ─────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // TOP 5 PRODUCTOS VENDIDOS (de la sucursal)
+        // ═══════════════════════════════════════════════════════
+        $topProducts = DB::table('product_invoice_items')
+            ->join('products', 'product_invoice_items.product_id', '=', 'products.id')
+            ->join('product_invoices', 'product_invoice_items.product_invoice_id', '=', 'product_invoices.id')
+            ->where('product_invoices.branch_id', $branchId)
+            ->where('product_invoices.created_at', '>=', $thisMonth)
+            ->where('product_invoices.status', '!=', 'cancelada')
+            ->selectRaw('
+                products.id,
+                products.code,
+                products.name,
+                SUM(product_invoice_items.quantity) as qty,
+                SUM(product_invoice_items.total_with_tax) as revenue
+            ')
+            ->groupBy('products.id', 'products.code', 'products.name')
+            ->orderByDesc('revenue')
+            ->limit(5)
+            ->get();
+
+        $maxProductRevenue = $topProducts->max('revenue') ?: 1;
+
+        // ═══════════════════════════════════════════════════════
+        // CITAS DE HOY
+        // ═══════════════════════════════════════════════════════
         $todayAppointments = (clone $apptQ)
             ->with(['patient', 'doctor'])
             ->whereDate('appointment_date', $today)
             ->orderBy('appointment_time')
             ->limit(8)->get();
 
-        // ── Facturas recientes ──────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        // FACTURAS RECIENTES
+        // ═══════════════════════════════════════════════════════
         $recentInvoices = (clone $invQ)
             ->with(['patient', 'branch'])
             ->latest()->limit(7)->get();
 
-        // ── Top médicos este mes (solo de la sucursal) ──────────────────────
+        $recentProductInvoices = (clone $prodInvQ)
+            ->with(['patient', 'branch'])
+            ->latest()->limit(7)->get();
+
+        // ═══════════════════════════════════════════════════════
+        // TOP MÉDICOS DE LA SUCURSAL
+        // ═══════════════════════════════════════════════════════
         $topDoctors = User::where('is_doctor', 1)
             ->where('branch_id', $branchId)
             ->withCount(['appointments as appts_month' => fn($q) =>
@@ -299,44 +480,37 @@ class DashboardController extends Controller
 
         $maxAppts = $topDoctors->max('appts_month') ?: 1;
 
-        // ── Historias Clínicas (solo para admin, pero lo dejamos en 0) ──────
+        // Historias clínicas (0 para recepcionista)
         $clinicalRecords = 0;
         $clinicalRecordsMonth = 0;
 
         return view('dashboard', compact(
-            'user',
-            'isAdmin',
-            'isReceptionist',
-            'isDoctor',
-            'revenueThisMonth',
-            'revenueLastMonth',
-            'revenueGrowth',
-            'invoicesThisMonth',
-            'pendingInvoices',
-            'pendingAmount',
-            'apptToday',
-            'apptThisMonth',
-            'apptCompleted',
-            'apptPending',
-            'totalPatients',
-            'newPatientsMonth',
-            'patientsWithIns',
-            'last14Days',
-            'apptByStatus',
-            'topServices',
-            'maxServiceRevenue',
-            'todayAppointments',
-            'recentInvoices',
-            'topDoctors',
-            'maxAppts',
-            'clinicalRecords',
-            'clinicalRecordsMonth'
+            'user', 'isAdmin', 'isReceptionist', 'isDoctor',
+            // Servicios
+            'revenueThisMonth', 'revenueLastMonth', 'revenueGrowth',
+            'invoicesThisMonth', 'pendingInvoices', 'pendingAmount',
+            // Productos
+            'productRevenueThisMonth', 'productRevenueLastMonth', 'productRevenueGrowth',
+            'productPendingInvoices', 'productPendingAmount',
+            'totalRevenueThisMonth',
+            // Citas
+            'apptToday', 'apptThisMonth', 'apptCompleted', 'apptPending',
+            'apptByStatus', 'todayAppointments',
+            // Pacientes
+            'totalPatients', 'newPatientsMonth', 'patientsWithIns',
+            // Gráficos y tops
+            'last14Days', 'topServices', 'maxServiceRevenue',
+            'topProducts', 'maxProductRevenue',
+            // Facturas recientes
+            'recentInvoices', 'recentProductInvoices',
+            // Extras
+            'topDoctors', 'maxAppts',
+            'clinicalRecords', 'clinicalRecordsMonth'
         ));
     }
 
     /**
-     * Dashboard específico para Médicos (que NO son admin)
-     * Solo muestra: citas, pacientes atendidos e historias clínicas
+     * Dashboard para Médicos
      */
     private function doctorDashboard($user, $today, $thisMonth, $lastMonth, $lastMonthEnd)
     {
@@ -344,80 +518,68 @@ class DashboardController extends Controller
         $isAdmin = false;
         $isReceptionist = false;
 
-        // ── Citas del médico ──────────────────────────────────────────────────
+        // ── Citas ──────────────────────────────────────────────
         $apptToday = Appointment::where('doctor_id', $user->id)
-            ->whereDate('appointment_date', $today)
-            ->count();
+            ->whereDate('appointment_date', $today)->count();
 
         $apptThisMonth = Appointment::where('doctor_id', $user->id)
-            ->whereBetween('appointment_date', [$thisMonth, now()])
-            ->count();
+            ->whereBetween('appointment_date', [$thisMonth, now()])->count();
 
         $apptCompleted = Appointment::where('doctor_id', $user->id)
             ->whereBetween('appointment_date', [$thisMonth, now()])
-            ->where('status', 'completada')
-            ->count();
+            ->where('status', 'completada')->count();
 
         $apptPending = Appointment::where('doctor_id', $user->id)
             ->where('status', 'programada')
-            ->where('appointment_date', '>=', $today)
-            ->count();
+            ->where('appointment_date', '>=', $today)->count();
 
-        // ── Pacientes atendidos por el médico ────────────────────────────────
+        // ── Pacientes ──────────────────────────────────────────
         $patientsAttended = Appointment::where('doctor_id', $user->id)
             ->where('status', 'completada')
-            ->distinct('patient_id')
-            ->count('patient_id');
+            ->distinct('patient_id')->count('patient_id');
 
         $newPatientsMonth = Appointment::where('doctor_id', $user->id)
             ->whereBetween('appointment_date', [$thisMonth, now()])
             ->where('status', 'completada')
-            ->distinct('patient_id')
-            ->count('patient_id');
+            ->distinct('patient_id')->count('patient_id');
 
-        // ── Historias Clínicas del médico ────────────────────────────────────
-        $clinicalRecords = ClinicalRecord::where('doctor_id', $user->id)
-            ->count();
+        // ── Historias Clínicas ─────────────────────────────────
+        $clinicalRecords = ClinicalRecord::where('doctor_id', $user->id)->count();
 
         $clinicalRecordsMonth = ClinicalRecord::where('doctor_id', $user->id)
-            ->whereBetween('consultation_date', [$thisMonth, now()])
-            ->count();
+            ->whereBetween('consultation_date', [$thisMonth, now()])->count();
 
-        // ── Citas de hoy (detalle) ───────────────────────────────────────────
+        // ── Citas de hoy ───────────────────────────────────────
         $todayAppointments = Appointment::where('doctor_id', $user->id)
             ->whereDate('appointment_date', $today)
             ->with(['patient', 'branch'])
             ->orderBy('appointment_time')
-            ->limit(8)
-            ->get();
+            ->limit(8)->get();
 
-        // ── Mis citas futuras ────────────────────────────────────────────────
+        // ── Próximas citas ─────────────────────────────────────
         $upcomingAppointments = Appointment::where('doctor_id', $user->id)
             ->where('appointment_date', '>=', $today)
             ->where('status', 'programada')
             ->with(['patient', 'branch'])
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
-            ->limit(5)
-            ->get();
+            ->limit(5)->get();
 
-        // ── Pacientes recientes atendidos ────────────────────────────────────
+        // ── Pacientes recientes ────────────────────────────────
         $recentPatients = Appointment::where('doctor_id', $user->id)
             ->where('status', 'completada')
             ->with(['patient', 'branch'])
             ->orderBy('updated_at', 'desc')
-            ->limit(7)
-            ->get();
+            ->limit(7)->get();
 
-        // ── Citas por estado (gráfico donut) ─────────────────────────────────
+        // ── Citas por estado ───────────────────────────────────
         $apptByStatus = Appointment::where('doctor_id', $user->id)
             ->whereBetween('appointment_date', [$thisMonth, now()])
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
+            ->pluck('count', 'status')->toArray();
 
-        // ── Top servicios que atiende el médico ──────────────────────────────
+        // ── Top servicios ──────────────────────────────────────
         $topServices = DB::table('appointment_service')
             ->join('appointments', 'appointment_service.appointment_id', '=', 'appointments.id')
             ->join('services', 'appointment_service.service_id', '=', 'services.id')
@@ -427,20 +589,17 @@ class DashboardController extends Controller
             ->selectRaw('services.name, COUNT(appointment_service.service_id) as total')
             ->groupBy('services.id', 'services.name')
             ->orderByDesc('total')
-            ->limit(5)
-            ->get();
+            ->limit(5)->get();
 
         $maxServices = $topServices->max('total') ?: 1;
 
-        // ── Historial de citas por día (últimos 7 días) ──────────────────────
+        // ── Citas completadas por día ──────────────────────────
         $appointmentsByDay = Appointment::where('doctor_id', $user->id)
             ->where('appointment_date', '>=', Carbon::now()->subDays(6))
             ->where('status', 'completada')
             ->selectRaw('DATE(appointment_date) as date, COUNT(*) as count')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('count', 'date')
-            ->toArray();
+            ->groupBy('date')->orderBy('date')
+            ->pluck('count', 'date')->toArray();
 
         $last7Days = [];
         for ($i = 6; $i >= 0; $i--) {
@@ -452,25 +611,12 @@ class DashboardController extends Controller
         }
 
         return view('dashboard-doctor', compact(
-            'user',
-            'isDoctor',
-            'isAdmin',
-            'isReceptionist',
-            'apptToday',
-            'apptThisMonth',
-            'apptCompleted',
-            'apptPending',
-            'patientsAttended',
-            'newPatientsMonth',
-            'clinicalRecords',
-            'clinicalRecordsMonth',
-            'todayAppointments',
-            'upcomingAppointments',
-            'recentPatients',
-            'apptByStatus',
-            'topServices',
-            'maxServices',
-            'last7Days'
+            'user', 'isDoctor', 'isAdmin', 'isReceptionist',
+            'apptToday', 'apptThisMonth', 'apptCompleted', 'apptPending',
+            'patientsAttended', 'newPatientsMonth',
+            'clinicalRecords', 'clinicalRecordsMonth',
+            'todayAppointments', 'upcomingAppointments', 'recentPatients',
+            'apptByStatus', 'topServices', 'maxServices', 'last7Days'
         ));
     }
 }

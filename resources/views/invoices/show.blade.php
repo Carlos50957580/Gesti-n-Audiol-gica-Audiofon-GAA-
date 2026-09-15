@@ -132,14 +132,14 @@
            style="border-radius:2rem;font-size:.82rem;">
             <i class="ri-arrow-left-line"></i>Volver
         </a>
-        @if($invoice->status === 'pendiente')
+        
             <button onclick="window.print()" class="btn-print">
                 <i class="ri-printer-line"></i>Imprimir
             </button>
             <button type="button" class="btn-print-thermal" onclick="printThermal()">
                 <i class="ri-receipt-line"></i>Ticket POS
             </button>
-        @endif
+        
         @if($invoice->status === 'pendiente')
             <a href="{{ route('invoices.cancel', $invoice) }}" 
                class="btn btn-danger btn-sm d-flex align-items-center gap-1"
