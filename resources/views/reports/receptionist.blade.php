@@ -398,10 +398,17 @@ let loadedTabs = {};
 let allInvoices = [];
 
 // ── Date helpers ──────────────────────────────────────────
-function today()     { return new Date().toISOString().split('T')[0]; }
-function yesterday() { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; }
-function weekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d.toISOString().split('T')[0]; }
-function monthStart(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01'; }
+function toLocalDateStr(d) {
+    const y   = d.getFullYear();
+    const m   = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function today()     { return toLocalDateStr(new Date()); }
+function yesterday() { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDateStr(d); }
+function weekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return toLocalDateStr(d); }
+function monthStart(){ const d = new Date(); return toLocalDateStr(new Date(d.getFullYear(), d.getMonth(), 1)); }
 
 function setShortcut(type, btn) {
     document.querySelectorAll('.btn-shortcut').forEach(b => b.classList.remove('active'));
