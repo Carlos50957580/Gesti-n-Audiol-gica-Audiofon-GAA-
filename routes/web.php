@@ -9,7 +9,7 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\Receiptcontroller;
 use App\Http\Controllers\ReceptionistReportController;
 use App\Http\Controllers\DoctorAppointmentController;
 use App\Http\Controllers\ServiceCategoryController;
@@ -186,10 +186,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // ── PAGOS / RECIBOS (admin y recepcionista) ─────────────────────────────────────
     Route::middleware(['role:admin,recepcionista'])->group(function () {
-        Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts.index');
-        Route::post('receipts', [ReceiptController::class, 'store'])->name('receipts.store');
-        Route::get('api/receipts/invoice-data/{invoice}', [ReceiptController::class, 'invoiceData'])->name('receipts.invoice-data');
-        Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
+        Route::get('receipts', [Receiptcontroller::class, 'index'])->name('receipts.index');
+        Route::post('receipts', [Receiptcontroller::class, 'store'])->name('receipts.store');
+        Route::get('api/receipts/invoice-data/{invoice}', [Receiptcontroller::class, 'invoiceData'])->name('receipts.invoice-data');
+        Route::get('receipts/{receipt}', [Receiptcontroller::class, 'show'])->name('receipts.show');
     });
 
 
