@@ -15,6 +15,8 @@ class ProductInvoice extends Model
         'paid_amount', 'balance',
         'status', 'with_ncf', 'ncf', 'ncf_type', 'ncf_sequence_id',
         'customer_rnc', 'customer_business_name', 'notes',
+    'encf', 'track_id', 'estado_dgii', 'qr_link', 'pdf_cloud_url',
+    'ecf_sequence_id', 'enviada_dgii', 'enviada_dgii_at',
     ];
 
     protected $casts = [
@@ -26,6 +28,9 @@ class ProductInvoice extends Model
         'paid_amount'    => 'decimal:2',
         'balance'        => 'decimal:2',
         'with_ncf'       => 'boolean',
+        'enviada_dgii' => 'boolean',
+    'enviada_dgii_at' => 'datetime',
+        
     ];
 
     // ── Relaciones ──────────────────────────────────────────
@@ -157,6 +162,46 @@ public function receipt()
 public function ncfSequence()
 {
     return $this->belongsTo(NcfSequence::class, 'ncf_sequence_id');
+}
+
+// ── Nuevas relaciones ──
+public function ecfSequence()
+{
+    return $this->belongsTo(EcfSequence::class, 'ecf_sequence_id');
+}
+
+public function ecfDocuments()
+{
+    return $this->morphMany(EcfDocument::class, 'documentable');
+}
+
+// ── Nuevos accessors ──
+public function getEstadoDgiiLabelAttribute()
+{
+    return match($this->estado_dgii) {
+        'aceptado'     => 'Aceptado por DGII',
+        'rechazado'    => 'Rechazado',
+        'en_proceso'   => 'En proceso',
+        'condicional'  => 'Aceptado condicional',
+        default        => $this->enviada_dgii ? 'Enviado' : 'No enviado',
+    };
+}
+
+public function getEstadoDgiiColorAttribute()
+{
+    return match($this->estado_dgii) {
+        'aceptado'     => 'success',
+        'rechazado'    => 'danger',
+        'en_proceso'   => 'warning',
+        'condicional'  => 'info',
+        default        => 'secondary',
+    };
+}
+
+public function puedeEnviarDgii(): bool
+{
+    return $this->status !== 'cancelada'
+        && !$this->enviada_dgii;
 }
 
 }

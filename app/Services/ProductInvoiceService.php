@@ -9,10 +9,19 @@ use App\Models\StockMovement;
 use App\Models\StockMovementItem;
 use App\Models\NcfType;
 use App\Models\NcfSequence;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProductInvoiceService
 {
+    protected EF2Service $ef2Service;
+
+    public function __construct(EF2Service $ef2Service)
+    {
+        $this->ef2Service = $ef2Service;
+    }
+
     /**
      * Crear factura de productos
      */
@@ -77,12 +86,12 @@ class ProductInvoiceService
                 $product = Product::findOrFail($item['product_id']);
                 $qty     = (int) $item['quantity'];
                 $price   = (float) $item['price'];
-                
+
                 $itemSubtotal = $qty * $price;
                 $taxAmount    = 0;
 
                 if ($product->has_tax) {
-                    $taxRate   = (float) (\App\Models\Setting::get('company_tax_rate', 18) ?? 18);
+                    $taxRate   = (float) (Setting::get('company_tax_rate', 18) ?? 18);
                     $taxAmount = $itemSubtotal * ($taxRate / 100);
                 }
 
@@ -118,9 +127,9 @@ class ProductInvoiceService
                 'balance'                => $total,
                 'status'                 => 'pendiente',
                 'with_ncf'               => $data['with_ncf'] ?? false,
-                'ncf'                    => $ncfCode,              // ✅ NCF automático
+                'ncf'                    => $ncfCode,
                 'ncf_type'               => $data['ncf_type'] ?? null,
-                'ncf_sequence_id'        => $ncfSequenceId,        // ✅ NUEVO
+                'ncf_sequence_id'        => $ncfSequenceId,
                 'customer_rnc'           => $data['customer_rnc'] ?? null,
                 'customer_business_name' => $data['customer_business_name'] ?? null,
                 'notes'                  => $data['notes'] ?? null,
@@ -133,7 +142,10 @@ class ProductInvoiceService
             // Registrar salida de stock automáticamente
             $this->registerStockExit($invoice);
 
-            return $invoice;
+            // ✅ NUEVO: Intentar envío automático a EF2 (no rompe la venta si falla)
+            $this->trySendToEf2($invoice->fresh(['items.product', 'patient', 'branch']));
+
+            return $invoice->fresh(['items', 'ecfDocuments']);
         });
     }
 
@@ -182,7 +194,6 @@ class ProductInvoiceService
     public function registerPayment(ProductInvoice $invoice, array $data): \App\Models\ProductReceipt
     {
         return DB::transaction(function () use ($invoice, $data) {
-            // Verificar que no esté pagada ni cancelada
             if ($invoice->status === 'pagada') {
                 throw new \Exception('Esta factura ya está completamente pagada.');
             }
@@ -213,10 +224,140 @@ class ProductInvoiceService
                 'notes'              => $data['notes'] ?? null,
             ]);
 
-            // Recalcular el balance y estado automáticamente
             $invoice->recalculateBalance();
 
             return $receipt;
         });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FACTURACIÓN ELECTRÓNICA (EF2)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Intenta enviar la factura a EF2 automáticamente.
+     * No lanza excepción para no romper la venta si EF2 falla.
+     */
+    protected function trySendToEf2(ProductInvoice $invoice): void
+{
+    Log::info('═══════════════════════════════════════════');
+    Log::info('ProductInvoiceService::trySendToEf2 - INICIO', [
+        'invoice_id' => $invoice->id,
+        'invoice_number' => $invoice->number,
+    ]);
+
+    // ── CHECK 1: ¿Está configurado EF2? ──
+    $configurado = $this->ef2Service->estaConfigurado();
+    Log::info('ProductInvoiceService::trySendToEf2 - CHECK configurado', [
+        'configurado' => $configurado,
+        'ef2_activo_raw' => Setting::get('ef2_activo'),
+    ]);
+
+    if (!$configurado) {
+        Log::warning('ProductInvoiceService::trySendToEf2 - ABORT: EF2 no configurado');
+        return;
+    }
+
+    // ── CHECK 2: ¿Tiene tipo de NCF? ──
+    Log::info('ProductInvoiceService::trySendToEf2 - CHECK ncf_type', [
+        'ncf_type' => $invoice->ncf_type,
+        'ncf' => $invoice->ncf,
+    ]);
+
+    if (!$invoice->ncf_type) {
+        Log::warning('ProductInvoiceService::trySendToEf2 - ABORT: Sin ncf_type');
+        return;
+    }
+
+    // ── INTENTO DE ENVÍO ──
+    try {
+        Log::info('ProductInvoiceService::trySendToEf2 - Llamando EF2Service');
+        $result = $this->ef2Service->enviarFacturaProductos($invoice);
+
+        Log::info('ProductInvoiceService::trySendToEf2 - Respuesta recibida', [
+            'success' => $result['success'] ?? false,
+            'result' => $result,
+        ]);
+
+        $this->guardarRespuestaEf2($invoice, $result);
+
+        Log::info('ProductInvoiceService::trySendToEf2 - FIN OK');
+
+    } catch (\Exception $e) {
+        Log::error('ProductInvoiceService::trySendToEf2 - EXCEPCIÓN', [
+            'invoice_id' => $invoice->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+
+        try {
+            $invoice->ecfDocuments()->create([
+                'tipo_ecf'          => $this->mapearTipoEcf($invoice),
+                'estado'            => 'error',
+                'error_message'     => $e->getMessage(),
+                'user_id'           => auth()->id(),
+                'intentos'          => 1,
+                'enviado_at'        => now(),
+            ]);
+        } catch (\Exception $inner) {
+            Log::error('ProductInvoiceService::trySendToEf2 - Error guardando ecf_document', [
+                'error' => $inner->getMessage(),
+            ]);
+        }
+    }
+}
+    /**
+     * Guarda la respuesta de EF2 en la factura y en ecf_documents.
+     * Público para que el controlador pueda llamarlo en reenvíos manuales.
+     */
+    public function guardarRespuestaEf2(ProductInvoice $invoice, array $result): void
+    {
+        $exitoso = !empty($result['success']);
+
+        // Guardar histórico en ecf_documents
+        $invoice->ecfDocuments()->create([
+            'tipo_ecf'           => $this->mapearTipoEcf($invoice),
+            'encf'               => $result['ncf'] ?? null,
+            'track_id'           => $result['track_id'] ?? null,
+            'estado'             => $result['estado'] ?? ($exitoso ? 'enviado' : 'error'),
+            'qr_link'            => $result['qr_link'] ?? null,
+            'pdf_cloud_url'      => $result['pdf_cloud_url'] ?? null,
+            'payload_enviado'    => $result['payload'] ?? null,
+            'respuesta_completa' => $result,
+            'error_code'         => $result['code'] ?? null,
+            'error_message'      => $exitoso ? null : ($result['message'] ?? 'Error desconocido'),
+            'ecf_sequence_id'    => $invoice->ecf_sequence_id,
+            'user_id'            => auth()->id(),
+            'intentos'           => 1,
+            'enviado_at'         => now(),
+            'respondido_at'      => now(),
+        ]);
+
+        // Actualizar la factura si fue exitoso
+        if ($exitoso) {
+            $invoice->update([
+                'encf'             => $result['ncf'] ?? null,
+                'track_id'         => $result['track_id'] ?? null,
+                'estado_dgii'      => $result['estado'] ?? 'enviado',
+                'qr_link'          => $result['qr_link'] ?? null,
+                'pdf_cloud_url'    => $result['pdf_cloud_url'] ?? null,
+                'enviada_dgii'     => true,
+                'enviada_dgii_at'  => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Mapea el tipo de NCF tradicional al tipo de e-CF de la DGII.
+     */
+    protected function mapearTipoEcf(ProductInvoice $invoice): string
+    {
+        return match ($invoice->ncf_type) {
+            'credito_fiscal'   => '31',
+            'consumidor_final' => '32',
+            'gubernamental'    => '45',
+            'regimen_especial' => '44',
+            default            => '32',
+        };
     }
 }

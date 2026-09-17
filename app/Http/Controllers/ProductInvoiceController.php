@@ -9,15 +9,18 @@ use App\Models\Patient;
 use App\Models\Branch;
 use App\Models\Setting;
 use App\Services\ProductInvoiceService;
+use App\Services\EF2Service;
 use Illuminate\Http\Request;
 
 class ProductInvoiceController extends Controller
 {
-    protected $service;
+    protected ProductInvoiceService $service;
+    protected EF2Service $ef2Service;
 
-    public function __construct(ProductInvoiceService $service)
+    public function __construct(ProductInvoiceService $service, EF2Service $ef2Service)
     {
         $this->service = $service;
+        $this->ef2Service = $ef2Service;
     }
 
     /**
@@ -72,20 +75,16 @@ class ProductInvoiceController extends Controller
         $user = auth()->user();
         $isAdmin = $user->role->name === 'admin';
 
-        // Categorías de productos activas
         $categories = ProductCategory::active()->orderBy('name')->get();
 
-        // Sucursales
         $branches = $isAdmin 
             ? Branch::where('is_active', 1)->get()
             : Branch::where('id', $user->branch_id)->get();
 
-        // Pacientes (solo de su sucursal si no es admin)
         $patients = $isAdmin
             ? Patient::orderBy('first_name')->get()
             : Patient::where('branch_id', $user->branch_id)->orderBy('first_name')->get();
 
-        // Sucursal por defecto
         $defaultBranchId = $isAdmin ? ($request->branch_id ?? $branches->first()->id ?? null) : $user->branch_id;
 
         return view('product-invoices.create', compact(
@@ -97,51 +96,51 @@ class ProductInvoiceController extends Controller
      * Guardar factura
      */
     public function store(Request $request)
-{
-    $data = $request->validate([
-        'patient_id'   => 'required|exists:patients,id',
-        'branch_id'    => 'required|exists:branches,id',
-        'items'        => 'required|array|min:1',
-        'items.*.product_id' => 'required|exists:products,id',
-        'items.*.quantity'   => 'required|integer|min:1',
-        'items.*.price'      => 'required|numeric|min:0',
-        'discount'     => 'nullable|numeric|min:0',
-        'with_ncf'     => 'boolean',
-        'ncf_type'     => 'nullable|required_if:with_ncf,1|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',  // ✅ required_if
-        'customer_rnc' => 'nullable|string|max:255',
-        'customer_business_name' => 'nullable|string|max:255',
-        'notes'        => 'nullable|string',
-    ]);
+    {
+        $data = $request->validate([
+            'patient_id'   => 'required|exists:patients,id',
+            'branch_id'    => 'required|exists:branches,id',
+            'items'        => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.price'      => 'required|numeric|min:0',
+            'discount'     => 'nullable|numeric|min:0',
+            'with_ncf'     => 'boolean',
+            'ncf_type'     => 'nullable|required_if:with_ncf,1|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+            'customer_rnc' => 'nullable|string|max:255',
+            'customer_business_name' => 'nullable|string|max:255',
+            'notes'        => 'nullable|string',
+        ]);
 
-    $user = auth()->user();
-    if ($user->role->name !== 'admin' && $data['branch_id'] != $user->branch_id) {
-        if ($request->wantsJson()) {
-            return response()->json(['message' => 'No puedes facturar en otra sucursal.'], 403);
+        $user = auth()->user();
+        if ($user->role->name !== 'admin' && $data['branch_id'] != $user->branch_id) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'No puedes facturar en otra sucursal.'], 403);
+            }
+            abort(403, 'No puedes facturar en otra sucursal.');
         }
-        abort(403, 'No puedes facturar en otra sucursal.');
+
+        try {
+            $invoice = $this->service->createInvoice($data);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Factura de productos creada exitosamente.',
+                    'redirect' => route('product-invoices.show', $invoice),
+                ]);
+            }
+
+            return redirect()
+                ->route('product-invoices.show', $invoice)
+                ->with('success', 'Factura de productos creada exitosamente.');
+        } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+            return back()->with('error', $e->getMessage())->withInput();
+        }
     }
-
-    try {
-        $invoice = $this->service->createInvoice($data);
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Factura de productos creada exitosamente.',
-                'redirect' => route('product-invoices.show', $invoice),
-            ]);
-        }
-
-        return redirect()
-            ->route('product-invoices.show', $invoice)
-            ->with('success', 'Factura de productos creada exitosamente.');
-    } catch (\Exception $e) {
-        if ($request->wantsJson()) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-        return back()->with('error', $e->getMessage())->withInput();
-    }
-}
 
     /**
      * Ver detalle
@@ -153,7 +152,16 @@ class ProductInvoiceController extends Controller
             abort(403);
         }
 
-        $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user', 'ncfSequence']);
+        $productInvoice->load([
+            'patient',
+            'user',
+            'branch',
+            'items.product',
+            'receipts.user',
+            'ncfSequence',
+            'ecfSequence',
+            'ecfDocuments' => fn($q) => $q->latest(),
+        ]);
 
         $company = [
             'name'  => Setting::get('company_name', 'Mi Clínica'),
@@ -163,7 +171,10 @@ class ProductInvoiceController extends Controller
             'address' => Setting::get('company_address', ''),
         ];
 
-        return view('product-invoices.show', compact('productInvoice', 'company'));
+        // Info de EF2 para saber si podemos mostrar el botón
+        $ef2Configurado = $this->ef2Service->estaConfigurado();
+
+        return view('product-invoices.show', compact('productInvoice', 'company', 'ef2Configurado'));
     }
 
     /**
@@ -196,7 +207,16 @@ class ProductInvoiceController extends Controller
             abort(403);
         }
 
-$productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.user', 'ncfSequence']);
+        $productInvoice->load([
+            'patient',
+            'user',
+            'branch',
+            'items.product',
+            'receipts.user',
+            'ncfSequence',
+            'ecfSequence',
+        ]);
+
         $company = [
             'name'  => Setting::get('company_name', 'Mi Clínica'),
             'rnc'   => Setting::get('company_rnc', ''),
@@ -209,6 +229,63 @@ $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.u
         ];
 
         return view('product-invoices.print', compact('productInvoice', 'company'));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FACTURACIÓN ELECTRÓNICA (EF2)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Enviar (o reenviar) la factura a EF2 manualmente.
+     */
+    public function enviarEf2(ProductInvoice $productInvoice)
+    {
+        $user = auth()->user();
+
+        // Permisos
+        if ($user->role->name !== 'admin' && $productInvoice->branch_id != $user->branch_id) {
+            abort(403);
+        }
+
+        // Validar configuración
+        if (!$this->ef2Service->estaConfigurado()) {
+            return back()->with('error', 'La facturación electrónica no está configurada o no está activa.');
+        }
+
+        // Validar que la factura tenga tipo de comprobante
+        if (!$productInvoice->ncf_type) {
+            return back()->with('error', 'Esta factura no tiene un tipo de comprobante fiscal definido.');
+        }
+
+        // Validar que no esté cancelada
+        if ($productInvoice->status === 'cancelada') {
+            return back()->with('error', 'No se puede enviar a la DGII una factura cancelada.');
+        }
+
+        // Si ya fue aceptada, no reenviar
+        if ($productInvoice->enviada_dgii && $productInvoice->estado_dgii === 'aceptado') {
+            return back()->with('info', 'Esta factura ya fue aceptada por la DGII.');
+        }
+
+        try {
+            $result = $this->ef2Service->enviarFacturaProductos($productInvoice);
+            $this->service->guardarRespuestaEf2($productInvoice, $result);
+
+            if (!empty($result['success'])) {
+                return back()->with(
+                    'success',
+                    'Factura enviada a la DGII correctamente. e-NCF: ' . ($result['ncf'] ?? '')
+                );
+            }
+
+            return back()->with(
+                'error',
+                'Error al enviar a la DGII: ' . ($result['message'] ?? 'Desconocido')
+            );
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al conectar con EF2: ' . $e->getMessage());
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -231,63 +308,59 @@ $productInvoice->load(['patient', 'user', 'branch', 'items.product', 'receipts.u
                ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$q}%"]);
         });
 
-        
         $patients = $query->orderBy('first_name')->limit(10)->get();
 
         return response()->json($patients);
     }
 
     /**
-     * Obtener productos por categoría y sucursal
+     * Obtener productos por categoría/búsqueda y sucursal (AJAX)
      */
-    /**
- * Obtener productos por categoría/búsqueda y sucursal (AJAX)
- */
-public function getProductsByCategory(Request $request)
-{
-    $request->validate([
-        'branch_id'   => 'required|exists:branches,id',
-        'category_id' => 'nullable|exists:product_categories,id',
-        'q'           => 'nullable|string|max:255',
-    ]);
+    public function getProductsByCategory(Request $request)
+    {
+        $request->validate([
+            'branch_id'   => 'required|exists:branches,id',
+            'category_id' => 'nullable|exists:product_categories,id',
+            'q'           => 'nullable|string|max:255',
+        ]);
 
-    $user = auth()->user();
-    if ($user->role->name !== 'admin' && $request->branch_id != $user->branch_id) {
-        return response()->json(['error' => 'Sin acceso a esta sucursal'], 403);
+        $user = auth()->user();
+        if ($user->role->name !== 'admin' && $request->branch_id != $user->branch_id) {
+            return response()->json(['error' => 'Sin acceso a esta sucursal'], 403);
+        }
+
+        $query = Product::active()
+            ->with(['stocks' => fn($q) => $q->where('branch_id', $request->branch_id)]);
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($sq) use ($search) {
+                $sq->where('name', 'like', "%{$search}%")
+                   ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(function ($p) {
+                $stock = $p->stocks->first();
+                return [
+                    'id'         => $p->id,
+                    'code'       => $p->code,
+                    'name'       => $p->name,
+                    'price'      => (float) $p->sale_price,
+                    'has_tax'    => (bool) $p->has_tax,
+                    'unit'       => $p->unit,
+                    'stock'      => $stock ? $stock->quantity : 0,
+                    'available'  => $stock ? max(0, $stock->quantity - $stock->reserved_quantity) : 0,
+                ];
+            });
+
+        return response()->json($products);
     }
-
-    $query = Product::active()
-        ->with(['stocks' => fn($q) => $q->where('branch_id', $request->branch_id)]);
-
-    if ($request->filled('category_id')) {
-        $query->where('category_id', $request->category_id);
-    }
-
-    if ($request->filled('q')) {
-        $search = $request->q;
-        $query->where(function ($sq) use ($search) {
-            $sq->where('name', 'like', "%{$search}%")
-               ->orWhere('code', 'like', "%{$search}%");
-        });
-    }
-
-    $products = $query->orderBy('name')
-        ->limit(50)
-        ->get()
-        ->map(function ($p) {
-            $stock = $p->stocks->first();
-            return [
-                'id'         => $p->id,
-                'code'       => $p->code,
-                'name'       => $p->name,
-                'price'      => (float) $p->sale_price,
-                'has_tax'    => (bool) $p->has_tax,
-                'unit'       => $p->unit,
-                'stock'      => $stock ? $stock->quantity : 0,
-                'available'  => $stock ? max(0, $stock->quantity - $stock->reserved_quantity) : 0,
-            ];
-        });
-
-    return response()->json($products);
-}
 }

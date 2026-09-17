@@ -35,6 +35,13 @@ class CompanyController extends Controller
             'receipt_prefix' => Setting::get('company_receipt_prefix', 'REC-'),
             'ncf_type' => Setting::get('company_ncf_type', 'consumidor_final'),
             'ncf_sequence' => Setting::get('company_ncf_sequence', 1),
+
+            // ===== EF2 (Facturación Electrónica) =====
+            'ef2_username' => Setting::get('ef2_username', ''),
+            'ef2_token' => Setting::get('ef2_token', ''),
+            'ef2_rnc_empresa' => Setting::get('ef2_rnc_empresa', ''),
+            'ef2_ambiente' => Setting::get('ef2_ambiente', 'produccion'),
+            'ef2_activo' => Setting::get('ef2_activo', '0'),
         ];
 
         return view('settings.company', compact('company'));
@@ -65,6 +72,13 @@ class CompanyController extends Controller
             'company_receipt_prefix' => 'nullable|string|max:20',
             'company_ncf_type' => 'nullable|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
             'company_ncf_sequence' => 'nullable|integer|min:1',
+
+            // ===== EF2 =====
+            'ef2_username' => 'nullable|string|max:255',
+            'ef2_token' => 'nullable|string|max:500',
+            'ef2_rnc_empresa' => 'nullable|string|max:20',
+            'ef2_ambiente' => 'nullable|in:produccion,pruebas',
+            'ef2_activo' => 'nullable|in:0,1',
         ]);
 
         if ($validator->fails()) {
@@ -73,7 +87,7 @@ class CompanyController extends Controller
                 ->withInput();
         }
 
-        // Guardar campos de texto usando tu modelo
+        // Guardar campos de texto usando tu modelo (incluye EF2)
         $textFields = [
             'company_name',
             'company_business_name',
@@ -89,6 +103,11 @@ class CompanyController extends Controller
             'company_invoice_prefix',
             'company_receipt_prefix',
             'company_ncf_type',
+            // EF2
+            'ef2_username',
+            'ef2_token',
+            'ef2_rnc_empresa',
+            'ef2_ambiente',
         ];
 
         foreach ($textFields as $field) {
@@ -106,6 +125,9 @@ class CompanyController extends Controller
             Setting::set('company_ncf_sequence', $request->company_ncf_sequence);
         }
 
+        // EF2 activo (checkbox: si no viene marcado, se guarda como '0')
+        Setting::set('ef2_activo', $request->has('ef2_activo') ? '1' : '0');
+
         // Procesar el logo
         if ($request->hasFile('company_logo')) {
             // Eliminar logo anterior si existe
@@ -113,7 +135,7 @@ class CompanyController extends Controller
             if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
                 Storage::disk('public')->delete($oldLogo);
             }
-            
+
             $path = $request->file('company_logo')->store('company/logos', 'public');
             Setting::set('company_logo', $path);
         }
@@ -125,7 +147,7 @@ class CompanyController extends Controller
             if ($oldFavicon && Storage::disk('public')->exists($oldFavicon)) {
                 Storage::disk('public')->delete($oldFavicon);
             }
-            
+
             $path = $request->file('company_favicon')->store('company/favicons', 'public');
             Setting::set('company_favicon', $path);
         }

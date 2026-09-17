@@ -97,6 +97,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     ->name('product-invoices.show');
     Route::post('/product-invoices/{productInvoice}/cancel', [ProductInvoiceController::class, 'cancel']);
     Route::get('/product-invoices/{productInvoice}/print', [ProductInvoiceController::class, 'print']);
+    Route::post('/product-invoices/{productInvoice}/enviar-ef2', 
+    [ProductInvoiceController::class, 'enviarEf2'])
+    ->name('product-invoices.enviar-ef2');
 
     // ── PAGOS DE PRODUCTOS ─────────────────────────
     Route::get('/product-receipts', [ProductReceiptController::class, 'index']);
@@ -369,6 +372,15 @@ Route::get('/clinical-records/{clinicalRecord}/print', [ClinicalRecordController
         Route::get('/clinical-records/pending-invoices/{patientId}', [ClinicalRecordController::class, 'getPendingInvoices'])
             ->name('clinical-records.pending-invoices');
     });
+});
+
+use App\Http\Controllers\EcfSequenceController;
+
+Route::middleware(['auth'])->group(function () {
+    // Secuencias e-CF
+    Route::resource('ecf-sequences', EcfSequenceController::class);
+    Route::patch('ecf-sequences/{ecfSequence}/toggle', [EcfSequenceController::class, 'toggle'])
+        ->name('ecf-sequences.toggle');
 });
 
 

@@ -213,8 +213,6 @@
                             </div>
                         </div>
 
-                       
-
                         <div class="col-md-3">
                             <div class="mb-3">
                                 <label for="company_invoice_prefix" class="form-label">Prefijo de Facturas</label>
@@ -235,6 +233,17 @@
                             </div>
                         </div>
 
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="company_tax_rate" class="form-label">Tasa de Impuesto (%)</label>
+                                <input type="number" step="0.01" class="form-control @error('company_tax_rate') is-invalid @enderror" 
+                                       id="company_tax_rate" name="company_tax_rate" 
+                                       value="{{ old('company_tax_rate', $company['tax_rate']) }}" 
+                                       placeholder="18">
+                                <div class="form-text">ITBIS por defecto (ej: 18)</div>
+                            </div>
+                        </div>
+
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="company_ncf_type" class="form-label">Tipo de NCF por Defecto</label>
@@ -249,6 +258,16 @@
                             </div>
                         </div>
 
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="company_ncf_sequence" class="form-label">Secuencia NCF Inicial</label>
+                                <input type="number" class="form-control @error('company_ncf_sequence') is-invalid @enderror" 
+                                       id="company_ncf_sequence" name="company_ncf_sequence" 
+                                       value="{{ old('company_ncf_sequence', $company['ncf_sequence']) }}" 
+                                       placeholder="1">
+                                <div class="form-text">Número inicial para NCF</div>
+                            </div>
+                        </div>
 
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -258,6 +277,100 @@
                                        value="{{ old('company_footer_text', $company['footer_text']) }}" 
                                        placeholder="Gracias por confiar en nosotros">
                                 <div class="form-text">Aparecerá en el footer de facturas y documentos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- CONFIGURACIÓN DE FACTURACIÓN ELECTRÓNICA EF2 -->
+                    <!-- ============================================ -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="ri-cloud-line me-1"></i> Facturación Electrónica (EF2)
+                                @if($company['ef2_activo'] == '1')
+                                    <span class="badge bg-success ms-2">Activo</span>
+                                @else
+                                    <span class="badge bg-secondary ms-2">Inactivo</span>
+                                @endif
+                            </h6>
+                            <p class="text-muted small mb-3">
+                                <i class="ri-information-line"></i> 
+                                Credenciales para la integración con la API de facturación electrónica EF2 
+                                (<a href="https://doc.ef2.do/" target="_blank">doc.ef2.do</a>).
+                            </p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ef2_username" class="form-label">Usuario API EF2</label>
+                                <input type="text" class="form-control @error('ef2_username') is-invalid @enderror" 
+                                       id="ef2_username" name="ef2_username" 
+                                       value="{{ old('ef2_username', $company['ef2_username']) }}" 
+                                       placeholder="api_empresa_xxxxx">
+                                <div class="form-text">Username proporcionado por EF2</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="ef2_token" class="form-label">Token API EF2</label>
+                                <input type="text" class="form-control @error('ef2_token') is-invalid @enderror" 
+                                       id="ef2_token" name="ef2_token" 
+                                       value="{{ old('ef2_token', $company['ef2_token']) }}" 
+                                       placeholder="tok_xxxxxxxxxxxxxxxxxxxx">
+                                <div class="form-text">Token de autenticación (Bearer Token)</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="ef2_rnc_empresa" class="form-label">RNC de la Empresa (EF2)</label>
+                                <input type="text" class="form-control @error('ef2_rnc_empresa') is-invalid @enderror" 
+                                       id="ef2_rnc_empresa" name="ef2_rnc_empresa" 
+                                       value="{{ old('ef2_rnc_empresa', $company['ef2_rnc_empresa']) }}" 
+                                       placeholder="132596161">
+                                <div class="form-text">RNC registrado en EF2 (9 dígitos para empresas, 11 para personas)</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ef2_ambiente" class="form-label">Ambiente EF2</label>
+                                <select class="form-select @error('ef2_ambiente') is-invalid @enderror" 
+                                        id="ef2_ambiente" name="ef2_ambiente">
+                                    <option value="produccion" {{ $company['ef2_ambiente'] == 'produccion' ? 'selected' : '' }}>
+                                        Producción (https://master.ef2.do/api2)
+                                    </option>
+                                    <option value="pruebas" {{ $company['ef2_ambiente'] == 'pruebas' ? 'selected' : '' }}>
+                                        Pruebas
+                                    </option>
+                                </select>
+                                <div class="form-text">Selecciona el ambiente de trabajo</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Estado de la Facturación Electrónica</label>
+                                <div class="form-check form-switch fs-20">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="ef2_activo" name="ef2_activo" 
+                                           value="1" {{ $company['ef2_activo'] == '1' ? 'checked' : '' }}>
+                                    <label class="form-check-label fs-14" for="ef2_activo">
+                                        Activar Facturación Electrónica
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Cuando está activo, las facturas se enviarán automáticamente a la DGII a través de EF2.
+                                </div>
+                            </div>
+
+                            {{-- Info box --}}
+                            <div class="alert alert-info mb-0">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="ri-lightbulb-line me-1"></i> ¿Cómo obtener tus credenciales?
+                                </h6>
+                                <ol class="mb-0 ps-3 small">
+                                    <li>Regístrate en <a href="https://ef2.do" target="_blank">ef2.do</a></li>
+                                    <li>Solicita tus credenciales de API al soporte</li>
+                                    <li>Copia el <strong>username</strong> y el <strong>token</strong> aquí</li>
+                                    <li>Activa el interruptor y guarda</li>
+                                </ol>
                             </div>
                         </div>
                     </div>
