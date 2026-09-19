@@ -103,58 +103,111 @@
                     </div>
                 </div>
 
-                {{-- Datos Fiscales (NCF) --}}
-                @if($productInvoice->with_ncf && $productInvoice->ncf)
-                    <div class="card border-primary">
-                        <div class="card-header bg-primary-subtle">
-                            <h5 class="card-title mb-0">
-                                <i class="ri-file-shield-2-line me-1 text-primary"></i>Comprobante Fiscal
-                            </h5>
+               {{-- ═══════════════════════════════════════════════════════ --}}
+{{-- COMPROBANTE FISCAL ELECTRÓNICO (e-CF) --}}
+{{-- ═══════════════════════════════════════════════════════ --}}
+@if($productInvoice->encf)
+    <div class="card border-primary">
+        <div class="card-header bg-primary-subtle d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="ri-shield-check-line me-1 text-primary"></i>Comprobante Fiscal Electrónico
+            </h5>
+            <span class="badge bg-{{ $productInvoice->estado_dgii_color }}">
+                {{ $productInvoice->estado_dgii_label }}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {{-- Columna izquierda: datos --}}
+                <div class="col-md-8">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">e-NCF</small>
+                            <code class="fs-6 fw-bold text-primary">{{ $productInvoice->encf }}</code>
                         </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <small class="text-muted d-block">NCF</small>
-                                    <strong><code style="font-size:1.05rem;color:#405189;">{{ $productInvoice->ncf }}</code></strong>
-                                </div>
-                                <div class="col-md-6">
-                                    <small class="text-muted d-block">Tipo de Comprobante</small>
-                                    <strong>{{ ucfirst(str_replace('_', ' ', $productInvoice->ncf_type ?? '—')) }}</strong>
-                                </div>
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Tipo de Comprobante</small>
+                            <strong>
+                                @switch($productInvoice->ncf_type)
+                                    @case('consumidor_final') Consumidor Final (E32) @break
+                                    @case('credito_fiscal')   Crédito Fiscal (E31) @break
+                                    @case('gubernamental')    Gubernamental (E45) @break
+                                    @case('regimen_especial') Régimen Especial (E44) @break
+                                    @default                  —
+                                @endswitch
+                            </strong>
+                        </div>
 
-                                @if($productInvoice->ncfSequence)
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block">Secuencia</small>
-                                        <span class="badge bg-info-subtle text-info">
-                                            <i class="ri-bookmark-line me-1"></i>{{ $productInvoice->ncfSequence->name }}
-                                        </span>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block">Rango NCF</small>
-                                        <strong style="font-size:.85rem;">
-                                            {{ $productInvoice->ncfSequence->prefix }}{{ $productInvoice->ncfSequence->serie }}
-                                            {{ (int) $productInvoice->ncfSequence->start_number }} -
-                                            {{ (int) $productInvoice->ncfSequence->end_number }}
-                                        </strong>
-                                    </div>
-                                @endif
-
-                                @if($productInvoice->customer_rnc)
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block">RNC del Cliente</small>
-                                        <strong><code>{{ $productInvoice->customer_rnc }}</code></strong>
-                                    </div>
-                                @endif
-                                @if($productInvoice->customer_business_name)
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block">Razón Social</small>
-                                        <strong>{{ $productInvoice->customer_business_name }}</strong>
-                                    </div>
-                                @endif
+                        @if($productInvoice->enviada_dgii_at)
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Fecha de Emisión</small>
+                                <strong>{{ $productInvoice->enviada_dgii_at->format('d/m/Y H:i') }}</strong>
                             </div>
-                        </div>
+                        @endif
+
+                        @if($productInvoice->track_id)
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Track ID DGII</small>
+                                <small class="text-muted">{{ Str::limit($productInvoice->track_id, 30) }}</small>
+                            </div>
+                        @endif
+
+                        @if($productInvoice->customer_rnc)
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">RNC / Cédula Cliente</small>
+                                <strong><code>{{ $productInvoice->customer_rnc }}</code></strong>
+                            </div>
+                        @endif
+
+                        @if($productInvoice->customer_business_name)
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Razón Social</small>
+                                <strong>{{ $productInvoice->customer_business_name }}</strong>
+                            </div>
+                        @endif
                     </div>
-                @endif
+                </div>
+
+                {{-- Columna derecha: QR --}}
+                <div class="col-md-4 text-center border-start">
+                    @if($productInvoice->qr_link)
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ urlencode($productInvoice->qr_link) }}"
+                             alt="Código QR DGII"
+                             class="img-fluid"
+                             style="max-width: 180px;">
+                        <p class="small text-muted mb-0 mt-2">
+                            <i class="ri-qr-scan-line me-1"></i>Escanee para verificar
+                        </p>
+                    @else
+                        <div class="text-muted py-5">
+                            <i class="ri-qr-code-line fs-1 d-block mb-2"></i>
+                            <small>QR no disponible</small>
+                        </div>
+                    @endif
+
+                    @if($productInvoice->pdf_cloud_url)
+                        <a href="{{ $productInvoice->pdf_cloud_url }}" target="_blank"
+                           class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="ri-file-pdf-line me-1"></i>PDF DGII
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Reenviar si fue rechazada --}}
+            @if($productInvoice->estado_dgii === 'rechazado' || !$productInvoice->enviada_dgii)
+                <hr>
+                <form action="{{ route('product-invoices.enviar-ef2', $productInvoice) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-warning btn-sm"
+                            onclick="return confirm('¿Enviar esta factura a la DGII?')">
+                        <i class="ri-send-plane-line me-1"></i>Reenviar a DGII
+                    </button>
+                </form>
+            @endif
+        </div>
+    </div>
+@endif
 
                 {{-- Productos --}}
                 <div class="card">

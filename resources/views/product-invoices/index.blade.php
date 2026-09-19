@@ -24,7 +24,7 @@
                     <div class="col-md-3">
                         <label class="form-label">Buscar</label>
                         <input type="text" name="search" class="form-control" 
-                               value="{{ request('search') }}" placeholder="Número, paciente o cédula">
+                               value="{{ request('search') }}" placeholder="Número, e-NCF, paciente o cédula">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Estado</label>
@@ -73,14 +73,15 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Número</th>
+                                <th>e-NCF</th>
                                 <th>Fecha</th>
-                                <th>Paciente</th>
+                                <th>Cliente</th>
                                 @if($isAdmin)
                                     <th>Sucursal</th>
                                 @endif
-                                <th class="text-center">Items</th>
                                 <th class="text-end">Total</th>
-                                <th>Estado</th>
+                                <th>Pago</th>
+                                <th>DGII</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -88,32 +89,49 @@
                             @forelse($invoices as $inv)
                                 <tr>
                                     <td><code class="fw-semibold">{{ $inv->number }}</code></td>
+                                    <td>
+                                        @if($inv->encf)
+                                            <code class="text-primary fw-semibold">{{ $inv->encf }}</code>
+                                        @else
+                                            <span class="text-muted small">—</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $inv->created_at->format('d/m/Y H:i') }}</td>
                                     <td>
-                                        <div class="fw-semibold">{{ $inv->patient->first_name }} {{ $inv->patient->last_name }}</div>
-                                        <small class="text-muted">{{ $inv->patient->cedula ?? 'Sin cédula' }}</small>
+                                        <div class="fw-semibold">
+                                            {{ $inv->customer_business_name ?? ($inv->patient->first_name . ' ' . $inv->patient->last_name) }}
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ $inv->customer_rnc ?? $inv->patient->cedula ?? 'Sin documento' }}
+                                        </small>
                                     </td>
                                     @if($isAdmin)
                                         <td>{{ $inv->branch->name }}</td>
                                     @endif
-                                    <td class="text-center">
-                                        <span class="badge bg-info-subtle text-info">{{ $inv->items->count() }}</span>
-                                    </td>
                                     <td class="text-end fw-bold">RD$ {{ number_format($inv->total, 2) }}</td>
                                     <td>
-                                        @php
-                                            $colors = ['pendiente' => 'warning', 'pagada' => 'success', 'cancelada' => 'danger'];
-                                        @endphp
                                         <span class="badge bg-{{ $inv->status_color }}-subtle text-{{ $inv->status_color }}">
-    {{ $inv->status_label }}
-</span>
+                                            {{ $inv->status_label }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if($inv->enviada_dgii)
+                                            <span class="badge bg-{{ $inv->estado_dgii_color }}-subtle text-{{ $inv->estado_dgii_color }}"
+                                                  title="{{ $inv->estado_dgii_label }}">
+                                                <i class="ri-cloud-line me-1"></i>{{ $inv->estado_dgii_label }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                No enviada
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-1 justify-content-center">
                                             <a href="{{ url('/product-invoices/'.$inv->id) }}" class="btn btn-sm btn-info" title="Ver">
                                                 <i class="ri-eye-line"></i>
                                             </a>
-                                            @if($inv->status === 'pendiente')
+                                            @if($inv->status === 'pendiente' || $inv->status === 'pagada_parcial')
                                                 <a href="{{ url('/product-receipts/create/'.$inv->id) }}" class="btn btn-sm btn-success" title="Pagar">
                                                     <i class="ri-money-dollar-circle-line"></i>
                                                 </a>
@@ -126,7 +144,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $isAdmin ? 8 : 7 }}" class="text-center py-5">
+                                    <td colspan="{{ $isAdmin ? 9 : 8 }}" class="text-center py-5">
                                         <i class="ri-file-list-3-line fs-1 text-muted opacity-25 d-block mb-2"></i>
                                         <p class="text-muted mb-0">No hay facturas de productos.</p>
                                     </td>

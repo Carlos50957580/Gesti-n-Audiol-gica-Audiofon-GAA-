@@ -21,10 +21,6 @@ class EF2Service
         $this->rncEmisor = Setting::get('ef2_rnc_empresa', '');
     }
 
-    // ==========================================================
-    // Validaciones previas
-    // ==========================================================
-
     public function estaConfigurado(): bool
     {
         $activo = Setting::get('ef2_activo', '0') === '1';
@@ -35,7 +31,6 @@ class EF2Service
             'ef2_activo_raw' => Setting::get('ef2_activo'),
             'activo' => $activo,
             'tiene_token' => $tieneToken,
-            'token_preview' => $tieneToken ? substr($this->token, 0, 15) . '...' : 'VACÍO',
             'tiene_rnc' => $tieneRnc,
             'rnc' => $this->rncEmisor,
             'resultado_final' => $activo && $tieneToken && $tieneRnc,
@@ -43,10 +38,6 @@ class EF2Service
 
         return $activo && $tieneToken && $tieneRnc;
     }
-
-    // ==========================================================
-    // Envío de facturas
-    // ==========================================================
 
     public function enviarFacturaProductos(ProductInvoice $invoice): array
     {
@@ -56,25 +47,17 @@ class EF2Service
             'invoice_number' => $invoice->number,
         ]);
 
-        // ── Validar configuración ──
         if (!$this->estaConfigurado()) {
-            Log::warning('EF2::enviarFacturaProductos - FALLO: No está configurado');
             return [
                 'success' => false,
                 'message' => 'La facturación electrónica no está configurada o activa.',
             ];
         }
 
-        // ── Validar secuencia ──
-        Log::info('EF2::enviarFacturaProductos - Buscando secuencia', [
-            'ncf_type_factura' => $invoice->ncf_type,
-            'tipo_ecf_mapeado' => $this->mapearTipoNcfAEcf($invoice->ncf_type),
-        ]);
-
         $secuencia = $this->seleccionarSecuencia($invoice);
 
         if (!$secuencia) {
-            Log::warning('EF2::enviarFacturaProductos - FALLO: No hay secuencia disponible', [
+            Log::warning('EF2::enviarFacturaProductos - Sin secuencia disponible', [
                 'tipo_ecf_buscado' => $this->mapearTipoNcfAEcf($invoice->ncf_type),
             ]);
             return [
@@ -83,33 +66,16 @@ class EF2Service
             ];
         }
 
-        Log::info('EF2::enviarFacturaProductos - Secuencia encontrada', [
-            'sequence_id' => $secuencia->id,
-            'prefijo' => $secuencia->prefijo,
-            'secuencia_actual' => $secuencia->secuencia_actual,
-            'hasta' => $secuencia->hasta,
-            'siguiente_encf' => $secuencia->siguiente_encf,
-        ]);
-
-        // ── Construir payload ──
         $payload = $this->construirPayload($invoice, $secuencia);
 
-        Log::info('EF2::enviarFacturaProductos - Payload construido', [
-            'payload' => $payload,
-        ]);
+        Log::info('EF2::enviarFacturaProductos - Payload construido', ['payload' => $payload]);
 
-        // ── Enviar a EF2 ──
         try {
-            Log::info('EF2::enviarFacturaProductos - Enviando request HTTP', [
-                'url' => "{$this->baseUrl}/procesar_factura.php",
-                'token_preview' => substr($this->token, 0, 20) . '...',
-            ]);
-
             $response = Http::withToken($this->token)
                 ->timeout(30)
                 ->post("{$this->baseUrl}/procesar_factura.php", $payload);
 
-            Log::info('EF2::enviarFacturaProductos - Respuesta HTTP recibida', [
+            Log::info('EF2::enviarFacturaProductos - Respuesta HTTP', [
                 'status_code' => $response->status(),
                 'body_preview' => substr($response->body(), 0, 500),
             ]);
@@ -117,9 +83,6 @@ class EF2Service
             $data = $response->json();
 
             if (!$data) {
-                Log::error('EF2::enviarFacturaProductos - Respuesta no es JSON válido', [
-                    'raw_body' => $response->body(),
-                ]);
                 return [
                     'success' => false,
                     'message' => 'Respuesta inválida de EF2',
@@ -127,14 +90,8 @@ class EF2Service
                 ];
             }
 
-            // Avanzar secuencia si fue exitoso
             if (!empty($data['success'])) {
-                Log::info('EF2::enviarFacturaProductos - ÉXITO, avanzando secuencia');
                 $secuencia->avanzar();
-            } else {
-                Log::warning('EF2::enviarFacturaProductos - EF2 rechazó la factura', [
-                    'response' => $data,
-                ]);
             }
 
             return $data;
@@ -143,7 +100,6 @@ class EF2Service
             Log::error('EF2::enviarFacturaProductos - EXCEPCIÓN', [
                 'invoice_id' => $invoice->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
@@ -153,22 +109,9 @@ class EF2Service
         }
     }
 
-    // ==========================================================
-    // Selección de secuencia
-    // ==========================================================
-
     protected function seleccionarSecuencia(ProductInvoice $invoice): ?EcfSequence
     {
         $tipoEcf = $this->mapearTipoNcfAEcf($invoice->ncf_type);
-
-        // Log de todas las secuencias existentes
-        $todasLasSecuencias = EcfSequence::all(['id', 'tipo_ecf', 'estado', 'secuencia_actual', 'hasta', 'fecha_vencimiento'])->toArray();
-
-        Log::info('EF2::seleccionarSecuencia - Secuencias en DB', [
-            'total' => count($todasLasSecuencias),
-            'secuencias' => $todasLasSecuencias,
-            'buscando_tipo' => $tipoEcf,
-        ]);
 
         $secuencia = EcfSequence::where('tipo_ecf', $tipoEcf)
             ->where('estado', true)
@@ -179,15 +122,6 @@ class EF2Service
             })
             ->orderBy('id')
             ->first();
-
-        if (!$secuencia) {
-            // Log específico de por qué no se encontró
-            $porTipo = EcfSequence::where('tipo_ecf', $tipoEcf)->get()->toArray();
-            Log::warning('EF2::seleccionarSecuencia - Sin resultados', [
-                'tipo_ecf_buscado' => $tipoEcf,
-                'secuencias_de_este_tipo' => $porTipo,
-            ]);
-        }
 
         return $secuencia;
     }
@@ -201,36 +135,30 @@ class EF2Service
             'regimen_especial' => '44',
         ];
 
-        $resultado = $map[$ncfType] ?? '32';
-
-        Log::info('EF2::mapearTipoNcfAEcf', [
-            'ncf_type' => $ncfType,
-            'tipo_ecf' => $resultado,
-        ]);
-
-        return $resultado;
+        return $map[$ncfType] ?? '32';
     }
-
-    // ==========================================================
-    // Construcción del payload
-    // ==========================================================
 
     protected function construirPayload(ProductInvoice $invoice, EcfSequence $secuencia): array
     {
         $tipoEcf = $this->mapearTipoNcfAEcf($invoice->ncf_type);
 
+        $idDoc = [
+            'TipoeCF' => $tipoEcf,
+            'eNCF' => $secuencia->siguiente_encf,
+            'IndicadorMontoGravado' => '0',
+            'TipoIngresos' => '01',
+            'TipoPago' => '1',
+        ];
+
+        if (!in_array($tipoEcf, ['32', '34'])) {
+            $idDoc['FechaVencimientoSecuencia'] = $this->fechaVencimiento($tipoEcf, $secuencia);
+        }
+
         return [
             'ECF' => [
                 'Encabezado' => [
                     'Version' => '1.0',
-                    'IdDoc' => [
-                        'TipoeCF' => $tipoEcf,
-                        'eNCF' => $secuencia->siguiente_encf,
-                        'FechaVencimientoSecuencia' => $this->fechaVencimiento($tipoEcf, $secuencia),
-                        'IndicadorMontoGravado' => '0',
-                        'TipoIngresos' => '01',
-                        'TipoPago' => '1',
-                    ],
+                    'IdDoc' => $idDoc,
                     'Emisor' => $this->construirEmisor(),
                     'Comprador' => $this->construirComprador($invoice),
                     'Totales' => $this->construirTotales($invoice),
@@ -244,10 +172,6 @@ class EF2Service
 
     protected function fechaVencimiento(string $tipoEcf, EcfSequence $secuencia): string
     {
-        if ($tipoEcf === '32') {
-            return now()->addYears(100)->format('d-m-Y');
-        }
-
         return $secuencia->fecha_vencimiento
             ? $secuencia->fecha_vencimiento->format('d-m-Y')
             : now()->addYear()->format('d-m-Y');
@@ -255,33 +179,53 @@ class EF2Service
 
     protected function construirEmisor(): array
     {
-        $emisor = [
+        $direccion = trim(Setting::get('company_address') ?? '') ?: 'Santo Domingo, República Dominicana';
+        $correo = trim(Setting::get('company_email') ?? '');
+        if (empty($correo)) {
+            $nombreLimpio = preg_replace('/[^a-z0-9]/', '', strtolower(Setting::get('company_name', 'empresa')));
+            $correo = 'info@' . $nombreLimpio . '.com';
+        }
+
+        return [
             'RNCEmisor' => str_replace('-', '', Setting::get('ef2_rnc_empresa', '')),
             'RazonSocialEmisor' => Setting::get('company_business_name', ''),
             'NombreComercial' => Setting::get('company_name', ''),
-            'DireccionEmisor' => Setting::get('company_address', ''),
+            'DireccionEmisor' => $direccion,
             'Municipio' => '010100',
             'Provincia' => '010000',
-            'CorreoEmisor' => Setting::get('company_email', ''),
+            'CorreoEmisor' => $correo,
             'FechaEmision' => now()->format('d-m-Y'),
         ];
-
-        Log::info('EF2::construirEmisor', $emisor);
-
-        return $emisor;
     }
 
+    /**
+     * ✅ MODIFICADO: Usa la cédula del paciente si no hay RNC del cliente
+     */
     protected function construirComprador(ProductInvoice $invoice): array
     {
+        // Prioridad 1: RNC del cliente (ingresado manualmente)
         $rnc = $invoice->customer_rnc
             ? preg_replace('/[^0-9]/', '', $invoice->customer_rnc)
             : '';
 
+        // Prioridad 2: Cédula del paciente (automático)
+        if (empty($rnc) && $invoice->patient && $invoice->patient->cedula) {
+            $rnc = preg_replace('/[^0-9]/', '', $invoice->patient->cedula);
+        }
+
+        // Nombre: razón social del cliente o nombre completo del paciente
+        $nombre = $invoice->customer_business_name
+            ?: trim(($invoice->patient->first_name ?? '') . ' ' . ($invoice->patient->last_name ?? ''));
+
+        if (empty($nombre)) {
+            $nombre = 'Consumidor Final';
+        }
+
         $data = [
-            'RazonSocialComprador' => $invoice->customer_business_name
-                ?? ($invoice->patient->first_name . ' ' . $invoice->patient->last_name),
+            'RazonSocialComprador' => $nombre,
         ];
 
+        // Solo enviar RNC si es válido (9 dígitos = RNC, 11 = cédula)
         if (preg_match('/^\d{9}$|^\d{11}$/', $rnc)) {
             $data['RNCComprador'] = $rnc;
         }
@@ -293,7 +237,7 @@ class EF2Service
 
     protected function construirTotales(ProductInvoice $invoice): array
     {
-        $totales = [
+        return [
             'MontoGravadoTotal' => number_format($invoice->subtotal, 2, '.', ''),
             'MontoGravadoI1' => number_format($invoice->subtotal, 2, '.', ''),
             'ITBIS1' => '18',
@@ -301,10 +245,6 @@ class EF2Service
             'TotalITBIS1' => number_format($invoice->tax_amount, 2, '.', ''),
             'MontoTotal' => number_format($invoice->total, 2, '.', ''),
         ];
-
-        Log::info('EF2::construirTotales', $totales);
-
-        return $totales;
     }
 
     protected function construirItems(ProductInvoice $invoice): array
@@ -325,8 +265,6 @@ class EF2Service
             ];
             $linea++;
         }
-
-        Log::info('EF2::construirItems', ['total_items' => count($items), 'items' => $items]);
 
         return $items;
     }

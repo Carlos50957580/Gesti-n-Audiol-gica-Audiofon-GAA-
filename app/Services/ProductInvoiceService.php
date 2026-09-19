@@ -28,7 +28,17 @@ class ProductInvoiceService
     public function createInvoice(array $data): ProductInvoice
     {
         return DB::transaction(function () use ($data) {
-            // ── CONSUMIR NCF SI APLICA ──────────────────────────────
+            // ── FORZAR CONSUMIDOR FINAL SI NO SE MARCA CRÉDITO FISCAL ──
+            // Si el usuario no marcó "with_ncf", se emite automáticamente como Consumidor Final (B02/e-CF 32)
+            if (empty($data['with_ncf'])) {
+                $data['with_ncf'] = true;
+                $data['ncf_type'] = 'consumidor_final';
+                Log::info('ProductInvoiceService::createInvoice - Forzando consumidor_final', [
+                    'branch_id' => $data['branch_id'] ?? null,
+                ]);
+            }
+
+            // ── CONSUMIR NCF AUTOMÁTICAMENTE ────────────────────────
             $ncfCode = null;
             $ncfSequenceId = null;
 
@@ -47,10 +57,9 @@ class ProductInvoiceService
 
                 $ncfType = NcfType::where('code', $typeCode)->first();
                 if (!$ncfType) {
-                    throw new \Exception('Tipo de NCF no configurado en el sistema.');
+                    throw new \Exception('Tipo de NCF no configurado en el sistema (código ' . $typeCode . ').');
                 }
 
-                // Buscar secuencia activa: primero la específica de la sucursal, luego la general
                 $sequence = NcfSequence::active()
                     ->where('ncf_type_id', $ncfType->id)
                     ->where(function ($q) use ($data) {
@@ -65,14 +74,13 @@ class ProductInvoiceService
                     ->first();
 
                 if (!$sequence) {
-                    throw new \Exception('No hay una secuencia NCF activa para este tipo de comprobante.');
+                    throw new \Exception('No hay una secuencia NCF activa para este tipo de comprobante (' . $typeCode . ').');
                 }
 
                 if (!$sequence->canIssue()) {
                     throw new \Exception('La secuencia NCF no puede emitir más comprobantes (' . $sequence->status_label . ').');
                 }
 
-                // ✅ Consumir el NCF (avanza el contador de la secuencia)
                 $ncfCode = $sequence->issueNext();
                 $ncfSequenceId = $sequence->id;
             }
@@ -126,9 +134,9 @@ class ProductInvoiceService
                 'paid_amount'            => 0,
                 'balance'                => $total,
                 'status'                 => 'pendiente',
-                'with_ncf'               => $data['with_ncf'] ?? false,
+                'with_ncf'               => true,
                 'ncf'                    => $ncfCode,
-                'ncf_type'               => $data['ncf_type'] ?? null,
+                'ncf_type'               => $data['ncf_type'],
                 'ncf_sequence_id'        => $ncfSequenceId,
                 'customer_rnc'           => $data['customer_rnc'] ?? null,
                 'customer_business_name' => $data['customer_business_name'] ?? null,
@@ -139,10 +147,9 @@ class ProductInvoiceService
                 $invoice->items()->create($item);
             }
 
-            // Registrar salida de stock automáticamente
             $this->registerStockExit($invoice);
 
-            // ✅ NUEVO: Intentar envío automático a EF2 (no rompe la venta si falla)
+            // ✅ Enviar a EF2 (no rompe la venta si falla)
             $this->trySendToEf2($invoice->fresh(['items.product', 'patient', 'branch']));
 
             return $invoice->fresh(['items', 'ecfDocuments']);
@@ -234,87 +241,54 @@ class ProductInvoiceService
     // FACTURACIÓN ELECTRÓNICA (EF2)
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Intenta enviar la factura a EF2 automáticamente.
-     * No lanza excepción para no romper la venta si EF2 falla.
-     */
     protected function trySendToEf2(ProductInvoice $invoice): void
-{
-    Log::info('═══════════════════════════════════════════');
-    Log::info('ProductInvoiceService::trySendToEf2 - INICIO', [
-        'invoice_id' => $invoice->id,
-        'invoice_number' => $invoice->number,
-    ]);
-
-    // ── CHECK 1: ¿Está configurado EF2? ──
-    $configurado = $this->ef2Service->estaConfigurado();
-    Log::info('ProductInvoiceService::trySendToEf2 - CHECK configurado', [
-        'configurado' => $configurado,
-        'ef2_activo_raw' => Setting::get('ef2_activo'),
-    ]);
-
-    if (!$configurado) {
-        Log::warning('ProductInvoiceService::trySendToEf2 - ABORT: EF2 no configurado');
-        return;
-    }
-
-    // ── CHECK 2: ¿Tiene tipo de NCF? ──
-    Log::info('ProductInvoiceService::trySendToEf2 - CHECK ncf_type', [
-        'ncf_type' => $invoice->ncf_type,
-        'ncf' => $invoice->ncf,
-    ]);
-
-    if (!$invoice->ncf_type) {
-        Log::warning('ProductInvoiceService::trySendToEf2 - ABORT: Sin ncf_type');
-        return;
-    }
-
-    // ── INTENTO DE ENVÍO ──
-    try {
-        Log::info('ProductInvoiceService::trySendToEf2 - Llamando EF2Service');
-        $result = $this->ef2Service->enviarFacturaProductos($invoice);
-
-        Log::info('ProductInvoiceService::trySendToEf2 - Respuesta recibida', [
-            'success' => $result['success'] ?? false,
-            'result' => $result,
-        ]);
-
-        $this->guardarRespuestaEf2($invoice, $result);
-
-        Log::info('ProductInvoiceService::trySendToEf2 - FIN OK');
-
-    } catch (\Exception $e) {
-        Log::error('ProductInvoiceService::trySendToEf2 - EXCEPCIÓN', [
+    {
+        Log::info('═══════════════════════════════════════════');
+        Log::info('ProductInvoiceService::trySendToEf2 - INICIO', [
             'invoice_id' => $invoice->id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
+            'invoice_number' => $invoice->number,
         ]);
+
+        if (!$this->ef2Service->estaConfigurado()) {
+            Log::warning('ProductInvoiceService::trySendToEf2 - ABORT: EF2 no configurado');
+            return;
+        }
+
+        if (!$invoice->ncf_type) {
+            Log::warning('ProductInvoiceService::trySendToEf2 - ABORT: Sin ncf_type');
+            return;
+        }
 
         try {
-            $invoice->ecfDocuments()->create([
-                'tipo_ecf'          => $this->mapearTipoEcf($invoice),
-                'estado'            => 'error',
-                'error_message'     => $e->getMessage(),
-                'user_id'           => auth()->id(),
-                'intentos'          => 1,
-                'enviado_at'        => now(),
+            $result = $this->ef2Service->enviarFacturaProductos($invoice);
+            $this->guardarRespuestaEf2($invoice, $result);
+        } catch (\Exception $e) {
+            Log::error('ProductInvoiceService::trySendToEf2 - EXCEPCIÓN', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
             ]);
-        } catch (\Exception $inner) {
-            Log::error('ProductInvoiceService::trySendToEf2 - Error guardando ecf_document', [
-                'error' => $inner->getMessage(),
-            ]);
+
+            try {
+                $invoice->ecfDocuments()->create([
+                    'tipo_ecf'          => $this->mapearTipoEcf($invoice),
+                    'estado'            => 'error',
+                    'error_message'     => $e->getMessage(),
+                    'user_id'           => auth()->id(),
+                    'intentos'          => 1,
+                    'enviado_at'        => now(),
+                ]);
+            } catch (\Exception $inner) {
+                Log::error('ProductInvoiceService::trySendToEf2 - Error guardando ecf_document', [
+                    'error' => $inner->getMessage(),
+                ]);
+            }
         }
     }
-}
-    /**
-     * Guarda la respuesta de EF2 en la factura y en ecf_documents.
-     * Público para que el controlador pueda llamarlo en reenvíos manuales.
-     */
+
     public function guardarRespuestaEf2(ProductInvoice $invoice, array $result): void
     {
         $exitoso = !empty($result['success']);
 
-        // Guardar histórico en ecf_documents
         $invoice->ecfDocuments()->create([
             'tipo_ecf'           => $this->mapearTipoEcf($invoice),
             'encf'               => $result['ncf'] ?? null,
@@ -333,7 +307,6 @@ class ProductInvoiceService
             'respondido_at'      => now(),
         ]);
 
-        // Actualizar la factura si fue exitoso
         if ($exitoso) {
             $invoice->update([
                 'encf'             => $result['ncf'] ?? null,
@@ -347,9 +320,6 @@ class ProductInvoiceService
         }
     }
 
-    /**
-     * Mapea el tipo de NCF tradicional al tipo de e-CF de la DGII.
-     */
     protected function mapearTipoEcf(ProductInvoice $invoice): string
     {
         return match ($invoice->ncf_type) {

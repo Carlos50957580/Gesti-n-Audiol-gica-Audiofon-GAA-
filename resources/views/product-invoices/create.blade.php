@@ -136,83 +136,71 @@
                     </div>
 
                     {{-- NCF Opcional --}}
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="ri-file-shield-line me-1"></i>Comprobante Fiscal (Opcional)
-        </h5>
-    </div>
-    <div class="card-body">
-        <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" name="with_ncf" value="1" 
-                   id="withNcf" onchange="toggleNcf()">
-            <label class="form-check-label" for="withNcf">Emitir con NCF</label>
+{{-- Aviso de Facturación Electrónica Automática --}}
+@if(\App\Models\Setting::get('ef2_activo') === '1')
+    <div class="alert alert-info d-flex align-items-start">
+        <i class="ri-cloud-line fs-20 me-2 mt-1"></i>
+        <div class="flex-grow-1">
+            <strong>Facturación Electrónica Activa</strong>
+            <p class="mb-0 small">
+                Todas las ventas se emitirán automáticamente como <strong>Consumidor Final</strong> y 
+                se enviarán a la DGII.
+                <br>
+                Si el cliente necesita un <strong>Crédito Fiscal (B01)</strong>, activa la opción de abajo.
+            </p>
         </div>
+    </div>
 
-        <div id="ncfFields" class="d-none">
-            {{-- Tipo de NCF --}}
-            <div class="mb-3">
-                <label class="form-label">Tipo de NCF</label>
-                <select name="ncf_type" id="ncfType" class="form-select" onchange="loadNextNcf()">
-                    <option value="">Seleccionar tipo</option>
-                    <option value="consumidor_final">Consumidor Final (B02)</option>
-                    <option value="credito_fiscal">Crédito Fiscal (B01)</option>
-                    <option value="gubernamental">Gubernamental (B15)</option>
-                    <option value="regimen_especial">Régimen Especial (B14)</option>
-                </select>
+    {{-- Opción de Crédito Fiscal --}}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="ri-file-shield-line me-1"></i>Comprobante Fiscal
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="with_ncf" value="1" 
+                       id="withNcf" onchange="toggleNcf()">
+                <label class="form-check-label" for="withNcf">
+                    Emitir <strong>Crédito Fiscal (B01 / e-CF 31)</strong> en lugar de Consumidor Final
+                </label>
             </div>
 
-            {{-- RNC del cliente --}}
-            <div class="mb-3">
-                <label class="form-label">RNC del Cliente</label>
-                <div class="input-group">
-                    <input type="text" name="customer_rnc" id="customerRnc" class="form-control" 
-                           placeholder="000-0000000-0">
-                    <button type="button" class="btn btn-primary" onclick="searchRnc()">
-                        <i class="ri-search-line"></i>
-                    </button>
-                </div>
-                <div id="rncStatus" class="mt-1 small"></div>
-            </div>
-
-            {{-- Razón Social --}}
-            <div class="mb-3">
-                <label class="form-label">Razón Social</label>
-                <input type="text" name="customer_business_name" id="customerBusinessName" 
-                       class="form-control" readonly>
-            </div>
-
-            {{-- NCF a emitir --}}
-            <div id="ncfPreviewBox" class="d-none">
-                <label class="form-label small">NCF a emitir</label>
-                <div class="p-3 rounded" style="background:#f0f4ff;border:1px solid #c7d2fe;">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <code id="ncfPreview" style="font-size:1.05rem;font-weight:700;color:#405189;">—</code>
-                            <small class="d-block text-muted mt-1" id="ncfSequenceName">—</small>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadNextNcf()">
-                            <i class="ri-refresh-line"></i>
+            <div id="ncfFields" class="d-none">
+                <div class="mb-3">
+                    <label for="customerRnc" class="form-label">
+                        RNC del Cliente <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="text" name="customer_rnc" id="customerRnc" class="form-control" 
+                               placeholder="000-0000000-0" onblur="searchRnc()">
+                        <button type="button" class="btn btn-primary" onclick="searchRnc()">
+                            <i class="ri-search-line"></i>
                         </button>
                     </div>
-                    <div class="mt-2 small">
-                        <span class="text-muted">Disponibles:</span>
-                        <strong id="ncfRemaining">—</strong>
-                    </div>
-                    <div id="ncfAlert" class="alert alert-warning mt-2 mb-0 d-none" style="font-size:.8rem;padding:.4rem .6rem;">
-                        <i class="ri-alert-line me-1"></i>
-                        <span id="ncfAlertText"></span>
-                    </div>
+                    <div id="rncStatus" class="mt-1 small"></div>
                 </div>
-            </div>
 
-            <div id="ncfLoading" class="text-center py-2 d-none">
-                <span class="spinner-border spinner-border-sm me-2"></span>
-                <small class="text-muted">Consultando secuencia NCF...</small>
+                <div class="mb-3">
+                    <label for="customerBusinessName" class="form-label">Razón Social</label>
+                    <input type="text" name="customer_business_name" id="customerBusinessName" 
+                           class="form-control" readonly
+                           placeholder="Se llenará automáticamente al consultar el RNC">
+                </div>
+
+                {{-- Input hidden para forzar el tipo de NCF --}}
+                <input type="hidden" name="ncf_type" id="ncfType" value="">
             </div>
         </div>
     </div>
-</div>
+@else
+    <div class="alert alert-warning">
+        <i class="ri-alert-line me-1"></i>
+        La facturación electrónica no está configurada. Configúrala en 
+        <a href="{{ route('settings.company') }}">Ajustes de Empresa</a>.
+    </div>
+@endif
 
                 </div>
 
