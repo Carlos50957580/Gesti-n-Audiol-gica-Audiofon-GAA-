@@ -487,86 +487,23 @@
     // NCF
     // -----------------------------------------
     // ═══════════════════════════════════════════
+// -----------------------------------------
 // NCF
-// ═══════════════════════════════════════════
+// -----------------------------------------
 function toggleNcf() {
     const checked = document.getElementById('withNcf').checked;
     document.getElementById('ncfFields').classList.toggle('d-none', !checked);
 
-    if (checked) {
-        // Cargar automáticamente el primer NCF disponible
-        const branchId = document.getElementById('branchSelect').value;
-        const ncfType = document.getElementById('ncfType').value;
-        if (branchId && ncfType) {
-            loadNextNcf();
-        }
-    } else {
-        document.getElementById('ncfPreviewBox').classList.add('d-none');
-    }
+    // Fix: asigna 'credito_fiscal' al campo oculto cuando se marca el switch.
+    // Antes este campo se quedaba vacío y disparaba el error de validación
+    // "El campo ncf type es obligatorio cuando with ncf es 1".
+    document.getElementById('ncfType').value = checked ? 'credito_fiscal' : '';
 }
 
-/**
- * Consultar el próximo NCF disponible
- */
-async function loadNextNcf() {
-    const ncfType = document.getElementById('ncfType').value;
-    const branchId = document.getElementById('branchSelect').value;
-
-    if (!ncfType) {
-        document.getElementById('ncfPreviewBox').classList.add('d-none');
-        return;
-    }
-
-    // Mostrar loading
-    document.getElementById('ncfLoading').classList.remove('d-none');
-    document.getElementById('ncfPreviewBox').classList.add('d-none');
-
-    try {
-        const params = new URLSearchParams({ ncf_type: ncfType });
-        if (branchId) params.append('branch_id', branchId);
-
-        const r = await fetch('/api/ncf/next-available?' + params.toString(), {
-            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
-        });
-        const data = await r.json();
-
-        if (!data.success) {
-            document.getElementById('ncfPreviewBox').classList.add('d-none');
-            showToast(data.message || 'No hay NCF disponible.', 'error');
-            return;
-        }
-
-        // Mostrar preview
-        document.getElementById('ncfPreview').textContent = data.ncf;
-        document.getElementById('ncfSequenceName').textContent = data.sequence_name;
-        document.getElementById('ncfRemaining').textContent = data.remaining;
-        document.getElementById('ncfPreviewBox').classList.remove('d-none');
-
-        // Alerta si está bajo
-        const alertBox = document.getElementById('ncfAlert');
-        const alertText = document.getElementById('ncfAlertText');
-        if (data.is_low) {
-            alertBox.classList.remove('d-none');
-            alertText.textContent = `¡Atención! Solo quedan ${data.remaining} NCF en esta secuencia.`;
-        } else {
-            alertBox.classList.add('d-none');
-        }
-
-    } catch (error) {
-        console.error('Error consultando NCF:', error);
-        showToast('Error al consultar la secuencia NCF.', 'error');
-    } finally {
-        document.getElementById('ncfLoading').classList.add('d-none');
-    }
-}
-
-/**
- * Búsqueda de RNC
- */
 async function searchRnc() {
     const rnc = document.getElementById('customerRnc').value.trim();
     if (!rnc) {
-        showToast('Ingrese un RNC.', 'error');
+        alert('Ingrese un RNC.');
         return;
     }
     const status = document.getElementById('rncStatus');
@@ -585,13 +522,6 @@ async function searchRnc() {
         status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
     }
 }
-
-// Detectar cambios en sucursal para recargar NCF
-document.getElementById('branchSelect').addEventListener('change', function() {
-    if (document.getElementById('withNcf').checked && document.getElementById('ncfType').value) {
-        loadNextNcf();
-    }
-});
 
     // -----------------------------------------
     // ENVÍO DEL FORMULARIO
