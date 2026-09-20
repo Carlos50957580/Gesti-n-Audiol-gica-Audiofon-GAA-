@@ -11,13 +11,24 @@ use App\Models\ServiceCategory;
 use App\Models\Branch;
 use App\Models\Insurance;
 use App\Models\Setting;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
+
 {
+
+
+protected InvoiceService $invoiceService;
+
+    public function __construct(InvoiceService $invoiceService)
+    {
+        $this->invoiceService = $invoiceService;
+    }
+    
     public function index(Request $request)
     {
         $query = Invoice::with(['patient', 'user', 'doctor', 'branch', 'insurance']);
@@ -120,7 +131,6 @@ class InvoiceController extends Controller
         'services.*.cov_type' => 'nullable|in:pct,amt',
     ]);
 
-    // Validar sucursal según rol
     if (auth()->user()->role->name === 'recepcionista') {
         if ($request->branch_id != auth()->user()->branch_id) {
             return redirect()->back()->withInput()
@@ -128,153 +138,13 @@ class InvoiceController extends Controller
         }
     }
 
-    DB::beginTransaction();
-
     try {
-        // ── CONSUMIR NCF SI APLICA ──────────────────────────────
-        $ncfCode = null;
-        $ncfSequenceId = null;
-
-        if ($request->with_ncf && $request->filled('ncf_type')) {
-            $typeCodeMap = [
-                'consumidor_final' => 'B02',
-                'credito_fiscal'   => 'B01',
-                'gubernamental'    => 'B15',
-                'regimen_especial' => 'B14',
-            ];
-
-            $typeCode = $typeCodeMap[$request->ncf_type];
-            $ncfType = \App\Models\NcfType::where('code', $typeCode)->first();
-
-            if (!$ncfType) {
-                throw new \Exception('Tipo de NCF no configurado.');
-            }
-
-            $sequence = \App\Models\NcfSequence::active()
-                ->where('ncf_type_id', $ncfType->id)
-                ->where(function ($q) use ($request) {
-                    $q->where('branch_id', $request->branch_id)
-                      ->orWhereNull('branch_id');
-                })
-                ->where('valid_until', '>=', now()->toDateString())
-                ->where('valid_from', '<=', now()->toDateString())
-                ->whereRaw('CAST(current_number AS UNSIGNED) <= CAST(end_number AS UNSIGNED)')
-                ->orderByRaw('CASE WHEN branch_id = ? THEN 0 ELSE 1 END', [$request->branch_id])
-                ->orderBy('valid_until')
-                ->first();
-
-            if (!$sequence) {
-                throw new \Exception('No hay una secuencia NCF activa para este tipo de comprobante.');
-            }
-
-            if (!$sequence->canIssue()) {
-                throw new \Exception('La secuencia NCF no puede emitir más comprobantes (' . $sequence->status_label . ').');
-            }
-
-            // Consumir el NCF (avanza el contador)
-            $ncfCode = $sequence->issueNext();
-            $ncfSequenceId = $sequence->id;
-        }
-
-        // ── PROCESAR SERVICIOS ──────────────────────────────────
-        $subtotal = 0;
-        $totalTax = 0;
-        $insuranceDiscount = 0;
-        $items = [];
-
-        $insurance = $request->filled('insurance_id') ? Insurance::find($request->insurance_id) : null;
-
-        foreach ($request->services as $serviceData) {
-            $service = Service::with(['taxes', 'insuranceCoverage'])->find($serviceData['id']);
-            $quantity = $serviceData['quantity'];
-            $price = $serviceData['custom_price'] ?? $service->price;
-            $subtotalItem = $price * $quantity;
-
-            $taxCalculation = $service->calculateTaxes($subtotalItem);
-            $taxAmount = $taxCalculation['total_tax'];
-            $totalTax += $taxAmount;
-
-            $coveragePercentage = 0;
-            $insuranceAmount = 0;
-            $patientAmount = $subtotalItem;
-
-            if ($insurance) {
-                $specificCoverage = $service->getCoverageForInsurance($insurance);
-                
-                if ($specificCoverage) {
-                    $calculation = $specificCoverage->calculateCoverage($subtotalItem);
-                    $coveragePercentage = $calculation['percentage'];
-                    $insuranceAmount = $calculation['insurance_amount'];
-                    $patientAmount = $subtotalItem - $insuranceAmount;
-                } else {
-                    $globalCoverage = $insurance->coverage_percentage;
-                    if ($globalCoverage > 0) {
-                        $coveragePercentage = $globalCoverage;
-                        $insuranceAmount = $subtotalItem * ($globalCoverage / 100);
-                        $patientAmount = $subtotalItem - $insuranceAmount;
-                    }
-                }
-                
-                $insuranceDiscount += $insuranceAmount;
-            }
-
-            $items[] = [
-                'service_id' => $service->id,
-                'price' => $price,
-                'quantity' => $quantity,
-                'subtotal' => $subtotalItem,
-                'coverage_percentage' => $coveragePercentage,
-                'insurance_amount' => $insuranceAmount,
-                'patient_amount' => $patientAmount,
-                'tax_amount' => $taxAmount,
-                'tax_details' => $taxCalculation['taxes'],
-                'total_with_tax' => $patientAmount + $taxAmount,
-            ];
-
-            $subtotal += $subtotalItem;
-        }
-
-        $totalWithTax = $subtotal + $totalTax;
-        $total = $totalWithTax - $insuranceDiscount;
-
-        // ── CREAR FACTURA ──────────────────────────────────────
-        $invoice = Invoice::create([
-            'patient_id' => $request->patient_id,
-            'user_id' => auth()->id(),
-            'doctor_id' => $request->doctor_id,
-            'branch_id' => $request->branch_id,
-            'insurance_id' => $request->insurance_id,
-            'subtotal' => $subtotal,
-            'tax_amount' => $totalTax,
-            'total_with_tax' => $totalWithTax,
-            'insurance_discount' => $insuranceDiscount,
-            'total' => $total,
-            'status' => 'pendiente',
-            'authorization_number' => $request->authorization_number,
-            'with_ncf' => $request->has('with_ncf'),
-            'ncf' => $ncfCode,                          // ✅ NCF consumido de la secuencia
-            'ncf_type' => $request->ncf_type,
-            'ncf_sequence_id' => $ncfSequenceId,        // ✅ Referencia a la secuencia usada
-            'customer_rnc' => $request->customer_rnc,
-            'customer_business_name' => $request->customer_business_name,
-            'tax_details' => [
-                'total_tax' => $totalTax,
-                'items' => collect($items)->map(fn($item) => $item['tax_details'])->flatten(1)->toArray()
-            ]
-        ]);
-
-        foreach ($items as $item) {
-            $invoice->items()->create($item);
-        }
-
-        DB::commit();
+        $invoice = $this->invoiceService->createInvoice($validated);
 
         return redirect()
             ->route('invoices.show', $invoice->id)
             ->with('success', "Factura #{$invoice->id} creada exitosamente.");
-
     } catch (\Exception $e) {
-        DB::rollBack();
         return redirect()->back()->withInput()
             ->with('error', 'Error al crear la factura: ' . $e->getMessage());
     }
@@ -310,40 +180,50 @@ public function consultRnc($rnc)
    /**
      * Display the specified invoice.
      */
-    public function show(Invoice $invoice)
-    {
-        // Validar acceso
-        if (auth()->user()->role->name === 'recepcionista') {
-            if ($invoice->branch_id != auth()->user()->branch_id) {
-                abort(403, 'No tienes acceso a esta factura.');
-            }
+   public function show(Invoice $invoice)
+{
+    // Validar acceso
+    if (auth()->user()->role->name === 'recepcionista') {
+        if ($invoice->branch_id != auth()->user()->branch_id) {
+            abort(403, 'No tienes acceso a esta factura.');
         }
-
-        $invoice->load(['patient', 'user', 'doctor', 'branch', 'insurance', 'items.service.category']);
-
-        // ── Obtener configuración de la empresa ─────────────────────────────
-        $company = [
-            'name' => Setting::get('company_name', 'Mi Clínica'),
-            'business_name' => Setting::get('company_business_name', 'Mi Clínica SRL'),
-            'rnc' => Setting::get('company_rnc', ''),
-            'email' => Setting::get('company_email', ''),
-            'phone' => Setting::get('company_phone', ''),
-            'mobile' => Setting::get('company_mobile', ''),
-            'address' => Setting::get('company_address', ''),
-            'slogan' => Setting::get('company_slogan', ''),
-            'website' => Setting::get('company_website', ''),
-            'logo' => Setting::get('company_logo', null),
-            'favicon' => Setting::get('company_favicon', null),
-            'footer_text' => Setting::get('company_footer_text', 'Gracias por su preferencia'),
-            'currency' => Setting::get('company_currency', 'DOP'),
-            'tax_rate' => Setting::get('company_tax_rate', 18),
-            'invoice_prefix' => Setting::get('company_invoice_prefix', 'FAC-'),
-            'receipt_prefix' => Setting::get('company_receipt_prefix', 'REC-'),
-            'ncf_type' => Setting::get('company_ncf_type', 'consumidor_final'),
-        ];
-
-        return view('invoices.show', compact('invoice', 'company'));
     }
+
+    // ✅ AGREGADO: 'ecfDocuments.user' y 'receipt' (singular)
+    $invoice->load([
+        'patient',
+        'user',
+        'doctor',
+        'branch',
+        'insurance',
+        'items.service.category',
+        'ecfDocuments.user',  // ← Historial DGII con quién lo envió
+        'receipt',            // ← Último recibo (para mostrar pago registrado)
+    ]);
+
+    // ── Obtener configuración de la empresa ─────────────────────────────
+    $company = [
+        'name' => Setting::get('company_name', 'Mi Clínica'),
+        'business_name' => Setting::get('company_business_name', 'Mi Clínica SRL'),
+        'rnc' => Setting::get('company_rnc', ''),
+        'email' => Setting::get('company_email', ''),
+        'phone' => Setting::get('company_phone', ''),
+        'mobile' => Setting::get('company_mobile', ''),
+        'address' => Setting::get('company_address', ''),
+        'slogan' => Setting::get('company_slogan', ''),
+        'website' => Setting::get('company_website', ''),
+        'logo' => Setting::get('company_logo', null),
+        'favicon' => Setting::get('company_favicon', null),
+        'footer_text' => Setting::get('company_footer_text', 'Gracias por su preferencia'),
+        'currency' => Setting::get('company_currency', 'DOP'),
+        'tax_rate' => Setting::get('company_tax_rate', 18),
+        'invoice_prefix' => Setting::get('company_invoice_prefix', 'FAC-'),
+        'receipt_prefix' => Setting::get('company_receipt_prefix', 'REC-'),
+        'ncf_type' => Setting::get('company_ncf_type', 'consumidor_final'),
+    ];
+
+    return view('invoices.show', compact('invoice', 'company'));
+}
 
     /**
      * Print the specified invoice.
@@ -582,4 +462,39 @@ public function getDoctors(Request $request)
         'requires_authorization' => false
     ]);
 }
+
+
+    /**
+     * ✅ NUEVO: Enviar (o reenviar) la factura a EF2 manualmente
+     */
+    public function enviarEf2(Invoice $invoice)
+    {
+        if (auth()->user()->role->name === 'recepcionista') {
+            if ($invoice->branch_id != auth()->user()->branch_id) {
+                abort(403);
+            }
+        }
+
+        if (!$invoice->puedeEnviarseADgii()) {
+            return back()->with('error', 'Esta factura no puede enviarse a la DGII (ya fue aceptada o está cancelada).');
+        }
+
+        try {
+            $result = $this->invoiceService->enviarFacturaServiciosPublic($invoice);
+
+            if (!empty($result['success'])) {
+                return back()->with(
+                    'success',
+                    'Factura enviada a la DGII correctamente. e-NCF: ' . ($result['ncf'] ?? '')
+                );
+            }
+
+            return back()->with(
+                'error',
+                'Error al enviar a la DGII: ' . ($result['message'] ?? 'Desconocido')
+            );
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al conectar con EF2: ' . $e->getMessage());
+        }
+    }
 }

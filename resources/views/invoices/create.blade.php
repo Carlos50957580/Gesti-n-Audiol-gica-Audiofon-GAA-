@@ -97,6 +97,10 @@
 @keyframes toastIn { from{opacity:0;transform:translateX(36px)} to{opacity:1;transform:translateX(0)} }
 .toast-success { background:linear-gradient(135deg,#0ab39c,#3d9f80); }
 .toast-error   { background:linear-gradient(135deg,#e74c3c,#c0392b); }
+
+/* ── e-CF preview ── */
+.ecf-preview { background:#f0f4ff; border:1px solid #c7d2fe; border-radius:.5rem; padding:.85rem 1rem; }
+.ecf-preview code { font-size:1.05rem; font-weight:700; color:#405189; }
 </style>
 
 <div id="toast-container"></div>
@@ -104,7 +108,7 @@
 <div class="row mb-3">
     <div class="col-12">
         <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-0">Nueva Factura</h4>
+            <h4 class="mb-0">Nueva Factura de Servicios</h4>
             <ol class="breadcrumb m-0">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('invoices.index') }}">Facturas</a></li>
@@ -179,7 +183,7 @@
                         </button>
                     @endforeach
                 </div>
-                
+
                 {{-- Tabla de servicios --}}
                 <div class="table-responsive">
                     <table class="svc-table">
@@ -216,20 +220,20 @@
                 <div class="card-icon bg-info-subtle text-info"><i class="ri-shield-check-line"></i></div>
                 <h6>Seguro Médico</h6>
             </div>
-           <div class="inv-card-body">
-    <div class="form-floating mb-3">
-        <select name="insurance_id" id="insurance_id" class="form-select">
-            <option value="">— Sin seguro —</option>
-            @foreach($insurances as $ins)
-                <option value="{{ $ins->id }}"
-                        data-coverage="{{ $ins->coverage_percentage }}"
-                        {{ old('insurance_id') == $ins->id ? 'selected' : '' }}>
-                    {{ $ins->name }}
-                </option>
-            @endforeach
-        </select>
-        <label>Seguro</label>
-    </div>
+            <div class="inv-card-body">
+                <div class="form-floating mb-3">
+                    <select name="insurance_id" id="insurance_id" class="form-select">
+                        <option value="">— Sin seguro —</option>
+                        @foreach($insurances as $ins)
+                            <option value="{{ $ins->id }}"
+                                    data-coverage="{{ $ins->coverage_percentage }}"
+                                    {{ old('insurance_id') == $ins->id ? 'selected' : '' }}>
+                                {{ $ins->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <label>Seguro</label>
+                </div>
                 <div id="coverage-controls" class="d-none">
                     <div class="sidebar-section-label">Cobertura global</div>
                     <div class="cov-toggle-group mb-2">
@@ -307,7 +311,7 @@
                         @foreach($doctors as $doctor)
                             <option value="{{ $doctor->id }}" data-branch="{{ $doctor->branch_id }}"
                                     {{ old('doctor_id') == $doctor->id ? 'selected' : '' }}>
-                                {{ $doctor->name }} 
+                                {{ $doctor->name }}
                                 @if($doctor->branch)
                                     ({{ $doctor->branch->name }})
                                 @endif
@@ -328,80 +332,81 @@
             </div>
         </div>
 
-        {{-- Datos Fiscales --}}
-<div class="inv-card">
-    <div class="inv-card-header">
-        <div class="card-icon bg-danger-subtle text-danger"><i class="ri-file-list-3-line"></i></div>
-        <h6>Datos Fiscales</h6>
-    </div>
-    <div class="inv-card-body">
-        <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="with_ncf" name="with_ncf" value="1">
-            <label class="form-check-label" for="with_ncf">Generar comprobante fiscal</label>
-        </div>
-
-        <div id="ncf-area" class="d-none">
-            {{-- Tipo de NCF --}}
-            <div class="form-floating mb-3">
-                <select name="ncf_type" id="ncf_type" class="form-select">
-                    <option value="">Seleccione tipo</option>
-                    <option value="consumidor_final">Consumidor Final (B02)</option>
-                    <option value="credito_fiscal">Crédito Fiscal (B01)</option>
-                    <option value="gubernamental">Gubernamental (B15)</option>
-                    <option value="regimen_especial">Régimen Especial (B14)</option>
-                </select>
-                <label>Tipo de NCF</label>
+        {{-- Datos Fiscales (e-CF) --}}
+        <div class="inv-card">
+            <div class="inv-card-header">
+                <div class="card-icon bg-danger-subtle text-danger"><i class="ri-file-list-3-line"></i></div>
+                <h6>Comprobante Electrónico (e-CF)</h6>
             </div>
+            <div class="inv-card-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="with_ncf" name="with_ncf" value="1">
+                    <label class="form-check-label" for="with_ncf">
+                        <strong>Facturar con RNC (Crédito Fiscal)</strong>
+                        <small class="d-block text-muted" style="font-size:.75rem;margin-top:.2rem;">
+                            Si no se marca, se emitirá como <strong>Consumidor Final (e-CF 32)</strong>
+                        </small>
+                    </label>
+                </div>
 
-            {{-- RNC del cliente --}}
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" id="customer_rnc" name="customer_rnc" 
-                       placeholder="RNC o Cédula del cliente">
-                <button type="button" class="btn btn-primary" id="btn-search-rnc">
-                    <i class="ri-search-line"></i>Buscar
-                </button>
-            </div>
+                <div id="ncf-area" class="d-none">
+                    {{-- Tipo de e-CF --}}
+                    <div class="form-floating mb-3">
+                        <select name="ncf_type" id="ncf_type" class="form-select">
+                            <option value="">Seleccione tipo</option>
+                            <option value="credito_fiscal">Crédito Fiscal (e-CF 31)</option>
+                            <option value="gubernamental">Gubernamental (e-CF 45)</option>
+                            <option value="regimen_especial">Régimen Especial (e-CF 44)</option>
+                        </select>
+                        <label>Tipo de e-CF</label>
+                    </div>
 
-            {{-- NCF asignado automáticamente --}}
-            <div id="ncf-preview-box" class="mb-3 d-none">
-                <label class="form-label small">NCF a emitir</label>
-                <div class="p-3 rounded" style="background:#f0f4ff;border:1px solid #c7d2fe;">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <code id="ncf-preview" style="font-size:1.05rem;font-weight:700;color:#405189;">—</code>
-                            <small class="d-block text-muted mt-1" id="ncf-sequence-name">—</small>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadNextNcf()">
-                            <i class="ri-refresh-line"></i>
+                    {{-- RNC del cliente --}}
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="customer_rnc" name="customer_rnc"
+                               placeholder="RNC o Cédula del cliente">
+                        <button type="button" class="btn btn-primary" id="btn-search-rnc">
+                            <i class="ri-search-line"></i>Buscar
                         </button>
                     </div>
-                    <div class="mt-2 small">
-                        <span class="text-muted">Disponibles:</span>
-                        <strong id="ncf-remaining">—</strong>
+
+                    {{-- Preview del e-NCF --}}
+                    <div id="ncf-preview-box" class="ecf-preview mb-3 d-none">
+                        <label class="form-label small mb-1">e-NCF a emitir</label>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <code id="ncf-preview">—</code>
+                                <small class="d-block text-muted mt-1" id="ncf-sequence-name">—</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadNextNcf()">
+                                <i class="ri-refresh-line"></i>
+                            </button>
+                        </div>
+                        <div class="mt-2 small">
+                            <span class="text-muted">Disponibles:</span>
+                            <strong id="ncf-remaining">—</strong>
+                        </div>
+                        <div id="ncf-alert" class="alert alert-warning mt-2 mb-0 d-none" style="font-size:.8rem;padding:.4rem .6rem;">
+                            <i class="ri-alert-line me-1"></i>
+                            <span id="ncf-alert-text"></span>
+                        </div>
                     </div>
-                    <div id="ncf-alert" class="alert alert-warning mt-2 mb-0 d-none" style="font-size:.8rem;padding:.4rem .6rem;">
-                        <i class="ri-alert-line me-1"></i>
-                        <span id="ncf-alert-text"></span>
+
+                    <div id="ncf-loading" class="text-center py-2 d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        <small class="text-muted">Consultando secuencia e-CF...</small>
                     </div>
+
+                    {{-- Razón Social --}}
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="customer_business_name"
+                               name="customer_business_name" readonly>
+                        <label>Razón Social</label>
+                    </div>
+                    <div id="rnc-status" class="mt-2"></div>
                 </div>
-                <input type="hidden" name="ncf" id="ncf" value="">
             </div>
-
-            <div id="ncf-loading" class="text-center py-2 d-none">
-                <span class="spinner-border spinner-border-sm me-2"></span>
-                <small class="text-muted">Consultando secuencia NCF...</small>
-            </div>
-
-            {{-- Razón Social (se llena con la consulta de RNC) --}}
-            <div class="form-floating">
-                <input type="text" class="form-control" id="customer_business_name" 
-                       name="customer_business_name" readonly>
-                <label>Razón Social</label>
-            </div>
-            <div id="rnc-status" class="mt-2"></div>
         </div>
-    </div>
-</div>
 
         {{-- Resumen --}}
         <div class="inv-card">
@@ -546,7 +551,7 @@
 @push('scripts')
 <script>
 // ============================================
-// OBTENER COBERTURA DE SERVICIO CON SEGURO
+// COBERTURA DE SERVICIO CON SEGURO
 // ============================================
 async function getServiceCoverage(serviceId, insuranceId) {
     try {
@@ -561,52 +566,43 @@ async function getServiceCoverage(serviceId, insuranceId) {
     }
 }
 
-// ============================================
-// ACTUALIZAR COBERTURA DE FILA
-// ============================================
 async function updateRowCoverage(tr) {
     const serviceId = parseInt(tr.querySelector('.svc-select').value);
     const insuranceId = document.getElementById('insurance_id').value;
     const covInput = tr.querySelector('.cov-input');
     const covUnitLabel = tr.querySelector('.cov-unit-label');
-    const subtotalCell = tr.querySelector('.subtotal-cell');
-    
+
     if (!insuranceId || !serviceId) {
         covInput.value = 0;
         covInput.title = 'Sin seguro';
         recalcRow(tr);
         return;
     }
-    
+
     const coverageData = await getServiceCoverage(serviceId, insuranceId);
-    
+
     if (coverageData && coverageData.has_coverage) {
         let coverageValue = coverageData.coverage_percentage;
-        
-        // Si es específica, mostrar badge
+
         if (coverageData.is_specific) {
             covInput.title = '📌 Cobertura específica del servicio';
-            // Guardar en dataset para saber que es específica
             tr.dataset.isSpecific = 'true';
         } else {
             covInput.title = '📋 Cobertura global del seguro';
             tr.dataset.isSpecific = 'false';
         }
-        
-        // Establecer el valor en el input de cobertura
+
         covInput.value = coverageValue;
-        
-        // Actualizar la etiqueta de tipo
+
         if (coverageData.coverage_percentage > 0) {
             covUnitLabel.textContent = '%';
             tr.dataset.covType = 'pct';
             tr.querySelector('.row-btn-pct')?.classList.add('active');
             tr.querySelector('.row-btn-amt')?.classList.remove('active');
         }
-        
+
         recalcRow(tr);
     } else {
-        // Sin cobertura
         covInput.value = 0;
         covInput.title = 'Sin cobertura';
         tr.dataset.isSpecific = 'false';
@@ -631,10 +627,10 @@ const SERVICES_DATA = {!! $services->map(fn($s) => [
     ])
 ]) !!};
 
-const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
-const URL_SEARCH = '{{ route("api.invoices.patients.search") }}';
-const URL_STORE  = '{{ route("api.patients.store") }}';
-const URL_DOCTORS = '{{ route("api.doctors") }}';
+const CSRF        = document.querySelector('meta[name="csrf-token"]').content;
+const URL_SEARCH  = '{{ route("api.invoices.patients.search") }}';
+const URL_STORE   = '{{ route("api.patients.store") }}';
+const URL_ECF     = '{{ route("api.ecf.next-available") }}';
 
 let rowIndex     = 0;
 let covType      = 'pct';
@@ -730,8 +726,7 @@ document.querySelectorAll('.cat-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        const catId = this.dataset.category;
-        filterServices(catId);
+        filterServices(this.dataset.category);
     });
 });
 
@@ -743,7 +738,7 @@ function filterServices(categoryId) {
         let hasVisible = false;
         let firstVisibleValue = null;
         let firstVisiblePrice = 0;
-        
+
         options.forEach(opt => {
             const serviceId = opt.value;
             const service = SERVICES_DATA.find(s => s.id == parseInt(serviceId));
@@ -758,7 +753,7 @@ function filterServices(categoryId) {
                 }
             }
         });
-        
+
         if (hasVisible) {
             const currentValue = select.value;
             const currentOption = select.querySelector(`option[value="${currentValue}"]`);
@@ -772,7 +767,7 @@ function filterServices(categoryId) {
                 recalcRow(row);
             }
         }
-        
+
         row.style.display = hasVisible ? '' : 'none';
         recalcRow(row);
     });
@@ -788,14 +783,13 @@ document.getElementById('insurance_id').addEventListener('change', async functio
     document.getElementById('coverage-controls').classList.toggle('d-none', !hasInsurance);
     ['th-cov','th-ins','th-pat'].forEach(id => document.getElementById(id).classList.toggle('d-none', !hasInsurance));
     document.querySelectorAll('.td-cov,.td-ins,.td-pat').forEach(td => td.classList.toggle('d-none', !hasInsurance));
-    
+
     if (hasInsurance) {
-        covType = 'pct'; 
+        covType = 'pct';
         setCovType('pct');
         document.getElementById('global-cov-input').value = parseFloat(opt.dataset.coverage || 0);
         applyGlobalCoverage();
-        
-        // ✅ Actualizar cobertura de todas las filas
+
         const rows = document.querySelectorAll('.svc-row');
         for (const row of rows) {
             await updateRowCoverage(row);
@@ -850,7 +844,7 @@ function buildOptions(selId) {
 
 function addSvcRow(selId, qty) {
     document.getElementById('svc-empty').style.display = 'none';
-    
+
     if (!selId) {
         const firstService = SERVICES_DATA[0];
         selId = firstService?.id || '';
@@ -881,7 +875,7 @@ function addSvcRow(selId, qty) {
             <div class="input-group input-group-sm price-group">
                 <span class="input-group-text">RD$</span>
                 <input type="number" class="form-control price-input text-end"
-                       value="${defaultPrice > 0 ? defaultPrice.toFixed(2) : '0.00'}" 
+                       value="${defaultPrice > 0 ? defaultPrice.toFixed(2) : '0.00'}"
                        min="0" step="0.01" placeholder="0.00"
                        title="Puedes modificar el precio">
             </div>
@@ -918,7 +912,6 @@ function addSvcRow(selId, qty) {
 
     const priceInp = tr.querySelector('.price-input');
 
-    // ✅ Al cambiar servicio - ACTUALIZAR PRECIO Y COBERTURA
     tr.querySelector('.svc-select').addEventListener('change', async function() {
         const sel = this;
         const selectedOpt = sel.options[sel.selectedIndex];
@@ -926,14 +919,12 @@ function addSvcRow(selId, qty) {
         priceInp.value = basePrice > 0 ? basePrice.toFixed(2) : '0.00';
         priceInp.classList.remove('modified');
         recalcRow(tr);
-        
-        // ✅ Actualizar cobertura si hay seguro seleccionado
+
         if (hasInsurance) {
             await updateRowCoverage(tr);
         }
     });
 
-    // Al editar precio
     priceInp.addEventListener('input', function() {
         const sel = tr.querySelector('.svc-select');
         const basePrice = parseFloat(sel.options[sel.selectedIndex]?.dataset.price || 0);
@@ -951,7 +942,6 @@ function addSvcRow(selId, qty) {
         recalculate();
     });
 
-    // Aplicar filtro de categoría actual
     const activeCat = document.querySelector('.cat-btn.active');
     if (activeCat && activeCat.dataset.category !== 'all') {
         filterServices(activeCat.dataset.category);
@@ -986,7 +976,6 @@ function recalcRow(tr) {
     const covVal     = parseFloat(tr.querySelector('.cov-input')?.value || 0);
     const type       = tr.dataset.covType || 'pct';
 
-    // Calcular impuestos
     const serviceId = parseInt(sel.value);
     const service = SERVICES_DATA.find(s => s.id === serviceId);
     let taxAmount = 0;
@@ -998,7 +987,7 @@ function recalcRow(tr) {
 
     let insAmt = 0, patAmt = subtotal + taxAmount;
     let isSpecific = tr.dataset.isSpecific === 'true';
-    
+
     if (hasInsurance && covVal > 0) {
         insAmt = type === 'pct'
             ? subtotal * (Math.min(covVal, 100) / 100)
@@ -1012,7 +1001,7 @@ function recalcRow(tr) {
         subtotalHTML += ' <span class="badge bg-info ms-1" style="font-size:0.6rem;">Específica</span>';
     }
     subtotalCell.innerHTML = subtotalHTML;
-    
+
     if (taxAmount > 0) {
         subtotalCell.title = `Subtotal: RD$ ${fmt(subtotal)}\nImpuestos: RD$ ${fmt(taxAmount)}\nTotal con impuestos: RD$ ${fmt(subtotal + taxAmount)}`;
     }
@@ -1034,8 +1023,7 @@ function recalculate() {
         const price     = parseFloat(priceInp?.value) > 0 ? parseFloat(priceInp.value) : basePrice;
         const qty       = parseInt(tr.querySelector('.qty-input')?.value) || 1;
         const sub       = price * qty;
-        
-        // Calcular impuestos
+
         const serviceId = parseInt(sel.value);
         const service = SERVICES_DATA.find(s => s.id === serviceId);
         let taxAmount = 0;
@@ -1044,7 +1032,7 @@ function recalculate() {
                 taxAmount += sub * (tax.rate / 100);
             });
         }
-        
+
         let ins = 0;
         if (hasInsurance) {
             const cov  = parseFloat(tr.querySelector('.cov-input')?.value || 0);
@@ -1057,7 +1045,7 @@ function recalculate() {
     });
     const totalWithTax = subtotal + totalTax;
     const total = totalWithTax - totalIns;
-    
+
     document.getElementById('disp-subtotal').textContent = 'RD$ ' + fmt(subtotal);
     document.getElementById('disp-tax').textContent = 'RD$ ' + fmt(totalTax);
     document.getElementById('disp-discount').textContent = '− RD$ ' + fmt(totalIns);
@@ -1078,22 +1066,22 @@ document.getElementById('doctor_id').addEventListener('change', function () {
     const pill   = document.getElementById('doctor-pill');
     const name   = opt.text?.trim() || '';
     const branchName = opt.dataset.branch ? (opt.dataset.branch === 'null' ? '' : opt.dataset.branch) : '';
-    
-    if (!this.value) { 
-        pill.classList.add('d-none'); 
-        return; 
+
+    if (!this.value) {
+        pill.classList.add('d-none');
+        return;
     }
-    
+
     const initials = name.split(' ').slice(0,2).map(w => w[0]?.toUpperCase() || '').join('');
     document.getElementById('doctor-pill-av').textContent = initials;
     document.getElementById('doctor-pill-name').textContent = name;
-    
+
     if (branchName && branchName !== 'null') {
         document.getElementById('doctor-pill-branch').textContent = '📍 ' + branchName;
     } else {
         document.getElementById('doctor-pill-branch').textContent = '';
     }
-    
+
     pill.classList.remove('d-none');
 });
 
@@ -1110,7 +1098,7 @@ document.getElementById('btn-save-patient').addEventListener('click', async func
     const payload = {
         first_name      : document.getElementById('m_first_name').value.trim(),
         last_name       : document.getElementById('m_last_name').value.trim(),
-        cedula : document.getElementById('m_cedula').value.trim() || null,
+        cedula          : document.getElementById('m_cedula').value.trim() || null,
         phone           : document.getElementById('m_phone').value.trim(),
         email           : document.getElementById('m_email').value.trim(),
         birth_date      : document.getElementById('m_birth_date').value,
@@ -1150,6 +1138,123 @@ document.getElementById('btn-save-patient').addEventListener('click', async func
 });
 
 // ============================================
+// e-CF — CHECKBOX + PREVIEW
+// ============================================
+document.getElementById('with_ncf').addEventListener('change', function() {
+    const area = document.getElementById('ncf-area');
+    const select = document.getElementById('ncf_type');
+
+    if (this.checked) {
+        area.classList.remove('d-none');
+        loadNextNcf();
+    } else {
+        area.classList.add('d-none');
+        select.value = '';
+        document.getElementById('customer_rnc').value = '';
+        document.getElementById('customer_business_name').value = '';
+        document.getElementById('rnc-status').innerHTML = '';
+        document.getElementById('ncf-preview-box').classList.add('d-none');
+    }
+});
+
+document.getElementById('ncf_type').addEventListener('change', function() {
+    if (this.value) {
+        loadNextNcf();
+    } else {
+        document.getElementById('ncf-preview-box').classList.add('d-none');
+    }
+});
+
+document.getElementById('branch_id').addEventListener('change', function() {
+    if (document.getElementById('with_ncf').checked && document.getElementById('ncf_type').value) {
+        loadNextNcf();
+    }
+});
+
+/**
+ * ✅ Consultar el próximo e-NCF disponible
+ */
+async function loadNextNcf() {
+    const ncfType = document.getElementById('ncf_type').value;
+    const branchId = document.getElementById('branch_id').value;
+
+    if (!ncfType) return;
+
+    const tipoEcfMap = {
+        credito_fiscal   : '31',
+        consumidor_final : '32',
+        gubernamental    : '45',
+        regimen_especial : '44'
+    };
+
+    const tipoEcf = tipoEcfMap[ncfType];
+    if (!tipoEcf) return;
+
+    document.getElementById('ncf-loading').classList.remove('d-none');
+    document.getElementById('ncf-preview-box').classList.add('d-none');
+
+    try {
+        const params = new URLSearchParams({ tipo_ecf: tipoEcf });
+        if (branchId) params.append('branch_id', branchId);
+
+        const r = await fetch(URL_ECF + '?' + params.toString(), {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+        });
+        const data = await r.json();
+
+        if (!data.success) {
+            document.getElementById('ncf-preview-box').classList.add('d-none');
+            showToast(data.message || 'No hay secuencia e-CF disponible.', 'error');
+            return;
+        }
+
+        document.getElementById('ncf-preview').textContent = data.encf;
+        document.getElementById('ncf-sequence-name').textContent = data.sequence_name;
+        document.getElementById('ncf-remaining').textContent = data.remaining;
+        document.getElementById('ncf-preview-box').classList.remove('d-none');
+
+        const alertBox = document.getElementById('ncf-alert');
+        const alertText = document.getElementById('ncf-alert-text');
+        if (data.is_low) {
+            alertBox.classList.remove('d-none');
+            alertText.textContent = `¡Atención! Solo quedan ${data.remaining} e-CF en esta secuencia.`;
+        } else {
+            alertBox.classList.add('d-none');
+        }
+
+    } catch (error) {
+        console.error('Error consultando e-CF:', error);
+        showToast('Error al consultar la secuencia e-CF.', 'error');
+    } finally {
+        document.getElementById('ncf-loading').classList.add('d-none');
+    }
+}
+
+// ── Búsqueda de RNC ─────────────────────────────
+document.getElementById('btn-search-rnc').addEventListener('click', async function () {
+    const rnc = document.getElementById('customer_rnc').value.trim();
+    if (!rnc) {
+        showToast('Ingrese un RNC.', 'error');
+        return;
+    }
+    const status = document.getElementById('rnc-status');
+    status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Consultando...</span>';
+    try {
+        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
+        const data = await response.json();
+        if (data.error) {
+            status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
+            document.getElementById('customer_business_name').value = '';
+            return;
+        }
+        document.getElementById('customer_business_name').value = data.nombre_razon_social ?? '';
+        status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
+    } catch (e) {
+        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
+    }
+});
+
+// ============================================
 // SUBMIT
 // ============================================
 document.getElementById('invoice-form').addEventListener('submit', function (e) {
@@ -1169,7 +1274,6 @@ document.getElementById('invoice-form').addEventListener('submit', function (e) 
         e.preventDefault(); showToast('Selecciona un médico asignado.', 'error'); return;
     }
 
-    // Inyectar custom_price + cov_value + cov_type
     document.querySelectorAll('.svc-row').forEach(tr => {
         const sel   = tr.querySelector('.svc-select');
         const match = sel?.name?.match(/services\[(\d+)\]/);
@@ -1201,46 +1305,6 @@ document.getElementById('invoice-form').addEventListener('submit', function (e) 
 });
 
 // ============================================
-// NCF
-// ============================================
-document.getElementById('with_ncf').addEventListener('change', function() {
-    document.getElementById('ncf-area').classList.toggle('d-none', !this.checked);
-});
-
-document.getElementById('btn-search-rnc').addEventListener('click', async function () {
-    const rnc = document.getElementById('customer_rnc').value.trim();
-    if (!rnc) {
-        showToast('Ingrese un RNC.', 'error');
-        return;
-    }
-    const status = document.getElementById('rnc-status');
-    status.innerHTML = '<span class="text-muted">Consultando...</span>';
-    try {
-        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
-        const data = await response.json();
-        if (data.error) {
-            status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
-            document.getElementById('customer_business_name').value = '';
-            return;
-        }
-        document.getElementById('customer_business_name').value = data.nombre_razon_social ?? '';
-        status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
-    } catch (e) {
-        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
-    }
-});
-
-document.getElementById('ncf_type').addEventListener('change', function(){
-    const prefixes = {
-        consumidor_final : 'B02',
-        credito_fiscal   : 'B01',
-        gubernamental    : 'B15',
-        regimen_especial : 'B14'
-    };
-    document.getElementById('ncf').value = prefixes[this.value] ?? '';
-});
-
-// ============================================
 // TOAST
 // ============================================
 function showToast(msg, type) {
@@ -1259,113 +1323,6 @@ document.addEventListener('DOMContentLoaded', function () {
     addSvcRow();
     const sel = document.getElementById('doctor_id');
     if (sel.value) sel.dispatchEvent(new Event('change'));
-});
-
-// ============================================
-// NCF
-// ============================================
-document.getElementById('with_ncf').addEventListener('change', function() {
-    document.getElementById('ncf-area').classList.toggle('d-none', !this.checked);
-    if (this.checked) {
-        loadNextNcf(); // Cargar automáticamente al activar
-    }
-});
-
-document.getElementById('ncf_type').addEventListener('change', function() {
-    if (this.value) {
-        loadNextNcf();
-    } else {
-        document.getElementById('ncf-preview-box').classList.add('d-none');
-    }
-});
-
-document.getElementById('branch_id').addEventListener('change', function() {
-    // Reconsultar NCF cuando cambia la sucursal
-    if (document.getElementById('with_ncf').checked && document.getElementById('ncf_type').value) {
-        loadNextNcf();
-    }
-});
-
-/**
- * Consultar el próximo NCF disponible
- */
-async function loadNextNcf() {
-    const ncfType = document.getElementById('ncf_type').value;
-    const branchId = document.getElementById('branch_id').value;
-
-    if (!ncfType) {
-        return;
-    }
-
-    // Mostrar loading
-    document.getElementById('ncf-loading').classList.remove('d-none');
-    document.getElementById('ncf-preview-box').classList.add('d-none');
-
-    try {
-        const params = new URLSearchParams({ ncf_type: ncfType });
-        if (branchId) params.append('branch_id', branchId);
-
-        const r = await fetch('/api/ncf/next-available?' + params.toString(), {
-            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
-        });
-        const data = await r.json();
-
-        if (!data.success) {
-            // No hay NCF disponible
-            document.getElementById('ncf-preview-box').classList.add('d-none');
-            showToast(data.message || 'No hay NCF disponible.', 'error');
-            // Marcar visualmente
-            document.getElementById('ncf').value = '';
-            return;
-        }
-
-        // Mostrar preview
-        document.getElementById('ncf-preview').textContent = data.ncf;
-        document.getElementById('ncf-sequence-name').textContent = data.sequence_name;
-        document.getElementById('ncf-remaining').textContent = data.remaining;
-        document.getElementById('ncf').value = data.ncf;
-        document.getElementById('ncf-preview-box').classList.remove('d-none');
-
-        // Alerta si está bajo
-        const alertBox = document.getElementById('ncf-alert');
-        const alertText = document.getElementById('ncf-alert-text');
-        if (data.is_low) {
-            alertBox.classList.remove('d-none');
-            alertText.textContent = `¡Atención! Solo quedan ${data.remaining} NCF en esta secuencia.`;
-        } else {
-            alertBox.classList.add('d-none');
-        }
-
-    } catch (error) {
-        console.error('Error consultando NCF:', error);
-        showToast('Error al consultar la secuencia NCF.', 'error');
-    } finally {
-        document.getElementById('ncf-loading').classList.add('d-none');
-    }
-}
-
-// ── Búsqueda de RNC ─────────────────────────────
-document.getElementById('btn-search-rnc').addEventListener('click', async function () {
-    const rnc = document.getElementById('customer_rnc').value.trim();
-    if (!rnc) {
-        showToast('Ingrese un RNC.', 'error');
-        return;
-    }
-    const status = document.getElementById('rnc-status');
-    status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Consultando...</span>';
-    try {
-        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
-        const data = await response.json();
-        if (data.error) {
-            status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
-            document.getElementById('customer_business_name').value = '';
-            return;
-        }
-        document.getElementById('customer_business_name').value = data.nombre_razon_social ?? '';
-        status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
-    } catch (e) {
-        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
-    }
 });
 </script>
 @endpush

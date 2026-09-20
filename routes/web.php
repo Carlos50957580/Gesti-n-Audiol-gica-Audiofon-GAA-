@@ -384,6 +384,15 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
+Route::post('invoices/{invoice}/enviar-ef2', [InvoiceController::class, 'enviarEf2'])
+    ->name('invoices.enviar-ef2');
+
+    Route::get('/api/ecf/next-available', [App\Http\Controllers\EcfSequenceController::class, 'nextAvailable'])
+    ->name('api.ecf.next-available');
+
+
+
+
 
 
 require __DIR__.'/auth.php';

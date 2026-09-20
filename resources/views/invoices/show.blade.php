@@ -69,6 +69,17 @@
 .status-pill.pagada { background:rgba(10,179,156,.2); color:#7fffea; border:1px solid rgba(10,179,156,.3); }
 .status-pill.cancelada { background:rgba(240,101,72,.2); color:#ffb3a3; border:1px solid rgba(240,101,72,.3); }
 
+/* DGII pill */
+.dgii-pill {
+    display:inline-flex; align-items:center; gap:.4rem;
+    border-radius:2rem; padding:.3rem .9rem; font-size:.78rem; font-weight:700;
+    position:relative; z-index:1; margin-left:.4rem;
+}
+.dgii-pill.aceptado { background:rgba(10,179,156,.25); color:#7fffea; border:1px solid rgba(10,179,156,.4); }
+.dgii-pill.enviado { background:rgba(112,102,224,.25); color:#c9c4ff; border:1px solid rgba(112,102,224,.4); }
+.dgii-pill.rechazado, .dgii-pill.error { background:rgba(240,101,72,.25); color:#ffb3a3; border:1px solid rgba(240,101,72,.4); }
+.dgii-pill.pendiente { background:rgba(247,184,77,.25); color:#ffd989; border:1px solid rgba(247,184,77,.4); }
+
 /* ── Body ── */
 .inv-body { padding:1.75rem 2.25rem; }
 
@@ -80,6 +91,44 @@
 .info-box-lbl { font-size:.67rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:.35rem; }
 .info-box-val { font-size:.9rem; font-weight:700; color:var(--ink); }
 .info-box-sub { font-size:.75rem; color:var(--muted); margin-top:.12rem; }
+
+/* ── e-CF block ── */
+.ecf-block {
+    background:linear-gradient(135deg, rgba(64,81,137,.04), rgba(10,179,156,.04));
+    border:1px dashed rgba(64,81,137,.25);
+    border-radius:.65rem; padding:1rem 1.15rem; margin-bottom:1.5rem;
+}
+.ecf-block-title {
+    font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--rp); margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;
+}
+.ecf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.85rem; }
+@media(max-width:580px) { .ecf-grid { grid-template-columns:1fr; } }
+.ecf-item-lbl { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.2rem; }
+.ecf-item-val { font-size:.85rem; font-weight:700; color:var(--ink); font-family:monospace; word-break:break-all; }
+.ecf-qr {
+    display:flex; align-items:center; gap:1rem;
+    padding:.85rem 1rem; background:#fff; border-radius:.5rem;
+    border:1px solid var(--border); margin-top:.85rem;
+}
+.ecf-qr-img {
+    width:90px; height:90px; border-radius:.4rem; background:#fff;
+    border:1px solid var(--border); padding:.25rem; flex-shrink:0;
+}
+.ecf-qr-info { font-size:.78rem; color:var(--muted); line-height:1.5; }
+.ecf-qr-info strong { color:var(--ink); }
+
+/* Estado pill en bloque e-CF */
+.ecf-status {
+    display:inline-flex; align-items:center; gap:.35rem;
+    padding:.22rem .7rem; border-radius:2rem; font-size:.72rem; font-weight:800;
+    text-transform:uppercase; letter-spacing:.04em;
+}
+.ecf-status.aceptado { background:rgba(10,179,156,.15); color:#067a6b; }
+.ecf-status.enviado { background:rgba(112,102,224,.15); color:#4f44b8; }
+.ecf-status.rechazado, .ecf-status.error { background:rgba(240,101,72,.15); color:#c0392b; }
+.ecf-status.pendiente, .ecf-status.procesando { background:rgba(247,184,77,.15); color:#a4730a; }
+.ecf-status.sin_enviar { background:#f0f2f7; color:#6b7a99; }
 
 /* ── Divider ── */
 .inv-divider { border:none; border-top:1px dashed var(--border); margin:1.25rem 0; }
@@ -108,18 +157,22 @@
 
 /* ── Print styles ── */
 @media print {
-    .action-bar, .page-title-box, nav, .navbar, .sidebar, .breadcrumb { display:none!important; }
+    .action-bar, .page-title-box, nav, .navbar, .sidebar, .breadcrumb,
+    .no-print, .ecf-actions { display:none!important; }
     body, .page-content, .container-fluid { padding:0!important; margin:0!important; background:#fff!important; }
     .invoice-paper { box-shadow:none!important; border-radius:0!important; max-width:100%!important; }
     .inv-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .info-box, .totals-box, .items-table th { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .info-box, .totals-box, .items-table th, .ecf-block { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .collapse:not(.show) { display:block!important; }
 }
 </style>
 
 {{-- ── Action bar ── --}}
 <div class="action-bar">
     <div>
-        <h4 class="mb-0" style="font-weight:800;">Factura</h4>
+        <h4 class="mb-0" style="font-weight:800;">
+            Factura {{ $invoice->invoice_number }}
+        </h4>
         <ol class="breadcrumb mb-0 mt-1" style="font-size:.78rem;">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
             <li class="breadcrumb-item"><a href="{{ route('invoices.index') }}">Facturas</a></li>
@@ -132,16 +185,31 @@
            style="border-radius:2rem;font-size:.82rem;">
             <i class="ri-arrow-left-line"></i>Volver
         </a>
-        
-            <button onclick="window.print()" class="btn-print">
-                <i class="ri-printer-line"></i>Imprimir
-            </button>
-            <button type="button" class="btn-print-thermal" onclick="printThermal()">
-                <i class="ri-receipt-line"></i>Ticket POS
-            </button>
-        
+
+        <button onclick="window.print()" class="btn-print">
+            <i class="ri-printer-line"></i>Imprimir
+        </button>
+        <button type="button" class="btn-print-thermal" onclick="printThermal()">
+            <i class="ri-receipt-line"></i>Ticket POS
+        </button>
+
+        {{-- ✅ Botón Enviar a DGII --}}
+        @if($invoice->ncf_type && $invoice->status !== 'cancelada')
+            @if(!$invoice->enviada_dgii || ($invoice->estado_dgii && !in_array($invoice->estado_dgii, ['aceptado'])))
+                <form action="{{ route('invoices.enviar-ef2', $invoice) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center gap-1"
+                            style="border-radius:2rem;font-size:.82rem;background:linear-gradient(135deg,#7066e0,#405189);border:none;"
+                            onclick="return confirm('¿Enviar esta factura a la DGII?')">
+                        <i class="ri-send-plane-line"></i>
+                        {{ $invoice->enviada_dgii ? 'Reenviar a DGII' : 'Enviar a DGII' }}
+                    </button>
+                </form>
+            @endif
+        @endif
+
         @if($invoice->status === 'pendiente')
-            <a href="{{ route('invoices.cancel', $invoice) }}" 
+            <a href="{{ route('invoices.cancel', $invoice) }}"
                class="btn btn-danger btn-sm d-flex align-items-center gap-1"
                style="border-radius:2rem;font-size:.82rem;"
                onclick="return confirm('¿Estás seguro de cancelar esta factura?')">
@@ -150,6 +218,26 @@
         @endif
     </div>
 </div>
+
+{{-- Alertas de sesión --}}
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="ri-check-double-line me-1"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="ri-error-warning-line me-1"></i>{{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if(session('info'))
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="ri-information-line me-1"></i>{{ session('info') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
 {{-- ══════════════════════
      INVOICE PAPER
@@ -162,7 +250,7 @@
             <div>
                 <div class="inv-brand">
                     @if($company['logo'])
-                        <img src="{{ asset('storage/' . $company['logo']) }}" 
+                        <img src="{{ asset('storage/' . $company['logo']) }}"
                              alt="{{ $company['name'] }}" height="40" style="filter:brightness(0) invert(1);margin-right:10px;">
                     @else
                         <i class="ri-heart-pulse-line me-2" style="opacity:.8;"></i>
@@ -179,9 +267,33 @@
                         | {{ $company['email'] }}
                     @endif
                 </div>
-                <div class="status-pill {{ $invoice->status }} mt-2">
-                    <i class="ri-checkbox-circle-line"></i> 
-                    {{ ucfirst($invoice->status) }}
+                <div class="mt-2">
+                    <span class="status-pill {{ $invoice->status }}">
+                        <i class="ri-checkbox-circle-line"></i>
+                        {{ ucfirst($invoice->status) }}
+                    </span>
+
+                    {{-- ✅ Estado DGII en el header --}}
+                    @if($invoice->ncf_type)
+                        @php
+                            $dgiiClass = $invoice->enviada_dgii
+                                ? ($invoice->estado_dgii ?? 'pendiente')
+                                : 'sin_enviar';
+                            $dgiiLabel = $invoice->enviada_dgii
+                                ? ucfirst(str_replace('_', ' ', $invoice->estado_dgii ?? 'enviado'))
+                                : 'Sin enviar a DGII';
+                            $dgiiIcon = match($dgiiClass) {
+                                'aceptado' => 'ri-shield-check-line',
+                                'enviado' => 'ri-send-plane-line',
+                                'rechazado', 'error' => 'ri-error-warning-line',
+                                default => 'ri-time-line',
+                            };
+                        @endphp
+                        <span class="dgii-pill {{ $dgiiClass }}">
+                            <i class="{{ $dgiiIcon }}"></i>
+                            {{ $dgiiLabel }}
+                        </span>
+                    @endif
                 </div>
             </div>
             <div class="text-end">
@@ -192,7 +304,11 @@
                 <div style="font-size:.78rem;opacity:.75;margin-top:.3rem;position:relative;z-index:1;">
                     {{ $invoice->created_at->format('d/m/Y — g:i A') }}
                 </div>
-                @if($invoice->ncf)
+                @if($invoice->encf)
+                    <div style="font-size:.8rem;opacity:.9;margin-top:.15rem;position:relative;z-index:1;font-family:monospace;font-weight:700;">
+                        e-NCF: {{ $invoice->encf }}
+                    </div>
+                @elseif($invoice->ncf)
                     <div style="font-size:.75rem;opacity:.8;margin-top:.1rem;position:relative;z-index:1;">
                         NCF: {{ $invoice->ncf }}
                     </div>
@@ -247,6 +363,121 @@
             </div>
             @endif
         </div>
+
+        {{-- ══════════════════════════════════════════════ --}}
+        {{-- ✅ BLOQUE COMPROBANTE ELECTRÓNICO (e-CF)       --}}
+        {{-- ══════════════════════════════════════════════ --}}
+        @if($invoice->ncf_type)
+        <div class="ecf-block">
+            <div class="ecf-block-title">
+                <i class="ri-shield-check-line"></i>
+                Comprobante Electrónico (e-CF)
+                @php
+                    $ecfStatusClass = $invoice->enviada_dgii
+                        ? ($invoice->estado_dgii ?? 'pendiente')
+                        : 'sin_enviar';
+                    $ecfStatusLabel = $invoice->enviada_dgii
+                        ? ($invoice->estado_dgii ?? 'enviado')
+                        : 'sin enviar';
+                @endphp
+                <span class="ecf-status {{ $ecfStatusClass }} ms-auto">
+                    <i class="ri-radio-button-line"></i>{{ $ecfStatusLabel }}
+                </span>
+            </div>
+
+            <div class="ecf-grid">
+                <div>
+                    <div class="ecf-item-lbl">Tipo de e-CF</div>
+                    <div class="ecf-item-val">
+                        @switch($invoice->ncf_type)
+                            @case('credito_fiscal') e-CF 31 — Crédito Fiscal @break
+                            @case('consumidor_final') e-CF 32 — Consumidor Final @break
+                            @case('gubernamental') e-CF 45 — Gubernamental @break
+                            @case('regimen_especial') e-CF 44 — Régimen Especial @break
+                            @default {{ $invoice->ncf_type }}
+                        @endswitch
+                    </div>
+                </div>
+
+                <div>
+                    <div class="ecf-item-lbl">e-NCF</div>
+                    <div class="ecf-item-val">{{ $invoice->encf ?? '—' }}</div>
+                </div>
+
+                @if($invoice->track_id)
+                <div>
+                    <div class="ecf-item-lbl">Track ID (DGII)</div>
+                    <div class="ecf-item-val" style="font-size:.78rem;">{{ $invoice->track_id }}</div>
+                </div>
+                @endif
+
+                @if($invoice->enviada_dgii_at)
+                <div>
+                    <div class="ecf-item-lbl">Enviado a DGII</div>
+                    <div class="ecf-item-val" style="font-family:sans-serif;font-size:.82rem;">
+                        {{ $invoice->enviada_dgii_at->format('d/m/Y H:i') }}
+                    </div>
+                </div>
+                @endif
+
+                @if($invoice->customer_rnc)
+                <div>
+                    <div class="ecf-item-lbl">RNC / Cédula del cliente</div>
+                    <div class="ecf-item-val">{{ $invoice->customer_rnc }}</div>
+                </div>
+                @endif
+
+                @if($invoice->customer_business_name)
+                <div>
+                    <div class="ecf-item-lbl">Razón Social</div>
+                    <div class="ecf-item-val" style="font-family:sans-serif;">{{ $invoice->customer_business_name }}</div>
+                </div>
+                @endif
+            </div>
+
+            {{-- QR + Links --}}
+            @if($invoice->qr_link || $invoice->pdf_cloud_url)
+            <div class="ecf-qr">
+                @if($invoice->qr_link)
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ urlencode($invoice->qr_link) }}"
+                         alt="QR DGII" class="ecf-qr-img">
+                @endif
+                <div class="ecf-qr-info">
+                    @if($invoice->qr_link)
+                        <div style="margin-bottom:.35rem;">
+                            <strong><i class="ri-qr-code-line me-1"></i>Consulta en DGII:</strong>
+                        </div>
+                        <div style="word-break:break-all;font-size:.72rem;">
+                            <a href="{{ $invoice->qr_link }}" target="_blank" style="color:var(--rp);">
+                                {{ $invoice->qr_link }}
+                            </a>
+                        </div>
+                    @endif
+                    @if($invoice->pdf_cloud_url)
+                        <div style="margin-top:.5rem;">
+                            <a href="{{ $invoice->pdf_cloud_url }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary" style="border-radius:2rem;font-size:.75rem;">
+                                <i class="ri-file-pdf-line me-1"></i>Ver PDF en la nube
+                            </a>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            {{-- Si tiene error, mostrar --}}
+            @if($invoice->ecfDocuments->where('estado', 'error')->count() > 0)
+                @php $lastError = $invoice->ecfDocuments->where('estado', 'error')->sortByDesc('created_at')->first(); @endphp
+                <div class="alert alert-danger mt-3 mb-0" style="font-size:.8rem;border-radius:.5rem;">
+                    <strong><i class="ri-error-warning-line me-1"></i>Último error:</strong>
+                    {{ $lastError->error_message ?? 'Sin detalles' }}
+                    @if($lastError->error_code)
+                        <span class="badge bg-danger ms-2">Código: {{ $lastError->error_code }}</span>
+                    @endif
+                </div>
+            @endif
+        </div>
+        @endif
 
         <hr class="inv-divider">
 
@@ -339,10 +570,54 @@
         @if($invoice->customer_business_name)
             <br><small>Cliente: {{ $invoice->customer_business_name }} (RNC: {{ $invoice->customer_rnc }})</small>
         @endif
+        @if($invoice->encf)
+            <br><small><strong>e-NCF:</strong> {{ $invoice->encf }} · <strong>Track ID:</strong> {{ $invoice->track_id }}</small>
+        @endif
     </div>
 </div>
 
-<div style="height:2rem;"></div>
+{{-- ══════════════════════════════════════════════ --}}
+{{-- ✅ HISTORIAL DE ENVÍOS A DGII (ecf_documents) --}}
+{{-- ══════════════════════════════════════════════ --}}
+@if($invoice->ecfDocuments->count() > 0)
+<div class="invoice-paper mt-4" style="max-width:780px;">
+    <div class="inv-body">
+        <p style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.65rem;">
+            <i class="ri-history-line me-1"></i>Historial de envíos a DGII
+        </p>
+        <div class="table-responsive">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;">Fecha</th>
+                        <th style="text-align:left;">Estado</th>
+                        <th style="text-align:left;">e-NCF</th>
+                        <th style="text-align:left;">Track ID</th>
+                        <th style="text-align:left;">Usuario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($invoice->ecfDocuments->sortByDesc('created_at') as $doc)
+                    <tr>
+                        <td style="font-size:.78rem;">{{ $doc->created_at->format('d/m/Y H:i') }}</td>
+                        <td>
+                            <span class="ecf-status {{ $doc->estado ?? 'sin_enviar' }}">
+                                {{ $doc->estado ?? 'pendiente' }}
+                            </span>
+                        </td>
+                        <td style="font-family:monospace;font-size:.78rem;">{{ $doc->encf ?? '—' }}</td>
+                        <td style="font-family:monospace;font-size:.72rem;word-break:break-all;">
+                            {{ $doc->track_id ? \Illuminate\Support\Str::limit($doc->track_id, 30) : '—' }}
+                        </td>
+                        <td style="font-size:.78rem;">{{ $doc->user->name ?? '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif<div style="height:2rem;"></div>
 </div>
 </div>
 
@@ -357,6 +632,12 @@ function printThermal() {
     // Datos de la empresa desde PHP
     const company = @json($company);
     const invoice = @json($invoice);
+    const qrLink  = @json($invoice->qr_link);
+
+    // Generar URL del QR usando api.qrserver.com
+    const qrImgUrl = qrLink
+        ? 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qrLink)
+        : null;
 
     doc.open();
     doc.write(`<!DOCTYPE html>
@@ -422,6 +703,20 @@ function printThermal() {
     margin-bottom: 4px;
   }
 
+  .ecf-box {
+    border: 2px solid #000;
+    padding: 6px;
+    margin: 6px 0;
+    text-align: center;
+  }
+
+  .qr-img {
+    width: 130px;
+    height: 130px;
+    margin: 4px auto;
+    display: block;
+  }
+
   @media print {
     @page { margin: 0; }
     body  { padding: 4px 6px; }
@@ -433,7 +728,7 @@ function printThermal() {
 {{-- Header con datos de la empresa --}}
 <div class="center">
     @if($company['logo'])
-        <img src="{{ public_path('storage/' . $company['logo']) }}" 
+        <img src="{{ public_path('storage/' . $company['logo']) }}"
              alt="{{ $company['name'] }}" class="company-logo">
     @endif
     <div class="bold big">{{ strtoupper($company['name']) }}</div>
@@ -446,6 +741,33 @@ function printThermal() {
 </div>
 
 <div class="sep2"></div>
+
+{{-- ✅ Bloque e-CF destacado (si existe) --}}
+@if($invoice->encf)
+<div class="ecf-box">
+    <div class="bold" style="font-size:13px;">COMPROBANTE ELECTRÓNICO</div>
+    <div style="font-size:12px;margin-top:2px;">
+        @switch($invoice->ncf_type)
+            @case('credito_fiscal') e-CF 31 — Crédito Fiscal @break
+            @case('consumidor_final') e-CF 32 — Consumidor Final @break
+            @case('gubernamental') e-CF 45 — Gubernamental @break
+            @case('regimen_especial') e-CF 44 — Régimen Especial @break
+        @endswitch
+    </div>
+    <div class="bold" style="font-size:15px;font-family:monospace;margin-top:3px;">
+        {{ $invoice->encf }}
+    </div>
+    @if($invoice->track_id)
+    <div class="small" style="margin-top:3px;word-break:break-all;">
+        Track ID: {{ $invoice->track_id }}
+    </div>
+    @endif
+   @if($invoice->qr_link)
+<img src="${qrImgUrl}" alt="QR DGII" class="qr-img">
+<div class="small">Escanee el código QR</div>
+@endif
+</div>
+@endif
 
 <table>
   <tr>
@@ -460,7 +782,7 @@ function printThermal() {
     <td class="lbl">Estado</td>
     <td class="td-r"><span class="badge-status {{ $invoice->status }}">{{ strtoupper($invoice->status) }}</span></td>
   </tr>
-  @if($invoice->ncf)
+  @if(!$invoice->encf && $invoice->ncf)
   <tr>
     <td class="lbl">NCF</td>
     <td class="td-r">{{ $invoice->ncf }}</td>
@@ -496,6 +818,17 @@ function printThermal() {
 <div class="small">Cobertura: {{ $invoice->insurance->coverage_percentage }}%</div>
 @if($invoice->authorization_number)
 <div class="small">Autorización: {{ $invoice->authorization_number }}</div>
+@endif
+@endif
+
+@if($invoice->customer_business_name)
+<div class="sep"></div>
+<div class="lbl">CLIENTE</div>
+<div class="bold" style="font-size:14px;margin-top:2px;">
+    {{ strtoupper($invoice->customer_business_name) }}
+</div>
+@if($invoice->customer_rnc)
+<div class="small">RNC: {{ $invoice->customer_rnc }}</div>
 @endif
 @endif
 

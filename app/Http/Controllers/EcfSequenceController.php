@@ -265,4 +265,55 @@ class EcfSequenceController extends Controller
 
         return redirect()->back()->with('success', "Secuencia {$mensaje} correctamente.");
     }
+
+        /**
+     * ✅ NUEVO: Obtener el próximo e-NCF disponible para servicios
+     */
+    public function nextAvailable(Request $request)
+    {
+        $request->validate([
+            'tipo_ecf' => 'required|in:31,32,44,45',
+            'branch_id' => 'nullable|exists:branches,id',
+        ]);
+
+        $tipoEcf = $request->tipo_ecf;
+        $branchId = $request->branch_id;
+
+        $secuencia = EcfSequence::where('tipo_ecf', $tipoEcf)
+            ->where('estado', true)
+            ->whereColumn('secuencia_actual', '<', 'hasta')
+            ->where(function ($q) {
+                $q->whereNull('fecha_vencimiento')
+                  ->orWhere('fecha_vencimiento', '>=', now()->toDateString());
+            })
+            ->when($branchId, function ($q) use ($branchId) {
+                $q->where(function ($sq) use ($branchId) {
+                    $sq->where('branch_id', $branchId)
+                       ->orWhereNull('branch_id');
+                });
+            })
+            ->orderByRaw('CASE WHEN branch_id = ? THEN 0 ELSE 1 END', [$branchId ?? 0])
+            ->orderBy('id')
+            ->first();
+
+        if (!$secuencia) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay secuencias e-CF disponibles para este tipo de comprobante.',
+            ]);
+        }
+
+        $remaining = $secuencia->hasta - $secuencia->secuencia_actual;
+        $isLow = $remaining <= 50;
+
+        return response()->json([
+            'success' => true,
+            'encf' => $secuencia->siguiente_encf,
+            'prefijo' => $secuencia->prefijo,
+            'sequence_name' => "Secuencia e-CF {$tipoEcf} - Prefijo {$secuencia->prefijo}",
+            'remaining' => $remaining,
+            'is_low' => $isLow,
+            'tipo_ecf' => $tipoEcf,
+        ]);
+    }
 }

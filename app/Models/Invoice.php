@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Invoice extends Model
 {
@@ -27,7 +28,16 @@ class Invoice extends Model
         'ncf_sequence_id',
         'customer_rnc',
         'customer_business_name',
-        'tax_details'
+        'tax_details',
+        // ── NUEVOS CAMPOS E-CF ──────────────────────
+        'encf',
+        'track_id',
+        'estado_dgii',
+        'qr_link',
+        'pdf_cloud_url',
+        'ecf_sequence_id',
+        'enviada_dgii',
+        'enviada_dgii_at',
     ];
 
     protected $casts = [
@@ -37,17 +47,19 @@ class Invoice extends Model
         'insurance_discount' => 'decimal:2',
         'total' => 'decimal:2',
         'with_ncf' => 'boolean',
-        'tax_details' => 'array'
+        'tax_details' => 'array',
+        // ── NUEVOS CASTS ────────────────────────────
+        'enviada_dgii' => 'boolean',
+        'enviada_dgii_at' => 'datetime',
     ];
 
     // ✅ Accessor para número de factura (usado en recibos)
-    // Este es el que se usa en las vistas
     public function getInvoiceNumberAttribute(): string
     {
         return 'FAC-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
     }
 
-    // Relaciones
+    // ── Relaciones ────────────────────────────────────────────────────────────
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
@@ -88,7 +100,36 @@ class Invoice extends Model
         return $this->hasOne(ClinicalRecord::class);
     }
 
-    // ✅ Scopes para estados
+    public function ncfSequence()
+    {
+        return $this->belongsTo(NcfSequence::class, 'ncf_sequence_id');
+    }
+
+    // app/Models/Invoice.php
+public function receipt()
+{
+    return $this->hasOne(Receipt::class)->latestOfMany();
+}
+
+    // ✅ NUEVA: relación con la secuencia e-CF usada
+    public function ecfSequence(): BelongsTo
+    {
+        return $this->belongsTo(EcfSequence::class, 'ecf_sequence_id');
+    }
+
+    // ✅ NUEVA: documentos electrónicos (morphMany)
+    public function ecfDocuments(): MorphMany
+    {
+        return $this->morphMany(EcfDocument::class, 'documentable');
+    }
+
+    // ✅ NUEVA: honorarios generados por esta factura
+    public function doctorFees(): HasMany
+    {
+        return $this->hasMany(DoctorFee::class);
+    }
+
+    // ── Scopes ────────────────────────────────────────────────────────────────
     public function scopePending($query)
     {
         return $query->where('status', 'pendiente');
@@ -104,51 +145,38 @@ class Invoice extends Model
         return $query->where('status', 'cancelada');
     }
 
-    // ============================================
-    // MÉTODOS DE UTILIDAD
-    // ============================================
-    
-    /**
-     * Verifica si la factura requiere historia clínica
-     */
+    // ── Métodos de utilidad ───────────────────────────────────────────────────
+
     public function requiresClinicalRecord()
     {
-        // Verificar si algún servicio de la factura requiere historia clínica
         foreach ($this->items as $item) {
             $service = $item->service;
             if ($service) {
-                // Verificar directamente en el servicio
-                if ($service->requires_clinical_record) {
-                    return true;
-                }
-                // Verificar en la categoría del servicio
-                if ($service->category && $service->category->requires_clinical_record) {
-                    return true;
-                }
+                if ($service->requires_clinical_record) return true;
+                if ($service->category && $service->category->requires_clinical_record) return true;
             }
         }
         return false;
     }
 
-    /**
-     * Verifica si la factura ya tiene una historia clínica asociada
-     */
     public function hasClinicalRecord()
     {
         return $this->clinicalRecord()->exists();
     }
 
-    /**
-     * Obtiene el total formateado con moneda
-     */
     public function getFormattedTotalAttribute()
     {
         $currency = \App\Models\Setting::get('company_currency', 'DOP');
         return $currency . ' ' . number_format($this->total, 2, ',', '.');
     }
 
-        public function ncfSequence()
+    /**
+     * ✅ NUEVO: ¿Puede enviarse a la DGII?
+     */
+    public function puedeEnviarseADgii(): bool
     {
-        return $this->belongsTo(NcfSequence::class, 'ncf_sequence_id');
+        return $this->status !== 'cancelada'
+            && $this->ncf_type !== null
+            && !($this->enviada_dgii && $this->estado_dgii === 'aceptado');
     }
 }
