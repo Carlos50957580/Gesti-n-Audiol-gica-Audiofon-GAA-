@@ -193,20 +193,7 @@
             <i class="ri-receipt-line"></i>Ticket POS
         </button>
 
-        {{-- ✅ Botón Enviar a DGII --}}
-        @if($invoice->ncf_type && $invoice->status !== 'cancelada')
-            @if(!$invoice->enviada_dgii || ($invoice->estado_dgii && !in_array($invoice->estado_dgii, ['aceptado'])))
-                <form action="{{ route('invoices.enviar-ef2', $invoice) }}" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center gap-1"
-                            style="border-radius:2rem;font-size:.82rem;background:linear-gradient(135deg,#7066e0,#405189);border:none;"
-                            onclick="return confirm('¿Enviar esta factura a la DGII?')">
-                        <i class="ri-send-plane-line"></i>
-                        {{ $invoice->enviada_dgii ? 'Reenviar a DGII' : 'Enviar a DGII' }}
-                    </button>
-                </form>
-            @endif
-        @endif
+      
 
         @if($invoice->status === 'pendiente')
             <a href="{{ route('invoices.cancel', $invoice) }}"

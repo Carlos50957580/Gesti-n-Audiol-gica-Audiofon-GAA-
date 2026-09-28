@@ -120,7 +120,7 @@ protected InvoiceService $invoiceService;
         'insurance_id' => 'nullable|exists:insurances,id',
         'authorization_number' => 'nullable|string|max:255',
         'with_ncf' => 'nullable|boolean',
-        'ncf_type' => 'nullable|required_if:with_ncf,1|in:consumidor_final,credito_fiscal,gubernamental,regimen_especial',
+        // ✅ ncf_type ya NO se valida desde el request
         'customer_rnc' => 'nullable|string|max:255',
         'customer_business_name' => 'nullable|string|max:255',
         'services' => 'required|array|min:1',
@@ -130,6 +130,19 @@ protected InvoiceService $invoiceService;
         'services.*.cov_value' => 'nullable|numeric|min:0',
         'services.*.cov_type' => 'nullable|in:pct,amt',
     ]);
+
+    // ✅ Calcular ncf_type SIEMPRE en el backend
+    if (!empty($validated['with_ncf'])) {
+        $validated['ncf_type'] = 'credito_fiscal';
+        if (empty($validated['customer_rnc'])) {
+            return back()->withErrors([
+                'customer_rnc' => 'El RNC es obligatorio para emitir Crédito Fiscal.'
+            ])->withInput();
+        }
+    } else {
+        $validated['with_ncf'] = true;
+        $validated['ncf_type'] = 'consumidor_final';
+    }
 
     if (auth()->user()->role->name === 'recepcionista') {
         if ($request->branch_id != auth()->user()->branch_id) {

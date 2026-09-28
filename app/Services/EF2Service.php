@@ -428,74 +428,104 @@ class EF2Service
     }
 
         protected function construirTotalesServicio(\App\Models\Invoice $invoice): array
-    {
-        // ✅ e-CF al paciente por el monto que PAGA EL PACIENTE (sin seguro)
-        $montoTotalPaciente = $invoice->total;
+{
+    // ✅ Clasificar ítems por su indicador de facturación
+    $montoGravadoI1 = 0;   // Ítems gravados al 18%
+    $montoExento = 0;      // Ítems exentos (sin ITBIS)
+    $totalItbis = 0;       // ITBIS total de los gravados
 
-        // Base gravable = subtotal del paciente (subtotal - descuento seguro proporcional)
-        // Como el descuento del seguro no genera ITBIS adicional, calculamos:
-        // - Base gravable: subtotal del paciente
-        // - ITBIS: solo sobre la parte del paciente
-        $subtotalPaciente = $invoice->subtotal - $invoice->insurance_discount;
-        
-        // ✅ ITBIS proporcional al paciente (si hay impuestos)
-        // Si subtotal total era 500 y seguro cubre 200 (40%), el ITBIS del paciente es 60% del ITBIS total
-        $factorPaciente = $invoice->subtotal > 0 
-            ? ($subtotalPaciente / $invoice->subtotal) 
+    foreach ($invoice->items as $item) {
+        // Calcular lo que paga el paciente por este ítem
+        $factorPaciente = $item->subtotal > 0
+            ? ($item->patient_amount / $item->subtotal)
             : 1;
-        $itbisPaciente = $invoice->tax_amount * $factorPaciente;
 
-        // Protección: evitar negativos
-        if ($subtotalPaciente < 0) $subtotalPaciente = 0;
-        if ($itbisPaciente < 0) $itbisPaciente = 0;
-        if ($montoTotalPaciente < 0) $montoTotalPaciente = 0;
+        $montoPaciente = $item->patient_amount;
+        $itbisItemPaciente = $item->tax_amount * $factorPaciente;
 
-        return [
-            'MontoGravadoTotal' => number_format($subtotalPaciente, 2, '.', ''),
-            'MontoGravadoI1' => number_format($subtotalPaciente, 2, '.', ''),
-            'ITBIS1' => '18',
-            'TotalITBIS' => number_format($itbisPaciente, 2, '.', ''),
-            'TotalITBIS1' => number_format($itbisPaciente, 2, '.', ''),
-            'MontoTotal' => number_format($montoTotalPaciente, 2, '.', ''),
-        ];
+        // Determinar si el ítem es gravado (1) o exento (4)
+        if ($itbisItemPaciente > 0.009) {
+            // Gravado al 18%
+            $montoGravadoI1 += $montoPaciente;
+            $totalItbis += $itbisItemPaciente;
+        } else {
+            // Exento (sin ITBIS)
+            $montoExento += $montoPaciente;
+        }
     }
+
+    // El monto gravado total = solo los gravados I1
+    $montoGravadoTotal = $montoGravadoI1;
+
+    // El total de la factura = gravado + exento + ITBIS
+    $montoTotal = $montoGravadoTotal + $montoExento + $totalItbis;
+
+    // ✅ Construir el array dinámicamente: solo incluir campos que tengan valor
+    $totales = [
+        'MontoGravadoTotal' => number_format($montoGravadoTotal, 2, '.', ''),
+        'MontoGravadoI1'    => number_format($montoGravadoI1, 2, '.', ''),
+        'ITBIS1'            => '18',
+        'TotalITBIS'        => number_format($totalItbis, 2, '.', ''),
+        'TotalITBIS1'       => number_format($totalItbis, 2, '.', ''),
+        'MontoTotal'        => number_format($montoTotal, 2, '.', ''),
+    ];
+
+    // ✅ Solo incluir MontoExento si hay ítems exentos
+    if ($montoExento > 0.009) {
+        $totales['MontoExento'] = number_format($montoExento, 2, '.', '');
+    }
+
+    Log::info('EF2::construirTotalesServicio', $totales);
+
+    return $totales;
+}
 
     protected function construirItemsServicio(\App\Models\Invoice $invoice): array
-    {
-        $items = [];
-        $linea = 1;
+{
+    $items = [];
+    $linea = 1;
 
-        foreach ($invoice->items as $item) {
-            // ✅ Precio unitario = lo que paga el paciente por unidad
-            // Si el item tiene seguro, el precio efectivo es patient_amount / quantity
-            $precioPaciente = $item->quantity > 0
-                ? ($item->patient_amount / $item->quantity)
-                : $item->price;
-            
-            // ✅ Monto del item = lo que paga el paciente (sin seguro)
-            $montoPaciente = $item->patient_amount;
+    foreach ($invoice->items as $item) {
+        // ✅ Precio unitario = lo que paga el paciente por unidad
+        $precioPaciente = $item->quantity > 0
+            ? ($item->patient_amount / $item->quantity)
+            : $item->price;
 
-            // IndicadorFacturacion: 1 = con ITBIS, 4 = exento
-            // Solo ponemos 1 si el item genera ITBIS Y el paciente paga ITBIS
-            $factorPaciente = $item->subtotal > 0
-                ? ($item->patient_amount / $item->subtotal)
-                : 1;
-            $itbisItemPaciente = $item->tax_amount * $factorPaciente;
-            $indicador = $itbisItemPaciente > 0 ? '1' : '4';
+        // ✅ Monto del item = lo que paga el paciente
+        $montoPaciente = $item->patient_amount;
 
-            $items[] = [
-                'NumeroLinea' => (string) $linea,
-                'IndicadorFacturacion' => $indicador,
-                'NombreItem' => $item->service->name ?? 'Servicio',
-                'IndicadorBienoServicio' => '2', // ✅ 2 = Servicio
-                'CantidadItem' => (string) $item->quantity,
-                'UnidadMedida' => '43',
-                'PrecioUnitarioItem' => number_format($precioPaciente, 2, '.', ''),
-                'MontoItem' => number_format($montoPaciente, 2, '.', ''),
-            ];
-            $linea++;
-        }
+        // ✅ Calcular ITBIS proporcional del paciente
+        $factorPaciente = $item->subtotal > 0
+            ? ($item->patient_amount / $item->subtotal)
+            : 1;
+        $itbisItemPaciente = $item->tax_amount * $factorPaciente;
 
-        return $items;
+        // ✅ IndicadorFacturacion:
+        //   1 = Gravado 18%
+        //   4 = Exento
+        $indicador = $itbisItemPaciente > 0.009 ? '1' : '4';
+
+        // ✅ Tipo de ítem: 1=Bien, 2=Servicio
+        $tipoItem = '2'; // Siempre servicio en facturas médicas
+
+        $items[] = [
+            'NumeroLinea' => (string) $linea,
+            'IndicadorFacturacion' => $indicador,
+            'NombreItem' => $item->service->name ?? 'Servicio',
+            'IndicadorBienoServicio' => $tipoItem,
+            'CantidadItem' => (string) $item->quantity,
+            'UnidadMedida' => '43',
+            'PrecioUnitarioItem' => number_format($precioPaciente, 2, '.', ''),
+            'MontoItem' => number_format($montoPaciente, 2, '.', ''),
+        ];
+        $linea++;
     }
+
+    Log::info('EF2::construirItemsServicio', [
+        'total_items' => count($items),
+        'items' => $items,
+    ]);
+
+    return $items;
+}
 }
