@@ -182,6 +182,14 @@
     </li>
 @endif
 
+<li class="nav-item">
+    <a class="nav-link menu-link {{ request()->routeIs('ecf-sequences.*') ? 'active' : '' }}" 
+       href="{{ route('ecf-sequences.index') }}">
+        <i class="ri-cloud-line"></i>
+        <span data-key="t-ecf-sequences">Secuencias e-CF</span>
+    </a>
+</li>
+
                 @endif {{-- Fin admin --}}
 
                 {{-- ============================ --}}
@@ -407,22 +415,10 @@
     </li>
 @endif
 
-<li class="nav-item">
-    <a class="nav-link menu-link {{ request()->routeIs('ecf-sequences.*') ? 'active' : '' }}" 
-       href="{{ route('ecf-sequences.index') }}">
-        <i class="ri-cloud-line"></i>
-        <span data-key="t-ecf-sequences">Secuencias e-CF</span>
-    </a>
-</li>
-
-
 
 @endif
 
-
                  
-
-                    
 
             </ul>
         </div>

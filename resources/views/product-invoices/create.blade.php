@@ -26,7 +26,7 @@
         <form action="{{ url('/product-invoices') }}" method="POST" id="invoiceForm">
             @csrf
             <div class="row">
-                <!-- Columna Izquierda: Datos, Productos y NCF -->
+                <!-- Columna Izquierda -->
                 <div class="col-lg-8">
 
                     <!-- Datos Básicos -->
@@ -47,14 +47,21 @@
                                         @endforeach
                                     </select>
                                 </div>
+
                                 <div class="col-md-6">
                                     <label class="form-label">Paciente <span class="text-danger">*</span></label>
                                     <input type="hidden" name="patient_id" id="patientId">
-                                    <div class="position-relative">
-                                        <input type="text" id="patientSearch" class="form-control" 
-                                               placeholder="Buscar por nombre o cédula..." autocomplete="off">
-                                        <div id="patientResults" class="position-absolute w-100 bg-white border rounded mt-1 d-none" 
-                                             style="z-index:999;max-height:250px;overflow-y:auto;box-shadow:0 4px 15px rgba(0,0,0,.1);"></div>
+                                    <div class="input-group">
+                                        <div class="position-relative flex-grow-1">
+                                            <input type="text" id="patientSearch" class="form-control"
+                                                   placeholder="Buscar por nombre o cédula..." autocomplete="off">
+                                            <div id="patientResults"
+                                                 class="position-absolute w-100 bg-white border rounded mt-1 d-none"
+                                                 style="z-index:999;max-height:250px;overflow-y:auto;box-shadow:0 4px 15px rgba(0,0,0,.1);"></div>
+                                        </div>
+                                        <button type="button" class="btn btn-primary" onclick="openNewPatientModal()">
+                                            <i class="ri-user-add-line"></i>
+                                        </button>
                                     </div>
                                     <div id="patientSelected" class="alert alert-info d-none mt-2 mb-0 py-2">
                                         <strong id="patientName"></strong>
@@ -71,7 +78,6 @@
                             <h5 class="card-title mb-0">Productos</h5>
                         </div>
                         <div class="card-body">
-                            <!-- Selector de categoría + búsqueda -->
                             <div class="row g-2 mb-3">
                                 <div class="col-md-5">
                                     <label class="form-label">Categoría</label>
@@ -85,7 +91,8 @@
                                 <div class="col-md-7">
                                     <label class="form-label">Buscar producto</label>
                                     <div class="position-relative">
-                                        <i class="ri-search-line position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#999;"></i>
+                                        <i class="ri-search-line position-absolute"
+                                           style="left:10px;top:50%;transform:translateY(-50%);color:#999;"></i>
                                         <input type="text" id="productSearch" class="form-control ps-4"
                                                placeholder="Buscar por nombre o código..." autocomplete="off">
                                     </div>
@@ -135,76 +142,73 @@
                         </div>
                     </div>
 
-                    {{-- NCF Opcional --}}
-{{-- Aviso de Facturación Electrónica Automática --}}
-@if(\App\Models\Setting::get('ef2_activo') === '1')
-    <div class="alert alert-info d-flex align-items-start">
-        <i class="ri-cloud-line fs-20 me-2 mt-1"></i>
-        <div class="flex-grow-1">
-            <strong>Facturación Electrónica Activa</strong>
-            <p class="mb-0 small">
-                Todas las ventas se emitirán automáticamente como <strong>Consumidor Final</strong> y 
-                se enviarán a la DGII.
-                <br>
-                Si el cliente necesita un <strong>Crédito Fiscal (B01)</strong>, activa la opción de abajo.
-            </p>
-        </div>
-    </div>
+                    {{-- Comprobante Fiscal --}}
+                    @if(\App\Models\Setting::get('ef2_activo') === '1')
+                        <div class="alert alert-info d-flex align-items-start">
+                            <i class="ri-cloud-line fs-20 me-2 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <strong>Facturación Electrónica Activa</strong>
+                                <p class="mb-0 small">
+                                    Todas las ventas se emitirán automáticamente como <strong>Consumidor Final</strong> y
+                                    se enviarán a la DGII.
+                                    <br>
+                                    Si el cliente necesita un <strong>Crédito Fiscal (B01)</strong>, activa la opción de abajo.
+                                </p>
+                            </div>
+                        </div>
 
-    {{-- Opción de Crédito Fiscal --}}
-    <div class="card">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="ri-file-shield-line me-1"></i>Comprobante Fiscal
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" name="with_ncf" value="1" 
-                       id="withNcf" onchange="toggleNcf()">
-                <label class="form-check-label" for="withNcf">
-                    Emitir <strong>Crédito Fiscal (B01 / e-CF 31)</strong> en lugar de Consumidor Final
-                </label>
-            </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="ri-file-shield-line me-1"></i>Comprobante Fiscal
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" name="with_ncf" value="1"
+                                           id="withNcf" onchange="toggleNcf()">
+                                    <label class="form-check-label" for="withNcf">
+                                        Emitir <strong>Crédito Fiscal (B01 / e-CF 31)</strong> en lugar de Consumidor Final
+                                    </label>
+                                </div>
 
-            <div id="ncfFields" class="d-none">
-                <div class="mb-3">
-                    <label for="customerRnc" class="form-label">
-                        RNC del Cliente <span class="text-danger">*</span>
-                    </label>
-                    <div class="input-group">
-                        <input type="text" name="customer_rnc" id="customerRnc" class="form-control" 
-                               placeholder="000-0000000-0" onblur="searchRnc()">
-                        <button type="button" class="btn btn-primary" onclick="searchRnc()">
-                            <i class="ri-search-line"></i>
-                        </button>
-                    </div>
-                    <div id="rncStatus" class="mt-1 small"></div>
-                </div>
+                                <div id="ncfFields" class="d-none">
+                                    <div class="mb-3">
+                                        <label for="customerRnc" class="form-label">
+                                            RNC del Cliente <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text" name="customer_rnc" id="customerRnc" class="form-control"
+                                                   placeholder="000-0000000-0" onblur="searchRnc()">
+                                            <button type="button" class="btn btn-primary" onclick="searchRnc()">
+                                                <i class="ri-search-line"></i>
+                                            </button>
+                                        </div>
+                                        <div id="rncStatus" class="mt-1 small"></div>
+                                    </div>
 
-                <div class="mb-3">
-                    <label for="customerBusinessName" class="form-label">Razón Social</label>
-                    <input type="text" name="customer_business_name" id="customerBusinessName" 
-                           class="form-control" readonly
-                           placeholder="Se llenará automáticamente al consultar el RNC">
-                </div>
+                                    <div class="mb-3">
+                                        <label for="customerBusinessName" class="form-label">Razón Social</label>
+                                        <input type="text" name="customer_business_name" id="customerBusinessName"
+                                               class="form-control" readonly
+                                               placeholder="Se llenará automáticamente al consultar el RNC">
+                                    </div>
 
-                {{-- Input hidden para forzar el tipo de NCF --}}
-                <input type="hidden" name="ncf_type" id="ncfType" value="">
-            </div>
-        </div>
-    </div>
-@else
-    <div class="alert alert-warning">
-        <i class="ri-alert-line me-1"></i>
-        La facturación electrónica no está configurada. Configúrala en 
-        <a href="{{ route('settings.company') }}">Ajustes de Empresa</a>.
-    </div>
-@endif
+                                    <input type="hidden" name="ncf_type" id="ncfType" value="">
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="alert alert-warning">
+                            <i class="ri-alert-line me-1"></i>
+                            La facturación electrónica no está configurada. Configúrala en
+                            <a href="{{ route('settings.company') }}">Ajustes de Empresa</a>.
+                        </div>
+                    @endif
 
                 </div>
 
-                <!-- Columna Derecha: Resumen Lateral -->
+                <!-- Columna Derecha: Resumen -->
                 <div class="col-lg-4">
                     <div class="card" style="position:sticky;top:80px;">
                         <div class="card-header">
@@ -221,7 +225,8 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small">Descuento</label>
-                                <input type="number" name="discount" id="discountInput" class="form-control form-control-sm" 
+                                <input type="number" name="discount" id="discountInput"
+                                       class="form-control form-control-sm"
                                        value="0" min="0" step="0.01" oninput="updateTotals()">
                             </div>
                             <hr>
@@ -252,54 +257,168 @@
     </div>
 </div>
 
+{{-- ══════════════════════════════════════════════════════════════ --}}
+{{-- Modal: Nuevo Paciente --}}
+{{-- ══════════════════════════════════════════════════════════════ --}}
+<div class="modal fade" id="newPatientModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:.75rem;overflow:hidden;">
+            <div class="modal-header py-3" style="background:linear-gradient(135deg,#405189,#0ab39c);color:#fff;">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <i class="ri-user-add-line fs-18"></i>Nuevo Paciente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1);"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="modal-alert" class="alert d-none mb-3"></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="m_first_name" placeholder="Nombre">
+                            <label>Nombre <span class="text-danger">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="m_last_name" placeholder="Apellido">
+                            <label>Apellido <span class="text-danger">*</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="m_cedula" placeholder="000-0000000-0">
+                            <label>Cédula <span class="text-muted fw-normal">(opcional)</span></label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="m_phone" placeholder="809-000-0000">
+                            <label>Teléfono</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="email" class="form-control" id="m_email" placeholder="email@ejemplo.com">
+                            <label>Email</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="date" class="form-control" id="m_birth_date" placeholder="Fecha">
+                            <label>Fecha de nacimiento</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="m_gender">
+                                <option value="">— Seleccionar —</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Femenino</option>
+                            </select>
+                            <label>Género</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select class="form-select" id="m_insurance_id">
+                                <option value="">— Sin seguro —</option>
+                                @foreach($insurances ?? [] as $ins)
+                                    <option value="{{ $ins->id }}">{{ $ins->name }}</option>
+                                @endforeach
+                            </select>
+                            <label>Seguro médico</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-none" id="m_ins_num_wrap">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="m_insurance_number" placeholder="Número">
+                            <label>N° de afiliado</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control" id="m_address" placeholder="Dirección" style="height:72px;"></textarea>
+                            <label>Dirección</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-3 px-4">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal"
+                        style="border-radius:2rem;">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-2"
+                        id="btn-save-patient" style="border-radius:2rem;padding:.42rem 1rem;">
+                    <span class="spinner-border spinner-border-sm d-none" id="patient-save-spin"></span>
+                    <i class="ri-save-line" id="patient-save-icon"></i>
+                    <span>Guardar paciente</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
-    const CSRF = document.querySelector('meta[name="csrf-token"]').content;
-    const URL_SEARCH_PATIENTS = "{{ url('/api/product-invoices/patients/search') }}";
-    const URL_PRODUCTS_BY_CAT = "{{ url('/api/product-invoices/products/by-category') }}";
-    const URL_STORE = "{{ url('/product-invoices') }}";
-    const URL_INDEX = "{{ url('/product-invoices') }}";
+    // ============================================
+    // CONSTANTES
+    // ============================================
+    const CSRF                 = document.querySelector('meta[name="csrf-token"]').content;
+    const URL_SEARCH_PATIENTS  = "{{ url('/api/product-invoices/patients/search') }}";
+    const URL_PRODUCTS_BY_CAT  = "{{ url('/api/product-invoices/products/by-category') }}";
+    const URL_STORE            = "{{ url('/product-invoices') }}";
+    const URL_INDEX            = "{{ url('/product-invoices') }}";
+    const URL_PATIENT_STORE    = "{{ route('api.patients.store') }}";
 
     let items = [];
 
-    // -----------------------------------------
+    // ============================================
     // BÚSQUEDA DE PACIENTES
-    // -----------------------------------------
-    const patientSearch = document.getElementById('patientSearch');
+    // ============================================
+    const patientSearch  = document.getElementById('patientSearch');
     const patientResults = document.getElementById('patientResults');
     let patientSearchTimer = null;
 
-    patientSearch.addEventListener('input', function() {
+    patientSearch.addEventListener('input', function () {
         clearTimeout(patientSearchTimer);
         const q = this.value.trim();
         if (q.length < 2) { patientResults.classList.add('d-none'); return; }
 
         patientSearchTimer = setTimeout(async () => {
-            const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
-            const list = await r.json();
-            if (!list.length) {
-                patientResults.innerHTML = '<div class="p-3 text-muted">Sin resultados</div>';
-            } else {
-                patientResults.innerHTML = list.map(p => `
-                    <div class="p-2 border-bottom" style="cursor:pointer;"
-                         onclick="selectPatient(${p.id}, '${p.first_name} ${p.last_name}', '${p.cedula || ''}')">
-                        <div class="fw-semibold">${p.first_name} ${p.last_name}</div>
-                        <small class="text-muted">${p.cedula || 'Sin cédula'}</small>
-                    </div>
-                `).join('');
+            try {
+                const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
+                const list = await r.json();
+
+                if (!list.length) {
+                    patientResults.innerHTML = '<div class="p-3 text-muted">Sin resultados</div>';
+                } else {
+                    patientResults.innerHTML = list.map(p => {
+                        const fullName    = `${p.first_name} ${p.last_name}`;
+                        const safeName    = fullName.replace(/'/g, "\\'");
+                        const safeCedula  = (p.cedula || '').replace(/'/g, "\\'");
+                        return `
+                            <div class="p-2 border-bottom" style="cursor:pointer;"
+                                 onclick="selectPatient(${p.id}, '${safeName}', '${safeCedula}')">
+                                <div class="fw-semibold">${fullName}</div>
+                                <small class="text-muted">${p.cedula || 'Sin cédula'}</small>
+                            </div>`;
+                    }).join('');
+                }
+                patientResults.classList.remove('d-none');
+            } catch (e) {
+                patientResults.innerHTML = '<div class="p-3 text-danger">Error al buscar</div>';
+                patientResults.classList.remove('d-none');
             }
-            patientResults.classList.remove('d-none');
         }, 300);
     });
 
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (!e.target.closest('#patientSearch') && !e.target.closest('#patientResults')) {
             patientResults.classList.add('d-none');
         }
     });
 
     function selectPatient(id, name, cedula) {
-        document.getElementById('patientId').value = id;
+        document.getElementById('patientId').value        = id;
         document.getElementById('patientName').textContent = name;
         document.getElementById('patientCedula').textContent = cedula ? 'Cédula: ' + cedula : '';
         document.getElementById('patientSelected').classList.remove('d-none');
@@ -307,10 +426,10 @@
         patientResults.classList.add('d-none');
     }
 
-    // -----------------------------------------
+    // ============================================
     // CARGA DE PRODUCTOS
-    // -----------------------------------------
-    let productLoadTimer = null;
+    // ============================================
+    let productLoadTimer       = null;
     let productFetchController = null;
 
     function scheduleLoadProducts(delay = 350) {
@@ -320,11 +439,11 @@
 
     async function loadProducts() {
         const branchId = document.getElementById('branchSelect').value;
-        const catId = document.getElementById('categorySelect').value;
-        const q = document.getElementById('productSearch').value.trim();
+        const catId    = document.getElementById('categorySelect').value;
+        const q        = document.getElementById('productSearch').value.trim();
 
         const productsList = document.getElementById('productsList');
-        const tbody = document.getElementById('productsBody');
+        const tbody        = document.getElementById('productsBody');
 
         if (!branchId) {
             productsList.classList.add('d-none');
@@ -336,7 +455,7 @@
 
         const params = new URLSearchParams({ branch_id: branchId });
         if (catId) params.append('category_id', catId);
-        if (q) params.append('q', q);
+        if (q)     params.append('q', q);
 
         productsList.classList.remove('d-none');
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Buscando...</td></tr>';
@@ -378,26 +497,26 @@
         }
     }
 
-    document.getElementById('branchSelect').addEventListener('change', () => scheduleLoadProducts(0));
+    document.getElementById('branchSelect').addEventListener('change',   () => scheduleLoadProducts(0));
     document.getElementById('categorySelect').addEventListener('change', () => scheduleLoadProducts(0));
-    document.getElementById('productSearch').addEventListener('input', () => scheduleLoadProducts(350));
+    document.getElementById('productSearch').addEventListener('input',   () => scheduleLoadProducts(350));
 
-    // -----------------------------------------
-    // AGREGAR ITEM
-    // -----------------------------------------
+    // ============================================
+    // ITEMS
+    // ============================================
     function addItem(product) {
         const existing = items.find(i => i.product_id === product.id);
         if (existing) {
             if (existing.quantity < product.stock) existing.quantity++;
         } else {
             items.push({
-                product_id: product.id,
-                code: product.code,
-                name: product.name,
-                price: product.price,
-                has_tax: product.has_tax,
-                quantity: 1,
-                max_stock: product.stock,
+                product_id : product.id,
+                code       : product.code,
+                name       : product.name,
+                price      : product.price,
+                has_tax    : product.has_tax,
+                quantity   : 1,
+                max_stock  : product.stock,
             });
         }
         renderItems();
@@ -449,7 +568,7 @@
         }
 
         const subtotalCell = document.getElementById(`subtotal-${idx}`);
-        const qtyForCalc = parseFloat(items[idx].quantity) || 0;
+        const qtyForCalc   = parseFloat(items[idx].quantity) || 0;
         subtotalCell.textContent = 'RD$ ' + (items[idx].price * qtyForCalc).toFixed(2);
 
         updateTotals();
@@ -460,75 +579,67 @@
         renderItems();
     }
 
-    // -----------------------------------------
+    // ============================================
     // TOTALES
-    // -----------------------------------------
+    // ============================================
     function updateTotals() {
         let subtotal = 0;
-        let tax = 0;
+        let tax      = 0;
         const taxRate = {{ (float) \App\Models\Setting::get('company_tax_rate', 18) }};
 
         items.forEach(item => {
-            const qty = parseFloat(item.quantity) || 0;
+            const qty          = parseFloat(item.quantity) || 0;
             const itemSubtotal = item.price * qty;
             subtotal += itemSubtotal;
             if (item.has_tax) tax += itemSubtotal * (taxRate / 100);
         });
 
         const discount = parseFloat(document.getElementById('discountInput').value) || 0;
-        const total = subtotal + tax - discount;
+        const total    = subtotal + tax - discount;
 
         document.getElementById('sumSubtotal').textContent = 'RD$ ' + subtotal.toFixed(2);
-        document.getElementById('sumTax').textContent = 'RD$ ' + tax.toFixed(2);
-        document.getElementById('sumTotal').textContent = 'RD$ ' + total.toFixed(2);
+        document.getElementById('sumTax').textContent      = 'RD$ ' + tax.toFixed(2);
+        document.getElementById('sumTotal').textContent    = 'RD$ ' + total.toFixed(2);
     }
 
-    // -----------------------------------------
+    // ============================================
     // NCF
-    // -----------------------------------------
-    // ═══════════════════════════════════════════
-// -----------------------------------------
-// NCF
-// -----------------------------------------
-function toggleNcf() {
-    const checked = document.getElementById('withNcf').checked;
-    document.getElementById('ncfFields').classList.toggle('d-none', !checked);
-
-    // Fix: asigna 'credito_fiscal' al campo oculto cuando se marca el switch.
-    // Antes este campo se quedaba vacío y disparaba el error de validación
-    // "El campo ncf type es obligatorio cuando with ncf es 1".
-    document.getElementById('ncfType').value = checked ? 'credito_fiscal' : '';
-}
-
-async function searchRnc() {
-    const rnc = document.getElementById('customerRnc').value.trim();
-    if (!rnc) {
-        alert('Ingrese un RNC.');
-        return;
+    // ============================================
+    function toggleNcf() {
+        const checked = document.getElementById('withNcf').checked;
+        document.getElementById('ncfFields').classList.toggle('d-none', !checked);
+        document.getElementById('ncfType').value = checked ? 'credito_fiscal' : '';
     }
-    const status = document.getElementById('rncStatus');
-    status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Consultando...</span>';
-    try {
-        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
-        const data = await response.json();
-        if (data.error) {
-            status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
-            document.getElementById('customerBusinessName').value = '';
+
+    async function searchRnc() {
+        const rnc = document.getElementById('customerRnc').value.trim();
+        if (!rnc) {
+            alert('Ingrese un RNC.');
             return;
         }
-        document.getElementById('customerBusinessName').value = data.nombre_razon_social ?? '';
-        status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
-    } catch (e) {
-        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
+        const status = document.getElementById('rncStatus');
+        status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Consultando...</span>';
+        try {
+            const response = await fetch('/api/rnc/' + encodeURIComponent(rnc));
+            const data = await response.json();
+            if (data.error) {
+                status.innerHTML = `<span class="text-danger">${data.mensaje}</span>`;
+                document.getElementById('customerBusinessName').value = '';
+                return;
+            }
+            document.getElementById('customerBusinessName').value = data.nombre_razon_social ?? '';
+            status.innerHTML = `<span class="text-success">✓ ${data.estado}</span>`;
+        } catch (e) {
+            status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
+        }
     }
-}
 
-    // -----------------------------------------
+    // ============================================
     // ENVÍO DEL FORMULARIO
-    // -----------------------------------------
+    // ============================================
     const invoiceForm = document.getElementById('invoiceForm');
 
-    invoiceForm.addEventListener('submit', async function(e) {
+    invoiceForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         if (!document.getElementById('patientId').value) {
@@ -546,19 +657,19 @@ async function searchRnc() {
             return;
         }
 
-        const submitBtn = invoiceForm.querySelector('button[type="submit"]');
+        const submitBtn    = invoiceForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
+        submitBtn.disabled  = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
 
         try {
             const formData = new FormData(invoiceForm);
 
             const r = await fetch(URL_STORE, {
-                method: 'POST',
+                method : 'POST',
                 headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': CSRF,
+                    'Accept'       : 'application/json',
+                    'X-CSRF-TOKEN' : CSRF,
                 },
                 body: formData,
             });
@@ -578,8 +689,91 @@ async function searchRnc() {
         } catch (err) {
             alert('Error de conexión. Intenta de nuevo.');
         } finally {
-            submitBtn.disabled = false;
+            submitBtn.disabled  = false;
             submitBtn.innerHTML = originalText;
+        }
+    });
+
+    // ============================================
+    // MODAL: NUEVO PACIENTE
+    // ============================================
+    function openNewPatientModal() {
+        new bootstrap.Modal(document.getElementById('newPatientModal')).show();
+    }
+
+    document.getElementById('m_insurance_id').addEventListener('change', function () {
+        document.getElementById('m_ins_num_wrap').classList.toggle('d-none', !this.value);
+    });
+
+    // Reset al cerrar el modal
+    document.getElementById('newPatientModal').addEventListener('hidden.bs.modal', function () {
+        ['m_first_name', 'm_last_name', 'm_cedula', 'm_phone', 'm_email',
+         'm_birth_date', 'm_address', 'm_insurance_number'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('m_gender').value        = '';
+        document.getElementById('m_insurance_id').value  = '';
+        document.getElementById('m_ins_num_wrap').classList.add('d-none');
+        document.getElementById('modal-alert').className = 'alert d-none';
+    });
+
+    document.getElementById('btn-save-patient').addEventListener('click', async function () {
+        const alertEl = document.getElementById('modal-alert');
+        alertEl.className = 'alert d-none';
+
+        const payload = {
+            first_name      : document.getElementById('m_first_name').value.trim(),
+            last_name       : document.getElementById('m_last_name').value.trim(),
+            cedula          : document.getElementById('m_cedula').value.trim() || null,
+            phone           : document.getElementById('m_phone').value.trim(),
+            email           : document.getElementById('m_email').value.trim(),
+            birth_date      : document.getElementById('m_birth_date').value,
+            gender          : document.getElementById('m_gender').value,
+            insurance_id    : document.getElementById('m_insurance_id').value,
+            insurance_number: document.getElementById('m_insurance_number').value.trim(),
+            address         : document.getElementById('m_address').value.trim(),
+        };
+
+        if (!payload.first_name || !payload.last_name) {
+            alertEl.className   = 'alert alert-danger';
+            alertEl.textContent = 'Nombre y apellido son obligatorios.';
+            return;
+        }
+
+        this.disabled = true;
+        document.getElementById('patient-save-spin').classList.remove('d-none');
+        document.getElementById('patient-save-icon').classList.add('d-none');
+
+        try {
+            const r = await fetch(URL_PATIENT_STORE, {
+                method : 'POST',
+                headers: {
+                    'Content-Type' : 'application/json',
+                    'Accept'       : 'application/json',
+                    'X-CSRF-TOKEN' : CSRF,
+                },
+                body: JSON.stringify(payload),
+            });
+            const data = await r.json();
+            if (!r.ok) throw data;
+
+            bootstrap.Modal.getInstance(document.getElementById('newPatientModal')).hide();
+
+            // Selecciona automáticamente al paciente recién creado
+           selectPatient(
+    data.patient.id,
+    data.patient.full_name || '—',
+    data.patient.cedula || ''
+);
+        } catch (err) {
+            alertEl.className   = 'alert alert-danger';
+            alertEl.textContent = err.errors
+                ? Object.values(err.errors).flat().join(' ')
+                : (err.message || 'Error al guardar paciente.');
+        } finally {
+            this.disabled = false;
+            document.getElementById('patient-save-spin').classList.add('d-none');
+            document.getElementById('patient-save-icon').classList.remove('d-none');
         }
     });
 </script>
