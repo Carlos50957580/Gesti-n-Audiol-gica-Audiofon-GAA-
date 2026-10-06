@@ -370,6 +370,8 @@
     const URL_PATIENT_STORE    = "{{ route('api.patients.store') }}";
 
     let items = [];
+let loadedProducts = [];   // ✅ Productos cargados desde la API
+let loadedPatients = [];   // ✅ Pacientes cargados desde la API
 
     // ============================================
     // BÚSQUEDA DE PACIENTES
@@ -383,32 +385,31 @@
         const q = this.value.trim();
         if (q.length < 2) { patientResults.classList.add('d-none'); return; }
 
-        patientSearchTimer = setTimeout(async () => {
-            try {
-                const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
-                const list = await r.json();
+       patientSearchTimer = setTimeout(async () => {
+    try {
+        const r = await fetch(URL_SEARCH_PATIENTS + '?q=' + encodeURIComponent(q));
+        const list = await r.json();
 
-                if (!list.length) {
-                    patientResults.innerHTML = '<div class="p-3 text-muted">Sin resultados</div>';
-                } else {
-                    patientResults.innerHTML = list.map(p => {
-                        const fullName    = `${p.first_name} ${p.last_name}`;
-                        const safeName    = fullName.replace(/'/g, "\\'");
-                        const safeCedula  = (p.cedula || '').replace(/'/g, "\\'");
-                        return `
-                            <div class="p-2 border-bottom" style="cursor:pointer;"
-                                 onclick="selectPatient(${p.id}, '${safeName}', '${safeCedula}')">
-                                <div class="fw-semibold">${fullName}</div>
-                                <small class="text-muted">${p.cedula || 'Sin cédula'}</small>
-                            </div>`;
-                    }).join('');
-                }
-                patientResults.classList.remove('d-none');
-            } catch (e) {
-                patientResults.innerHTML = '<div class="p-3 text-danger">Error al buscar</div>';
-                patientResults.classList.remove('d-none');
-            }
-        }, 300);
+        // ✅ Guardar pacientes en variable global
+        loadedPatients = list;
+
+        if (!list.length) {
+            patientResults.innerHTML = '<div class="p-3 text-muted">Sin resultados</div>';
+        } else {
+            patientResults.innerHTML = list.map((p, idx) => `
+                <div class="p-2 border-bottom" style="cursor:pointer;"
+                     onclick="selectPatientByIndex(${idx})">
+                    <div class="fw-semibold">${p.first_name} ${p.last_name}</div>
+                    <small class="text-muted">${p.cedula || 'Sin cédula'}</small>
+                </div>
+            `).join('');
+        }
+        patientResults.classList.remove('d-none');
+    } catch (e) {
+        patientResults.innerHTML = '<div class="p-3 text-danger">Error al buscar</div>';
+        patientResults.classList.remove('d-none');
+    }
+}, 300);
     });
 
     document.addEventListener('click', function (e) {
@@ -425,6 +426,18 @@
         patientSearch.value = name;
         patientResults.classList.add('d-none');
     }
+
+    // ✅ Nueva función que usa el índice (evita problemas con apóstrofes)
+function selectPatientByIndex(idx) {
+    const p = loadedPatients[idx];
+    if (p) {
+        selectPatient(
+            p.id,
+            `${p.first_name} ${p.last_name}`,
+            p.cedula || ''
+        );
+    }
+}
 
     // ============================================
     // CARGA DE PRODUCTOS
@@ -471,25 +484,28 @@
                 return;
             }
 
-            tbody.innerHTML = products.map(p => `
-                <tr>
-                    <td><code>${p.code}</code></td>
-                    <td>${p.name}</td>
-                    <td class="text-end">RD$ ${p.price.toFixed(2)}</td>
-                    <td class="text-center">
-                        <span class="badge bg-${p.stock > 0 ? 'success' : 'danger'}-subtle text-${p.stock > 0 ? 'success' : 'danger'}">
-                            ${p.stock}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-success"
-                                onclick='addItem(${JSON.stringify(p)})'
-                                ${p.stock <= 0 ? 'disabled' : ''}>
-                            <i class="ri-add-line"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+           // ✅ Guardar productos en variable global
+loadedProducts = products;
+
+tbody.innerHTML = products.map((p, idx) => `
+    <tr>
+        <td><code>${p.code}</code></td>
+        <td>${p.name}</td>
+        <td class="text-end">RD$ ${p.price.toFixed(2)}</td>
+        <td class="text-center">
+            <span class="badge bg-${p.stock > 0 ? 'success' : 'danger'}-subtle text-${p.stock > 0 ? 'success' : 'danger'}">
+                ${p.stock}
+            </span>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-success"
+                    onclick="addItemByIndex(${idx})"
+                    ${p.stock <= 0 ? 'disabled' : ''}>
+                <i class="ri-add-line"></i>
+            </button>
+        </td>
+    </tr>
+`).join('');
         } catch (err) {
             if (err.name !== 'AbortError') {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar productos</td></tr>';
@@ -521,6 +537,12 @@
         }
         renderItems();
     }
+
+    // ✅ Nueva función que usa el índice (evita problemas con apóstrofes)
+function addItemByIndex(idx) {
+    const product = loadedProducts[idx];
+    if (product) addItem(product);
+}
 
     function renderItems() {
         const tbody = document.getElementById('itemsBody');
