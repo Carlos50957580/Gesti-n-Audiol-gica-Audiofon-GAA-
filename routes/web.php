@@ -390,7 +390,17 @@ Route::post('invoices/{invoice}/enviar-ef2', [InvoiceController::class, 'enviarE
     Route::get('/api/ecf/next-available', [App\Http\Controllers\EcfSequenceController::class, 'nextAvailable'])
     ->name('api.ecf.next-available');
 
+use App\Http\Controllers\InsuranceInvoiceController;
 
+Route::middleware(['auth', 'active', 'role:admin,recepcionista'])->group(function () {
+    Route::resource('insurance-invoices', InsuranceInvoiceController::class);
+    Route::post('insurance-invoices/{insuranceInvoice}/cancel', [InsuranceInvoiceController::class, 'cancel'])
+        ->name('insurance-invoices.cancel');
+    Route::get('insurance-invoices/{insuranceInvoice}/print', [InsuranceInvoiceController::class, 'print'])
+        ->name('insurance-invoices.print');
+    Route::post('insurance-invoices/{insuranceInvoice}/enviar-ef2', [InsuranceInvoiceController::class, 'enviarEf2'])
+        ->name('insurance-invoices.enviar-ef2');
+});
 
 
 

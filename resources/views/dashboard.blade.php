@@ -15,7 +15,7 @@
 .dc {
     background:#fff; border:none; border-radius:var(--radius);
     box-shadow:0 2px 20px rgba(64,81,137,.08); overflow:hidden;
-    margin-bottom:1.25rem; transition:box-shadow .22s, transform .22s;
+    margin-bottom:0; transition:box-shadow .22s;
 }
 .dc:hover { box-shadow:0 8px 32px rgba(64,81,137,.13); }
 .dc-head {
@@ -36,16 +36,14 @@
     background:#fff; border-radius:var(--radius);
     box-shadow:0 2px 20px rgba(64,81,137,.08);
     padding:1.3rem; position:relative; overflow:hidden;
-    margin-bottom:1.25rem; transition:transform .2s, box-shadow .2s;
+    height:100%; transition:transform .2s, box-shadow .2s;
     border-left:4px solid transparent;
 }
 .kpi:hover { transform:translateY(-3px); box-shadow:0 10px 32px rgba(64,81,137,.15); }
 .kpi.kp-t { border-color:var(--dt); }
 .kpi.kp-p { border-color:var(--dp); }
 .kpi.kp-a { border-color:var(--da); }
-.kpi.kp-r { border-color:var(--dr); }
 .kpi.kp-v { border-color:var(--dv); }
-.kpi.kp-b { border-color:var(--db); }
 
 .kpi-ico {
     width:44px; height:44px; border-radius:.6rem; font-size:1.25rem;
@@ -54,49 +52,32 @@
 .kp-t .kpi-ico { background:rgba(10,179,156,.1);  color:var(--dt); }
 .kp-p .kpi-ico { background:rgba(64,81,137,.1);   color:var(--dp); }
 .kp-a .kpi-ico { background:rgba(247,184,75,.12); color:var(--da); }
-.kp-r .kpi-ico { background:rgba(240,101,72,.1);  color:var(--dr); }
 .kp-v .kpi-ico { background:rgba(112,102,224,.1); color:var(--dv); }
-.kp-b .kpi-ico { background:rgba(41,156,219,.1);  color:var(--db); }
 
 .kpi-val   { font-size:1.65rem; font-weight:800; color:var(--ink); letter-spacing:-.04em; line-height:1; }
 .kpi-lbl   { font-size:.74rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin:.25rem 0 .5rem; }
-.kpi-foot  { font-size:.76rem; color:var(--muted); display:flex; align-items:center; gap:.3rem; }
-.up        { color:var(--dt); font-weight:700; }
-.down      { color:var(--dr); font-weight:700; }
+.kpi-foot  { font-size:.76rem; color:var(--muted); display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; }
 .kpi-ghost { position:absolute; right:-8px; bottom:-8px; font-size:4.5rem; opacity:.04; line-height:1; }
 
 /* ── Role banner ── */
 .role-banner {
-    border-radius:var(--radius); padding:1.25rem 1.5rem;
+    border-radius:var(--radius); padding:1.1rem 1.5rem;
     display:flex; align-items:center; gap:1rem;
-    margin-bottom:1.25rem; position:relative; overflow:hidden;
+    position:relative; overflow:hidden; color:#fff;
 }
-.role-banner.admin-banner {
-    background:linear-gradient(135deg,#405189 0%,#2d3e7a 50%,#0ab39c 100%);
-    color:#fff;
-}
-.role-banner.branch-banner {
-    background:linear-gradient(135deg,#1a2e5e 0%,#405189 60%,#3d7abf 100%);
-    color:#fff;
-}
-.role-banner.doctor-banner {
-    background:linear-gradient(135deg,#0ab39c 0%,#2d7a6e 50%,#405189 100%);
-    color:#fff;
-}
-.role-banner h5 { margin:0; font-size:1.1rem; font-weight:800; }
-.role-banner p  { margin:0; font-size:.82rem; opacity:.82; }
+.role-banner.admin-banner  { background:linear-gradient(135deg,#405189 0%,#2d3e7a 50%,#0ab39c 100%); }
+.role-banner.branch-banner { background:linear-gradient(135deg,#1a2e5e 0%,#405189 60%,#3d7abf 100%); }
+.role-banner.doctor-banner { background:linear-gradient(135deg,#0ab39c 0%,#2d7a6e 50%,#405189 100%); }
+.role-banner h5 { margin:0; font-size:1.05rem; font-weight:800; color:#fff; }
+.role-banner p  { margin:0; font-size:.82rem; opacity:.85; }
 .role-banner-ico {
-    width:54px; height:54px; border-radius:.8rem; flex-shrink:0;
-    background:rgba(255,255,255,.15); backdrop-filter:blur(8px);
-    display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+    width:48px; height:48px; border-radius:.8rem; flex-shrink:0;
+    background:rgba(255,255,255,.15);
+    display:flex; align-items:center; justify-content:center; font-size:1.5rem;
 }
 .banner-deco {
     position:absolute; right:-20px; top:-20px; width:140px; height:140px;
     border-radius:50%; background:rgba(255,255,255,.06); pointer-events:none;
-}
-.banner-deco2 {
-    position:absolute; right:40px; bottom:-40px; width:100px; height:100px;
-    border-radius:50%; background:rgba(255,255,255,.04); pointer-events:none;
 }
 
 /* ── Agenda ── */
@@ -137,12 +118,12 @@
 .ib-paga { background:rgba(10,179,156,.12); color:var(--dt); }
 .ib-canc { background:rgba(240,101,72,.12); color:var(--dr); }
 
-/* ── Service bars ── */
+/* ── Bars (top servicios / productos) ── */
 .sb-row { margin-bottom:.85rem; }
 .sb-row:last-child { margin-bottom:0; }
-.sb-top { display:flex; justify-content:space-between; margin-bottom:.28rem; }
-.sb-name { font-size:.82rem; font-weight:600; color:var(--ink); }
-.sb-val  { font-size:.78rem; font-weight:700; color:var(--dp); }
+.sb-top { display:flex; justify-content:space-between; gap:.5rem; margin-bottom:.28rem; }
+.sb-name { font-size:.82rem; font-weight:600; color:var(--ink); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-val  { font-size:.78rem; font-weight:700; color:var(--dp); white-space:nowrap; }
 .sb-track { height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
 .sb-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--dp),var(--dt)); transition:width .9s cubic-bezier(.23,1,.32,1); }
 .sb-qty { font-size:.7rem; color:var(--muted); margin-top:.12rem; }
@@ -155,27 +136,7 @@
 .br-table tbody tr:hover td { background:var(--surface); }
 .br-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:.5rem; }
 
-/* ── Doctor ranking ── */
-.doctor-row { display:flex; align-items:center; gap:.85rem; padding:.65rem .2rem; border-bottom:1px solid var(--border); }
-.doctor-row:last-child { border-bottom:none; }
-.doctor-rank { width:20px; font-size:.7rem; font-weight:800; color:var(--muted); text-align:center; }
-.doctor-av   { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; color:#fff; }
-.doctor-name { font-size:.84rem; font-weight:600; color:var(--ink); }
-.doctor-mini { font-size:.72rem; color:var(--muted); }
-.doctor-bar  { flex:1; height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
-.doctor-bar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--dp),var(--dt)); }
-.doctor-count { font-size:.9rem; font-weight:800; color:var(--dp); text-align:right; min-width:28px; }
-.doctor-done  { font-size:.7rem; color:var(--dt); font-weight:600; text-align:right; }
-
-/* ── Donut ── */
-.donut-wrap { display:flex; align-items:center; gap:1.2rem; }
-.donut-cvs  { width:100px; height:100px; flex-shrink:0; }
-.leg-item   { display:flex; align-items:center; gap:.45rem; margin-bottom:.4rem; font-size:.79rem; }
-.leg-dot    { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-.leg-lbl    { color:var(--muted); flex:1; }
-.leg-val    { font-weight:700; color:var(--ink); }
-
-/* ── Stat mini boxes ── */
+/* ── Mini stats (acciones rápidas) ── */
 .mini-stat { border-radius:.6rem; padding:.75rem .9rem; text-align:center; }
 .mini-val  { font-size:1.3rem; font-weight:800; }
 .mini-lbl  { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
@@ -199,23 +160,19 @@
 .fa1{animation:fadeUp .4s .06s ease both}
 .fa2{animation:fadeUp .4s .12s ease both}
 .fa3{animation:fadeUp .4s .18s ease both}
-.fa4{animation:fadeUp .4s .24s ease both}
 
-/* ── Chart container ── */
-.chart-h160 { position:relative; height:165px; }
-.chart-h200 { position:relative; height:200px; }
+.chart-h220 { position:relative; height:230px; }
+.empty-box { text-align:center; padding:2rem 0; color:var(--muted); font-size:.83rem; }
+.empty-box i { font-size:2rem; opacity:.25; display:block; margin-bottom:.5rem; }
 </style>
 
 {{-- ══════════════════════════════════
-     HEADER
+     1. ENCABEZADO
 ══════════════════════════════════ --}}
 <div class="row mb-3 align-items-center">
     <div class="col">
         <h4 class="mb-0" style="font-weight:800;letter-spacing:-.02em;">
-            @if($isAdmin) Panel de Control
-            @elseif($isDoctor) Mis Citas
-            @else Panel de Control
-            @endif
+            @if($isDoctor && !$isAdmin) Mis Citas @else Panel de Control @endif
         </h4>
         <p class="mb-0 text-muted" style="font-size:.8rem;">
             <span class="pulse me-2"></span>
@@ -225,65 +182,53 @@
 </div>
 
 {{-- ══════════════════════════════════
-     ROLE BANNER
+     2. BANNER (compacto)
 ══════════════════════════════════ --}}
+<div class="mb-4">
 @if($isAdmin)
-<div class="role-banner admin-banner fa0">
-    <div class="banner-deco"></div>
-    <div class="banner-deco2"></div>
-    <div class="role-banner-ico"><i class="ri-shield-star-line"></i></div>
-    <div>
-        <h5>Vista de Administrador</h5>
-        <p>Estás viendo datos consolidados de todas las sucursales · {{ $branchStats->count() }} sucursal(es) activa(s)</p>
+    <div class="role-banner admin-banner fa0">
+        <div class="banner-deco"></div>
+        <div class="role-banner-ico"><i class="ri-shield-star-line"></i></div>
+        <div>
+            <h5>Vista de Administrador</h5>
+            <p>Datos consolidados de todas las sucursales · {{ $branchStats->count() }} sucursal(es) activa(s)</p>
+        </div>
     </div>
-    @if($branchStats->count())
-    <div class="ms-auto d-flex gap-2 flex-wrap">
-        @foreach($branchStats as $i => $br)
-        <span style="background:rgba(255,255,255,.15);border-radius:2rem;padding:.25rem .75rem;font-size:.78rem;font-weight:700;backdrop-filter:blur(6px);">
-            {{ $br->name }}
-        </span>
-        @endforeach
-    </div>
-    @endif
-</div>
 @elseif($isDoctor)
-<div class="role-banner doctor-banner fa0">
-    <div class="banner-deco"></div>
-    <div class="banner-deco2"></div>
-    <div class="role-banner-ico"><i class="ri-stethoscope-line"></i></div>
-    <div>
-        <h5>Bienvenido, Dr. {{ auth()->user()->name }}</h5>
-        <p>{{ auth()->user()->branch->name ?? 'Mi Sucursal' }} · Citas asignadas a tu agenda</p>
-    </div>
-    <div class="ms-auto d-flex gap-2">
-        <span style="background:rgba(255,255,255,.15);border-radius:2rem;padding:.25rem .75rem;font-size:.78rem;font-weight:700;">
+    <div class="role-banner doctor-banner fa0">
+        <div class="banner-deco"></div>
+        <div class="role-banner-ico"><i class="ri-stethoscope-line"></i></div>
+        <div>
+            <h5>Bienvenido, Dr. {{ auth()->user()->name }}</h5>
+            <p>{{ auth()->user()->branch->name ?? 'Mi Sucursal' }} · Citas asignadas a tu agenda</p>
+        </div>
+        <span class="ms-auto" style="background:rgba(255,255,255,.15);border-radius:2rem;padding:.25rem .75rem;font-size:.78rem;font-weight:700;">
             <i class="ri-calendar-check-line me-1"></i>{{ $apptToday }} citas hoy
         </span>
     </div>
-</div>
 @else
-<div class="role-banner branch-banner fa0">
-    <div class="banner-deco"></div>
-    <div class="banner-deco2"></div>
-    <div class="role-banner-ico"><i class="ri-building-2-line"></i></div>
-    <div>
-        <h5>{{ auth()->user()->branch->name ?? 'Mi Sucursal' }}</h5>
-        <p>
-            {{ auth()->user()->name }} ·
-            <span style="background:rgba(255,255,255,.2);border-radius:2rem;padding:.1rem .55rem;font-size:.75rem;font-weight:700;text-transform:capitalize;">
-                {{ auth()->user()->role->name }}
-            </span>
-            &nbsp;· Solo ves información de tu sucursal
-        </p>
+    <div class="role-banner branch-banner fa0">
+        <div class="banner-deco"></div>
+        <div class="role-banner-ico"><i class="ri-building-2-line"></i></div>
+        <div>
+            <h5>{{ auth()->user()->branch->name ?? 'Mi Sucursal' }}</h5>
+            <p>
+                {{ auth()->user()->name }} ·
+                <span style="background:rgba(255,255,255,.2);border-radius:2rem;padding:.1rem .55rem;font-size:.75rem;font-weight:700;text-transform:capitalize;">
+                    {{ auth()->user()->role->name }}
+                </span>
+                · Solo ves información de tu sucursal
+            </p>
+        </div>
     </div>
-</div>
 @endif
+</div>
 
 {{-- ══════════════════════════════════
-     KPI FILA - SERVICIOS Y PRODUCTOS
+     3. KPIs (4 tarjetas)
 ══════════════════════════════════ --}}
-<div class="row g-3">
-    {{-- Ingresos totales del mes --}}
+<div class="row g-3 mb-4">
+    {{-- Ingresos del mes (servicios + productos) --}}
     <div class="col-xl-3 col-md-6 fa0">
         <div class="kpi kp-t">
             <div class="kpi-ico"><i class="ri-money-dollar-circle-line"></i></div>
@@ -297,7 +242,7 @@
         </div>
     </div>
 
-    {{-- Ingresos de servicios --}}
+    {{-- Ingresos por servicios --}}
     <div class="col-xl-3 col-md-6 fa1">
         <div class="kpi kp-p">
             <div class="kpi-ico"><i class="ri-stethoscope-line"></i></div>
@@ -305,18 +250,18 @@
             <div class="kpi-lbl">Ingresos por servicios</div>
             <div class="kpi-foot">
                 @if($revenueGrowth > 0)
-                    <span class="up"><i class="ri-arrow-up-line"></i>{{ $revenueGrowth }}%</span> vs mes anterior
+                    <span style="color:var(--dt);font-weight:700;"><i class="ri-arrow-up-line"></i>{{ $revenueGrowth }}%</span> vs mes anterior
                 @elseif($revenueGrowth < 0)
-                    <span class="down"><i class="ri-arrow-down-line"></i>{{ abs($revenueGrowth) }}%</span> vs mes anterior
+                    <span style="color:var(--dr);font-weight:700;"><i class="ri-arrow-down-line"></i>{{ abs($revenueGrowth) }}%</span> vs mes anterior
                 @else
-                    <span style="color:var(--muted)">Sin cambios</span>
+                    <span>Sin cambios vs mes anterior</span>
                 @endif
             </div>
             <div class="kpi-ghost"><i class="ri-stethoscope-fill"></i></div>
         </div>
     </div>
 
-    {{-- Ingresos de productos --}}
+    {{-- Ingresos por productos --}}
     <div class="col-xl-3 col-md-6 fa2">
         <div class="kpi kp-v">
             <div class="kpi-ico"><i class="ri-shopping-bag-3-line"></i></div>
@@ -324,19 +269,19 @@
             <div class="kpi-lbl">Ingresos por productos</div>
             <div class="kpi-foot">
                 @if($productRevenueGrowth > 0)
-                    <span class="up"><i class="ri-arrow-up-line"></i>{{ $productRevenueGrowth }}%</span> vs mes anterior
+                    <span style="color:var(--dt);font-weight:700;"><i class="ri-arrow-up-line"></i>{{ $productRevenueGrowth }}%</span> vs mes anterior
                 @elseif($productRevenueGrowth < 0)
-                    <span class="down"><i class="ri-arrow-down-line"></i>{{ abs($productRevenueGrowth) }}%</span> vs mes anterior
+                    <span style="color:var(--dr);font-weight:700;"><i class="ri-arrow-down-line"></i>{{ abs($productRevenueGrowth) }}%</span> vs mes anterior
                 @else
-                    <span style="color:var(--muted)">Sin cambios</span>
+                    <span>Sin cambios vs mes anterior</span>
                 @endif
             </div>
             <div class="kpi-ghost"><i class="ri-shopping-bag-3-fill"></i></div>
         </div>
     </div>
 
-    {{-- Facturas pendientes --}}
-    <div class="col-xl-3 col-md-6 fa3">
+    {{-- Por cobrar --}}
+    <div class="col-xl-3 col-md-6 fa1">
         <div class="kpi kp-a">
             <div class="kpi-ico"><i class="ri-file-list-3-line"></i></div>
             <div class="kpi-val">{{ $pendingInvoices + $productPendingInvoices }}</div>
@@ -348,26 +293,23 @@
             <div class="kpi-ghost"><i class="ri-file-list-fill"></i></div>
         </div>
     </div>
-</div>
 
-{{-- Segunda fila de KPIs --}}
-<div class="row g-3">
     {{-- Citas hoy --}}
-    <div class="col-xl-3 col-md-6 fa0">
+    <div class="col-xl-6 col-md-6 fa2">
         <div class="kpi kp-p">
             <div class="kpi-ico"><i class="ri-calendar-check-line"></i></div>
             <div class="kpi-val">{{ $apptToday }}</div>
             <div class="kpi-lbl">Citas hoy</div>
             <div class="kpi-foot">
                 <i class="ri-time-line"></i>
-                {{ $apptPending }} próximas · {{ $apptThisMonth }} este mes
+                {{ $apptPending }} próximas · {{ $apptCompleted }} completadas en el mes
             </div>
             <div class="kpi-ghost"><i class="ri-calendar-fill"></i></div>
         </div>
     </div>
 
     {{-- Pacientes --}}
-    <div class="col-xl-3 col-md-6 fa1">
+    <div class="col-xl-6 col-md-6 fa3">
         <div class="kpi kp-v">
             <div class="kpi-ico"><i class="ri-team-line"></i></div>
             <div class="kpi-val">{{ $totalPatients }}</div>
@@ -379,40 +321,12 @@
             <div class="kpi-ghost"><i class="ri-team-fill"></i></div>
         </div>
     </div>
-
-    {{-- Ventas de productos del mes --}}
-    <div class="col-xl-3 col-md-6 fa2">
-        <div class="kpi kp-b">
-            <div class="kpi-ico"><i class="ri-shopping-cart-2-line"></i></div>
-            <div class="kpi-val">{{ $productInvoicesThisMonth ?? 0 }}</div>
-            <div class="kpi-lbl">Ventas de productos</div>
-            <div class="kpi-foot">
-                <i class="ri-money-dollar-circle-line"></i>
-                Facturado: RD$ {{ number_format($productInvoicedThisMonth ?? 0, 0, ',', '.') }}
-            </div>
-            <div class="kpi-ghost"><i class="ri-shopping-cart-2-fill"></i></div>
-        </div>
-    </div>
-
-    {{-- Citas completadas --}}
-    <div class="col-xl-3 col-md-6 fa3">
-        <div class="kpi kp-t">
-            <div class="kpi-ico"><i class="ri-checkbox-circle-line"></i></div>
-            <div class="kpi-val">{{ $apptCompleted }}</div>
-            <div class="kpi-lbl">Citas completadas</div>
-            <div class="kpi-foot">
-                <i class="ri-percent-line"></i>
-                {{ $apptThisMonth > 0 ? round($apptCompleted / $apptThisMonth * 100) : 0 }}% del total del mes
-            </div>
-            <div class="kpi-ghost"><i class="ri-checkbox-circle-fill"></i></div>
-        </div>
-    </div>
 </div>
 
 {{-- ══════════════════════════════════
-     ROW 2: Gráfico + Agenda
+     4. GRÁFICO + AGENDA DE HOY
 ══════════════════════════════════ --}}
-<div class="row g-3">
+<div class="row g-3 mb-4">
     <div class="col-xl-8 fa0">
         <div class="dc h-100">
             <div class="dc-head">
@@ -421,10 +335,11 @@
                 <span style="font-size:.74rem;color:var(--muted)">Solo facturas pagadas</span>
             </div>
             <div class="dc-body">
-                <div class="chart-h160"><canvas id="revChart"></canvas></div>
+                <div class="chart-h220"><canvas id="revChart"></canvas></div>
             </div>
         </div>
     </div>
+
     <div class="col-xl-4 fa1">
         <div class="dc h-100">
             <div class="dc-head">
@@ -432,7 +347,7 @@
                 <h6>Agenda de hoy</h6>
                 <a href="{{ route('appointments.index') }}" class="see-all">Ver todas →</a>
             </div>
-            <div class="dc-body" style="padding-top:.35rem;">
+            <div class="dc-body" style="padding-top:.35rem;max-height:290px;overflow-y:auto;">
                 @forelse($todayAppointments as $ap)
                     @php
                         $fn  = $ap->patient->first_name ?? '';
@@ -453,8 +368,8 @@
                         <span class="ag-st {{ $stc }}">{{ ucfirst($ap->status) }}</span>
                     </div>
                 @empty
-                    <div style="text-align:center;padding:2rem 0;color:var(--muted);font-size:.83rem;">
-                        <i class="ri-calendar-check-line" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem;"></i>
+                    <div class="empty-box">
+                        <i class="ri-calendar-check-line"></i>
                         Sin citas para hoy
                     </div>
                 @endforelse
@@ -464,258 +379,12 @@
 </div>
 
 {{-- ══════════════════════════════════
-     ROW 3: Servicios + Donut citas + Médicos
+     5. FACTURAS RECIENTES + (SUCURSALES | MIS CITAS | ACCIONES)
 ══════════════════════════════════ --}}
-<div class="row g-3">
-
-    {{-- Top servicios --}}
-    <div class="col-xl-4 fa0">
-        <div class="dc h-100">
-            <div class="dc-head">
-                <div class="dc-ico" style="background:rgba(10,179,156,.1);color:var(--dt)"><i class="ri-stethoscope-line"></i></div>
-                <h6>Top servicios del mes</h6>
-            </div>
-            <div class="dc-body">
-                @forelse($topServices as $svc)
-                    @php $pct = $maxServiceRevenue > 0 ? ($svc->revenue / $maxServiceRevenue * 100) : 0; @endphp
-                    <div class="sb-row">
-                        <div class="sb-top">
-                            <span class="sb-name">{{ $svc->name }}</span>
-                            <span class="sb-val">RD$ {{ number_format($svc->revenue, 0, ',', '.') }}</span>
-                        </div>
-                        <div class="sb-track"><div class="sb-fill" style="width:{{ round($pct) }}%"></div></div>
-                        <div class="sb-qty">{{ $svc->qty }} unidades</div>
-                    </div>
-                @empty
-                    <div style="text-align:center;color:var(--muted);padding:1.5rem 0;font-size:.83rem;">
-                        <i class="ri-bar-chart-line" style="font-size:1.8rem;opacity:.25;display:block;margin-bottom:.4rem;"></i>
-                        Sin datos este mes
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
-    {{-- Donut citas --}}
-    <div class="col-xl-4 fa1">
-        <div class="dc h-100">
-            <div class="dc-head">
-                <div class="dc-ico" style="background:rgba(112,102,224,.1);color:var(--dv)"><i class="ri-pie-chart-2-line"></i></div>
-                <h6>Estado de citas — este mes</h6>
-                <span style="font-size:.8rem;font-weight:700;color:var(--ink);">{{ $apptThisMonth }}</span>
-            </div>
-            <div class="dc-body">
-                <div class="donut-wrap mb-3">
-                    <div class="donut-cvs"><canvas id="apptDonut"></canvas></div>
-                    <div style="flex:1;">
-                        @foreach([
-                            ['programada','Programadas','#405189'],
-                            ['completada','Completadas','#0ab39c'],
-                            ['cancelada', 'Canceladas', '#f06548'],
-                        ] as [$key,$lbl,$col])
-                        <div class="leg-item">
-                            <div class="leg-dot" style="background:{{ $col }}"></div>
-                            <span class="leg-lbl">{{ $lbl }}</span>
-                            <span class="leg-val">{{ $apptByStatus[$key] ?? 0 }}</span>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <div class="mini-stat" style="background:rgba(10,179,156,.06);">
-                            <div class="mini-val" style="color:var(--dt);">{{ $apptCompleted }}</div>
-                            <div class="mini-lbl">Completadas</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mini-stat" style="background:rgba(247,184,75,.08);">
-                            <div class="mini-val" style="color:var(--da);">{{ $apptPending }}</div>
-                            <div class="mini-lbl">Pendientes</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Médicos --}}
-    <div class="col-xl-4 fa2">
-        <div class="dc h-100">
-            <div class="dc-head">
-                <div class="dc-ico" style="background:rgba(247,184,75,.12);color:var(--da)"><i class="ri-user-star-line"></i></div>
-                <h6>Médicos — citas este mes</h6>
-            </div>
-            <div class="dc-body" style="padding-top:.35rem;">
-                @forelse($topDoctors as $i => $doc)
-                    @php
-                        $ini = strtoupper(collect(explode(' ',$doc->name))->map(fn($w)=>$w[0]??'')->take(2)->join(''));
-                        $pct = $maxAppts > 0 ? round($doc->appts_month / $maxAppts * 100) : 0;
-                    @endphp
-                    <div class="doctor-row">
-                        <div class="doctor-rank">#{{ $i+1 }}</div>
-                        <div class="doctor-av av{{ $i % 6 }}">{{ $ini }}</div>
-                        <div style="flex:1;min-width:0;">
-                            <div class="doctor-name">{{ $doc->name }}</div>
-                            <div class="doctor-bar mt-1"><div class="doctor-bar-fill" style="width:{{ $pct }}%"></div></div>
-                        </div>
-                        <div>
-                            <div class="doctor-count">{{ $doc->appts_month }}</div>
-                            <div class="doctor-done">{{ $doc->appts_completed }} ✓</div>
-                        </div>
-                    </div>
-                @empty
-                    <div style="text-align:center;color:var(--muted);font-size:.83rem;padding:2rem 0;">
-                        <i class="ri-user-line" style="font-size:1.8rem;opacity:.25;display:block;margin-bottom:.4rem;"></i>
-                        Sin médicos asignados
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- ══════════════════════════════════
-     TOP PRODUCTOS VENDIDOS
-══════════════════════════════════ --}}
-@if(isset($topProducts) && $topProducts->count() > 0)
-<div class="row g-3 mt-2">
-    <div class="col-12">
-        <div class="dc">
-            <div class="dc-head">
-                <div class="dc-ico" style="background:rgba(112,102,224,.1);color:var(--dv)"><i class="ri-trophy-line"></i></div>
-                <h6>Top 5 productos más vendidos — este mes</h6>
-                <a href="{{ url('/product-reports') }}" class="see-all">Ver reporte →</a>
-            </div>
-            <div class="dc-body">
-                <div class="row g-3">
-                    @foreach($topProducts as $i => $prod)
-                        @php
-                            $pct = $maxProductRevenue > 0 ? ($prod->revenue / $maxProductRevenue * 100) : 0;
-                            $colors = ['#f7b84b', '#405189', '#0ab39c', '#7066e0', '#299cdb'];
-                        @endphp
-                        <div class="col-md-6 col-lg-4">
-                            <div style="background:var(--surface);border-radius:.65rem;padding:1rem;border:1px solid var(--border);">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <span style="width:28px;height:28px;border-radius:50%;background:{{ $colors[$i] }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;">
-                                        #{{ $i+1 }}
-                                    </span>
-                                    <div style="flex:1;min-width:0;">
-                                        <div style="font-size:.83rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            {{ $prod->name }}
-                                        </div>
-                                        <div style="font-size:.7rem;color:var(--muted);">
-                                            <code>{{ $prod->code }}</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span style="font-size:.75rem;color:var(--muted);">Vendidos:</span>
-                                    <strong style="font-size:.85rem;">{{ $prod->qty }}</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span style="font-size:.75rem;color:var(--muted);">Ingresos:</span>
-                                    <strong style="font-size:.85rem;color:var(--dt);">RD$ {{ number_format($prod->revenue, 0, ',', '.') }}</strong>
-                                </div>
-                                <div class="sb-track">
-                                    <div class="sb-fill" style="width:{{ round($pct) }}%;background:linear-gradient(90deg,{{ $colors[$i] }},var(--dt));"></div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-@endif
-
-    {{-- Donut citas --}}
-    <div class="col-xl-4 fa1">
-        <div class="dc h-100">
-            <div class="dc-head">
-                <div class="dc-ico" style="background:rgba(112,102,224,.1);color:var(--dv)"><i class="ri-pie-chart-2-line"></i></div>
-                <h6>Estado de citas — este mes</h6>
-                <span style="font-size:.8rem;font-weight:700;color:var(--ink);">{{ $apptThisMonth }}</span>
-            </div>
-            <div class="dc-body">
-                <div class="donut-wrap mb-3">
-                    <div class="donut-cvs"><canvas id="apptDonut"></canvas></div>
-                    <div style="flex:1;">
-                        @foreach([
-                            ['programada','Programadas','#405189'],
-                            ['completada','Completadas','#0ab39c'],
-                            ['cancelada', 'Canceladas', '#f06548'],
-                        ] as [$key,$lbl,$col])
-                        <div class="leg-item">
-                            <div class="leg-dot" style="background:{{ $col }}"></div>
-                            <span class="leg-lbl">{{ $lbl }}</span>
-                            <span class="leg-val">{{ $apptByStatus[$key] ?? 0 }}</span>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <div class="mini-stat" style="background:rgba(10,179,156,.06);">
-                            <div class="mini-val" style="color:var(--dt);">{{ $apptCompleted }}</div>
-                            <div class="mini-lbl">Completadas</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mini-stat" style="background:rgba(247,184,75,.08);">
-                            <div class="mini-val" style="color:var(--da);">{{ $apptPending }}</div>
-                            <div class="mini-lbl">Pendientes</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Médicos --}}
-    <div class="col-xl-4 fa2">
-        <div class="dc h-100">
-            <div class="dc-head">
-                <div class="dc-ico" style="background:rgba(247,184,75,.12);color:var(--da)"><i class="ri-user-star-line"></i></div>
-                <h6>Médicos — citas este mes</h6>
-            </div>
-            <div class="dc-body" style="padding-top:.35rem;">
-                @forelse($topDoctors as $i => $doc)
-                    @php
-                        $ini = strtoupper(collect(explode(' ',$doc->name))->map(fn($w)=>$w[0]??'')->take(2)->join(''));
-                        $pct = $maxAppts > 0 ? round($doc->appts_month / $maxAppts * 100) : 0;
-                    @endphp
-                    <div class="doctor-row">
-                        <div class="doctor-rank">#{{ $i+1 }}</div>
-                        <div class="doctor-av av{{ $i % 6 }}">{{ $ini }}</div>
-                        <div style="flex:1;min-width:0;">
-                            <div class="doctor-name">{{ $doc->name }}</div>
-                            <div class="doctor-bar mt-1"><div class="doctor-bar-fill" style="width:{{ $pct }}%"></div></div>
-                        </div>
-                        <div>
-                            <div class="doctor-count">{{ $doc->appts_month }}</div>
-                            <div class="doctor-done">{{ $doc->appts_completed }} ✓</div>
-                        </div>
-                    </div>
-                @empty
-                    <div style="text-align:center;color:var(--muted);font-size:.83rem;padding:2rem 0;">
-                        <i class="ri-user-line" style="font-size:1.8rem;opacity:.25;display:block;margin-bottom:.4rem;"></i>
-                        Sin médicos asignados
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- ══════════════════════════════════
-     ROW 4: Facturas recientes + Sucursales (admin) / Accesos rápidos (staff)
-══════════════════════════════════ --}}
-<div class="row g-3">
+<div class="row g-3 mb-4">
 
     <div class="col-xl-{{ $isAdmin ? '7' : '8' }} fa0">
-        <div class="dc">
+        <div class="dc h-100">
             <div class="dc-head">
                 <div class="dc-ico" style="background:rgba(64,81,137,.1);color:var(--dp)"><i class="ri-file-text-line"></i></div>
                 <h6>Facturas recientes{{ $isAdmin ? '' : ' — mi sucursal' }}</h6>
@@ -733,8 +402,8 @@
                         <span class="inv-badge ib-{{ $inv->status }}">{{ ucfirst($inv->status) }}</span>
                     </a>
                 @empty
-                    <div style="text-align:center;color:var(--muted);font-size:.83rem;padding:2rem 0;">
-                        <i class="ri-file-list-line" style="font-size:1.8rem;opacity:.25;display:block;margin-bottom:.4rem;"></i>
+                    <div class="empty-box">
+                        <i class="ri-file-list-line"></i>
                         Sin facturas registradas
                     </div>
                 @endforelse
@@ -743,12 +412,12 @@
     </div>
 
     @if($isAdmin)
-    {{-- Tabla de sucursales — solo admin --}}
+    {{-- Rendimiento por sucursal — solo admin --}}
     <div class="col-xl-5 fa1">
         <div class="dc h-100">
             <div class="dc-head">
                 <div class="dc-ico" style="background:rgba(240,101,72,.1);color:var(--dr)"><i class="ri-building-2-line"></i></div>
-                <h6>Rendimiento por sucursal</h6>
+                <h6>Rendimiento por sucursal "SERVICIOS"</h6>
                 <a href="{{ route('branches.index') }}" class="see-all">Ver →</a>
             </div>
             <div style="overflow-x:auto;">
@@ -786,7 +455,7 @@
     </div>
 
     @elseif($isDoctor)
-    {{-- Mis citas de hoy (solo médico) --}}
+    {{-- Mis citas de hoy — solo médico --}}
     <div class="col-xl-4 fa1">
         <div class="dc h-100">
             <div class="dc-head">
@@ -813,8 +482,8 @@
                         <span class="ag-st {{ $stc }}">{{ ucfirst($ap->status) }}</span>
                     </div>
                 @empty
-                    <div style="text-align:center;padding:2rem 0;color:var(--muted);font-size:.83rem;">
-                        <i class="ri-calendar-check-line" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.5rem;"></i>
+                    <div class="empty-box">
+                        <i class="ri-calendar-check-line"></i>
                         No tienes citas para hoy
                     </div>
                 @endforelse
@@ -823,9 +492,9 @@
     </div>
 
     @else
-    {{-- Accesos rápidos — recepcionista --}}
+    {{-- Acciones rápidas — recepcionista --}}
     <div class="col-xl-4 fa1">
-        <div class="dc">
+        <div class="dc h-100">
             <div class="dc-head">
                 <div class="dc-ico" style="background:rgba(64,81,137,.1);color:var(--dp)"><i class="ri-rocket-line"></i></div>
                 <h6>Acciones rápidas</h6>
@@ -833,25 +502,25 @@
             <div class="dc-body">
                 <div class="row g-2">
                     <div class="col-6">
-                        <a href="{{ route('patients.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                        <a href="{{ route('patients.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;">
                             <i class="ri-user-add-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
                             <span style="font-size:.78rem;font-weight:600;">Nuevo paciente</span>
                         </a>
                     </div>
                     <div class="col-6">
-                        <a href="{{ route('appointments.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                        <a href="{{ route('appointments.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;">
                             <i class="ri-calendar-add-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
                             <span style="font-size:.78rem;font-weight:600;">Nueva cita</span>
                         </a>
                     </div>
                     <div class="col-6">
-                        <a href="{{ route('invoices.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                        <a href="{{ route('invoices.create') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;">
                             <i class="ri-file-add-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
                             <span style="font-size:.78rem;font-weight:600;">Nueva factura</span>
                         </a>
                     </div>
                     <div class="col-6">
-                        <a href="{{ route('receipts.index') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;transition:background .2s;">
+                        <a href="{{ route('receipts.index') }}" class="d-block text-center p-3 rounded" style="background:var(--surface);color:var(--ink);text-decoration:none;">
                             <i class="ri-bank-card-line" style="font-size:1.6rem;display:block;margin-bottom:.3rem;"></i>
                             <span style="font-size:.78rem;font-weight:600;">Registrar pago</span>
                         </a>
@@ -880,20 +549,83 @@
 
 </div>
 
+{{-- ══════════════════════════════════
+     6. TOP SERVICIOS + TOP PRODUCTOS
+══════════════════════════════════ --}}
+<div class="row g-3">
+
+    <div class="col-xl-6 fa0">
+        <div class="dc h-100">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(10,179,156,.1);color:var(--dt)"><i class="ri-stethoscope-line"></i></div>
+                <h6>Top servicios del mes</h6>
+            </div>
+            <div class="dc-body">
+                @forelse($topServices as $svc)
+                    @php $pct = $maxServiceRevenue > 0 ? ($svc->revenue / $maxServiceRevenue * 100) : 0; @endphp
+                    <div class="sb-row">
+                        <div class="sb-top">
+                            <span class="sb-name">{{ $svc->name }}</span>
+                            <span class="sb-val">RD$ {{ number_format($svc->revenue, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="sb-track"><div class="sb-fill" style="width:{{ round($pct) }}%"></div></div>
+                        <div class="sb-qty">{{ $svc->qty }} unidades</div>
+                    </div>
+                @empty
+                    <div class="empty-box">
+                        <i class="ri-bar-chart-line"></i>
+                        Sin datos este mes
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6 fa1">
+        <div class="dc h-100">
+            <div class="dc-head">
+                <div class="dc-ico" style="background:rgba(112,102,224,.1);color:var(--dv)"><i class="ri-trophy-line"></i></div>
+                <h6>Top productos del mes</h6>
+                <a href="{{ url('/product-reports') }}" class="see-all">Ver reporte →</a>
+            </div>
+            <div class="dc-body">
+                @if(isset($topProducts) && $topProducts->count() > 0)
+                    @foreach($topProducts as $prod)
+                        @php $pct = $maxProductRevenue > 0 ? ($prod->revenue / $maxProductRevenue * 100) : 0; @endphp
+                        <div class="sb-row">
+                            <div class="sb-top">
+                                <span class="sb-name">{{ $prod->name }}</span>
+                                <span class="sb-val" style="color:var(--dv);">RD$ {{ number_format($prod->revenue, 0, ',', '.') }}</span>
+                            </div>
+                            <div class="sb-track">
+                                <div class="sb-fill" style="width:{{ round($pct) }}%;background:linear-gradient(90deg,var(--dv),var(--db));"></div>
+                            </div>
+                            <div class="sb-qty">{{ $prod->qty }} vendidos · {{ $prod->code }}</div>
+                        </div>
+                    @endforeach
+                @else
+                    <div class="empty-box">
+                        <i class="ri-shopping-bag-3-line"></i>
+                        Sin ventas de productos este mes
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
 <div style="height:1.5rem;"></div>
 </div>
 </div>
 
 @push('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{{-- Chart.js ya se carga en app.blade.php --}}
 <script>
-const CP='#405189',CT='#0ab39c',CA='#f7b84b',CR='#f06548',CBORDER='#edf0f7',CMUTED='#6b7a99';
+const CP='#405189', CBORDER='#edf0f7', CMUTED='#6b7a99';
 
-// ── Revenue bar chart (servicios + productos) ────────────
 const revData = @json($last14Days);
-const revCtx  = document.getElementById('revChart').getContext('2d');
 
-new Chart(revCtx, {
+new Chart(document.getElementById('revChart').getContext('2d'), {
     type: 'bar',
     data: {
         labels  : revData.map(d => d.label),
@@ -924,15 +656,8 @@ new Chart(revCtx, {
         responsive:true, maintainAspectRatio:false,
         plugins: {
             legend: {
-                display: true,
-                position: 'top',
-                align: 'end',
-                labels: {
-                    boxWidth: 12,
-                    padding: 10,
-                    font: { size: 11, weight: '600' },
-                    color: '#6b7a99',
-                }
+                display: true, position: 'top', align: 'end',
+                labels: { boxWidth: 12, padding: 10, font: { size: 11, weight: '600' }, color: CMUTED }
             },
             tooltip: {
                 backgroundColor:'#fff', borderColor:CBORDER, borderWidth:1,
@@ -943,67 +668,13 @@ new Chart(revCtx, {
             }
         },
         scales: {
-            x: {
-                stacked: true,
-                grid:{display:false},
-                border:{display:false},
-                ticks:{color:CMUTED, font:{size:10,weight:'600'}}
-            },
+            x: { stacked:true, grid:{display:false}, border:{display:false}, ticks:{color:CMUTED, font:{size:10,weight:'600'}} },
             y: {
-                stacked: true,
-                grid:{color:CBORDER},
-                border:{display:false, dash:[3,3]},
-                ticks:{
-                    color:CMUTED, font:{size:10},
-                    callback: v => v>=1000 ? 'RD$'+(v/1000).toFixed(0)+'k' : 'RD$'+v
-                }
+                stacked:true, grid:{color:CBORDER}, border:{display:false, dash:[3,3]},
+                ticks:{ color:CMUTED, font:{size:10}, callback: v => v>=1000 ? 'RD$'+(v/1000).toFixed(0)+'k' : 'RD$'+v }
             }
         }
     }
-});
-
-// ── Appointments donut ───────────────────────────────────
-const prog = {{ $apptByStatus['programada'] ?? 0 }};
-const comp = {{ $apptByStatus['completada'] ?? 0 }};
-const canc = {{ $apptByStatus['cancelada']  ?? 0 }};
-const tot  = prog + comp + canc;
-
-const doCtx = document.getElementById('apptDonut').getContext('2d');
-new Chart(doCtx, {
-    type: 'doughnut',
-    data: {
-        labels  : ['Programadas','Completadas','Canceladas'],
-        datasets: [{
-            data           : [prog, comp, canc],
-            backgroundColor: [CP, CT, CR],
-            borderColor    : '#fff',
-            borderWidth    : 3,
-            hoverOffset    : 4,
-        }]
-    },
-    options: {
-        responsive:true, maintainAspectRatio:true, cutout:'70%',
-        plugins: {
-            legend:{display:false},
-            tooltip:{ backgroundColor:'#fff', borderColor:CBORDER, borderWidth:1, titleColor:'#1e2535', bodyColor:CMUTED, padding:8 }
-        }
-    },
-    plugins: [{
-        id: 'center',
-        afterDraw(chart) {
-            const {ctx, chartArea:{width,height,left,top}} = chart;
-            const cx = left+width/2, cy = top+height/2;
-            ctx.save();
-            ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillStyle='#1e2535';
-            ctx.font=`800 ${Math.min(width,height)*.22}px sans-serif`;
-            ctx.fillText(tot, cx, cy-3);
-            ctx.fillStyle=CMUTED;
-            ctx.font=`600 ${Math.min(width,height)*.1}px sans-serif`;
-            ctx.fillText('citas', cx, cy+Math.min(width,height)*.14);
-            ctx.restore();
-        }
-    }]
 });
 </script>
 @endpush

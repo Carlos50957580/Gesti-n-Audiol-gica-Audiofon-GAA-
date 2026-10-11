@@ -12,6 +12,7 @@ class Insurance extends Model
         'address',
         'email',
         'phone',
+        'rnc',
         'authorization_phone',
         'coverage_percentage',
         'active'

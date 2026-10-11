@@ -172,23 +172,32 @@
                     </li>
 
                     {{-- Gestión de NCF --}}
-@if(auth()->user()->role->name === 'admin')
-    <li class="nav-item">
-        <a class="nav-link menu-link {{ request()->is('ncf-sequences*') ? 'active' : '' }}" 
-           href="{{ url('/ncf-sequences') }}">
-            <i class="ri-file-shield-2-line"></i>
-            <span data-key="t-ncf">Comprobantes NCF</span>
-        </a>
-    </li>
-@endif
+                @if(auth()->user()->role->name === 'admin')
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ request()->is('ncf-sequences*') ? 'active' : '' }}" 
+                        href="{{ url('/ncf-sequences') }}">
+                            <i class="ri-file-shield-2-line"></i>
+                            <span data-key="t-ncf">Comprobantes NCF</span>
+                        </a>
+                    </li>
+                @endif
 
-<li class="nav-item">
-    <a class="nav-link menu-link {{ request()->routeIs('ecf-sequences.*') ? 'active' : '' }}" 
-       href="{{ route('ecf-sequences.index') }}">
-        <i class="ri-cloud-line"></i>
-        <span data-key="t-ecf-sequences">Secuencias e-CF</span>
+                <li class="nav-item">
+                    <a class="nav-link menu-link {{ request()->routeIs('ecf-sequences.*') ? 'active' : '' }}" 
+                    href="{{ route('ecf-sequences.index') }}">
+                        <i class="ri-cloud-line"></i>
+                        <span data-key="t-ecf-sequences">Secuencias e-CF</span>
+                    </a>
+                </li>
+
+                                   <li class="nav-item">
+    <a class="nav-link menu-link {{ request()->routeIs('insurance-invoices.*') ? 'active' : '' }}"
+       href="{{ route('insurance-invoices.index') }}">
+        <i class="ri-shield-cross-line"></i>
+        <span>Facturas a Seguros</span>
     </a>
 </li>
+
 
                 @endif {{-- Fin admin --}}
 
@@ -357,6 +366,7 @@
                         </li>
                     @endif
 
+ 
                     {{-- ═══════════════════════════════════════════ --}}
 {{-- VENTAS DE PRODUCTOS (admin + recepcionista)  --}}
 {{-- ═══════════════════════════════════════════ --}}

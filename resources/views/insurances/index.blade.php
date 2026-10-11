@@ -128,6 +128,9 @@
             background: linear-gradient(135deg,#405189,#0ab39c); cursor: pointer;
             box-shadow: 0 2px 8px rgba(64,81,137,.4);
         }
+
+        /* ── RNC status hint ── */
+        .rnc-status { min-height: 18px; font-size: .78rem; }
     </style>
 
     <div id="toast-container"></div>
@@ -226,6 +229,7 @@
                     <thead>
                         <tr>
                             <th>Aseguradora</th>
+                            <th>RNC</th>
                             <th>Contacto</th>
                             <th>Tel. Autorización</th>
                             <th>Cobertura</th>
@@ -247,6 +251,13 @@
                                         <div class="text-muted" style="font-size:.75rem;">ID #{{ $ins->id }}</div>
                                     </div>
                                 </div>
+                            </td>
+                            <td>
+                                @if($ins->rnc)
+                                    <code style="font-size:.82rem;">{{ $ins->rnc }}</code>
+                                @else
+                                    <span class="text-muted" style="font-size:.82rem;">—</span>
+                                @endif
                             </td>
                             <td>
                                 <div style="font-size:.85rem;">
@@ -308,7 +319,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6">
+                            <td colspan="7">
                                 <div class="text-center py-5">
                                     <i class="ri-shield-check-line d-block text-muted mb-3" style="font-size:3.5rem;opacity:.3;"></i>
                                     <p class="text-muted mb-0">No hay aseguradoras registradas.</p>
@@ -357,6 +368,7 @@
                     {{-- Información general --}}
                     <p class="section-label"><i class="ri-information-line me-1"></i>Información general</p>
                     <div class="row g-3 mb-4">
+
                         <div class="col-md-6">
                             <div class="form-floating">
                                 <input type="text" class="form-control" id="f-name" placeholder="Nombre">
@@ -364,6 +376,24 @@
                                 <div class="invalid-feedback" id="err-name"></div>
                             </div>
                         </div>
+
+                        {{-- ✅ NUEVO: Campo RNC con botón de consulta --}}
+                        <div class="col-md-6">
+                            <div class="input-group" style="border-radius:.5rem;overflow:hidden;">
+                                <div class="form-floating flex-grow-1">
+                                    <input type="text" class="form-control" id="f-rnc"
+                                           placeholder="RNC" style="border-radius:0;"
+                                           onblur="if(this.value.trim()) consultRncInsurance()">
+                                    <label for="f-rnc"><i class="ri-government-line me-1 text-muted"></i>RNC</label>
+                                </div>
+                                <button type="button" class="btn btn-primary px-3" onclick="consultRncInsurance()"
+                                        title="Consultar RNC" style="border-radius:0;">
+                                    <i class="ri-search-line"></i>
+                                </button>
+                            </div>
+                            <div class="rnc-status mt-1" id="f-rnc-status"></div>
+                        </div>
+
                         <div class="col-md-6">
                             <div class="form-floating">
                                 <input type="email" class="form-control" id="f-email" placeholder="Email">
@@ -464,6 +494,10 @@
                     <div class="mt-1" id="show-status-badge"></div>
                 </div>
                 {{-- Details --}}
+                <div class="detail-row">
+                    <div class="detail-icon bg-dark-subtle text-dark"><i class="ri-government-line"></i></div>
+                    <div><div class="detail-lbl">RNC</div><div class="detail-val" id="show-rnc">—</div></div>
+                </div>
                 <div class="detail-row">
                     <div class="detail-icon bg-primary-subtle text-primary"><i class="ri-phone-line"></i></div>
                     <div><div class="detail-lbl">Teléfono</div><div class="detail-val" id="show-phone">—</div></div>
@@ -598,6 +632,54 @@ function filterTable() {
     document.getElementById('no-results').classList.toggle('d-none', visible > 0);
 }
 
+// ── CONSULTAR RNC ─────────────────────────────────────────
+async function consultRncInsurance() {
+    const rncInput = document.getElementById('f-rnc');
+    const status   = document.getElementById('f-rnc-status');
+    const rnc      = rncInput.value.trim();
+
+    if (!rnc) {
+        status.innerHTML = '';
+        return;
+    }
+
+    status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1" style="width:.75rem;height:.75rem;"></span>Consultando RNC...</span>';
+
+    try {
+        const response = await fetch('/api/rnc/' + encodeURIComponent(rnc), {
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+
+        if (data.error || !data.nombre_razon_social) {
+            status.innerHTML = `<span class="text-danger"><i class="ri-close-line me-1"></i>${data.mensaje ?? 'RNC no encontrado.'}</span>`;
+            return;
+        }
+
+        // Autocompletar nombre si está vacío
+        const nameInput = document.getElementById('f-name');
+        if (!nameInput.value.trim()) {
+            nameInput.value = data.nombre_razon_social;
+        }
+
+        // Autocompletar dirección si está vacía y la API la devuelve
+        const addrInput = document.getElementById('f-address');
+        if (addrInput && !addrInput.value.trim() && data.direccion) {
+            addrInput.value = data.direccion;
+        }
+
+        // Normalizar el RNC al formato oficial
+        if (data.rnc && data.rnc !== rnc) {
+            rncInput.value = data.rnc;
+        }
+
+        status.innerHTML = `<span class="text-success"><i class="ri-check-line me-1"></i>${data.nombre_razon_social}</span>`;
+
+    } catch (e) {
+        status.innerHTML = '<span class="text-danger">Error consultando RNC.</span>';
+    }
+}
+
 // ── CREATE ────────────────────────────────────────────────
 function openCreateModal() {
     clearInsForm();
@@ -622,6 +704,7 @@ async function openEditModal(id) {
         const d = await res.json();
 
         document.getElementById('f-name').value                = d.name || '';
+        document.getElementById('f-rnc').value                 = d.rnc  || '';
         document.getElementById('f-email').value               = d.email || '';
         document.getElementById('f-phone').value               = d.phone || '';
         document.getElementById('f-authorization-phone').value = d.authorization_phone || '';
@@ -635,6 +718,9 @@ async function openEditModal(id) {
         const active = d.active == 1 || d.active === true;
         document.getElementById('f-active').checked = active;
         document.getElementById('active-label').textContent = active ? 'Activa' : 'Inactiva';
+
+        // Limpiar estado RNC
+        document.getElementById('f-rnc-status').innerHTML = '';
 
         insModal.show();
     } catch {
@@ -652,6 +738,7 @@ async function saveInsurance() {
 
     const payload = {
         name                : document.getElementById('f-name').value.trim(),
+        rnc                 : document.getElementById('f-rnc').value.trim()                 || null,
         email               : document.getElementById('f-email').value.trim()               || null,
         phone               : document.getElementById('f-phone').value.trim()               || null,
         authorization_phone : document.getElementById('f-authorization-phone').value.trim() || null,
@@ -697,7 +784,7 @@ async function saveInsurance() {
 async function openShowModal(id) {
     currentShowId = id;
     // Reset
-    ['show-name','show-phone','show-email','show-auth-phone','show-address'].forEach(i => {
+    ['show-name','show-rnc','show-phone','show-email','show-auth-phone','show-address'].forEach(i => {
         document.getElementById(i).textContent = '…';
     });
     document.getElementById('show-coverage-bar').style.width = '0%';
@@ -715,6 +802,7 @@ async function openShowModal(id) {
 
         document.getElementById('show-name').textContent      = d.name;
         document.getElementById('show-avatar').textContent    = d.name.substring(0,2).toUpperCase();
+        document.getElementById('show-rnc').textContent       = d.rnc        || '—';
         document.getElementById('show-phone').textContent     = d.phone      || '—';
         document.getElementById('show-email').textContent     = d.email      || '—';
         document.getElementById('show-auth-phone').textContent= d.authorization_phone || '—';
@@ -776,7 +864,7 @@ async function confirmDelete() {
 
 // ── Helpers ───────────────────────────────────────────────
 function clearInsForm() {
-    ['f-name','f-email','f-phone','f-authorization-phone','f-address'].forEach(id => {
+    ['f-name','f-rnc','f-email','f-phone','f-authorization-phone','f-address'].forEach(id => {
         document.getElementById(id).value = '';
     });
     document.getElementById('f-coverage').value       = 0;
@@ -784,6 +872,7 @@ function clearInsForm() {
     document.getElementById('coverage-display').textContent = '0%';
     document.getElementById('f-active').checked = true;
     document.getElementById('active-label').textContent = 'Activa';
+    document.getElementById('f-rnc-status').innerHTML   = '';
     clearInsErrors();
     document.getElementById('ins-modal-alert').className = 'alert d-none';
 }
@@ -796,7 +885,14 @@ function clearInsErrors() {
 }
 
 function showInsFieldErrors(errors) {
-    const map = { name:'f-name', email:'f-email', phone:'f-phone', authorization_phone:'f-authorization-phone', coverage_percentage:'f-coverage-input' };
+    const map = {
+        name:'f-name',
+        rnc:'f-rnc',
+        email:'f-email',
+        phone:'f-phone',
+        authorization_phone:'f-authorization-phone',
+        coverage_percentage:'f-coverage-input'
+    };
     Object.entries(errors).forEach(([field, msgs]) => {
         const input = document.getElementById(map[field]);
         const err   = document.getElementById('err-' + field);

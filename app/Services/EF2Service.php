@@ -528,4 +528,173 @@ class EF2Service
 
     return $items;
 }
+
+// ═══════════════════════════════════════════════════════════
+// FACTURAS A SEGUROS / ARS
+// ═══════════════════════════════════════════════════════════
+
+public function enviarFacturaSeguro(\App\Models\InsuranceInvoice $invoice): array
+{
+    Log::info('═══════════════════════════════════════════');
+    Log::info('EF2::enviarFacturaSeguro - INICIO', [
+        'invoice_id' => $invoice->id,
+        'invoice_number' => $invoice->number,
+    ]);
+
+    if (!$this->estaConfigurado()) {
+        return [
+            'success' => false,
+            'message' => 'La facturación electrónica no está configurada o activa.',
+        ];
+    }
+
+    $secuencia = $this->seleccionarSecuenciaSeguro($invoice);
+
+    if (!$secuencia) {
+        Log::warning('EF2::enviarFacturaSeguro - Sin secuencia disponible', [
+            'tipo_ecf_buscado' => $this->mapearTipoNcfAEcf($invoice->ncf_type),
+        ]);
+        return [
+            'success' => false,
+            'message' => 'No hay secuencias e-CF disponibles para este tipo de comprobante.',
+        ];
+    }
+
+    $payload = $this->construirPayloadSeguro($invoice, $secuencia);
+
+    Log::info('EF2::enviarFacturaSeguro - Payload construido', ['payload' => $payload]);
+
+    try {
+        $response = Http::withToken($this->token)
+            ->timeout(30)
+            ->post("{$this->baseUrl}/procesar_factura.php", $payload);
+
+        Log::info('EF2::enviarFacturaSeguro - Respuesta HTTP', [
+            'status_code' => $response->status(),
+            'body_preview' => substr($response->body(), 0, 500),
+        ]);
+
+        $data = $response->json();
+
+        if (!$data) {
+            return [
+                'success' => false,
+                'message' => 'Respuesta inválida de EF2',
+                'raw' => $response->body(),
+            ];
+        }
+
+        if (!empty($data['success'])) {
+            $secuencia->avanzar();
+        }
+
+        return $data;
+
+    } catch (\Exception $e) {
+        Log::error('EF2::enviarFacturaSeguro - EXCEPCIÓN', [
+            'invoice_id' => $invoice->id,
+            'error' => $e->getMessage(),
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'Error de conexión con EF2: ' . $e->getMessage(),
+        ];
+    }
+}
+
+protected function seleccionarSecuenciaSeguro(\App\Models\InsuranceInvoice $invoice): ?EcfSequence
+{
+    $tipoEcf = $this->mapearTipoNcfAEcf($invoice->ncf_type);
+
+    return EcfSequence::where('tipo_ecf', $tipoEcf)
+        ->where('estado', true)
+        ->whereColumn('secuencia_actual', '<', 'hasta')
+        ->where(function ($q) {
+            $q->whereNull('fecha_vencimiento')
+              ->orWhere('fecha_vencimiento', '>=', now()->toDateString());
+        })
+        ->orderBy('id')
+        ->first();
+}
+
+protected function construirPayloadSeguro(\App\Models\InsuranceInvoice $invoice, EcfSequence $secuencia): array
+{
+    $tipoEcf = $this->mapearTipoNcfAEcf($invoice->ncf_type);
+
+    $idDoc = [
+        'TipoeCF' => $tipoEcf,
+        'eNCF' => $secuencia->siguiente_encf,
+        'IndicadorMontoGravado' => $invoice->with_tax ? '0' : '0',
+        'TipoIngresos' => '01',
+        'TipoPago' => '1',
+    ];
+
+    // E32 y E34 NO llevan fecha de vencimiento
+    if (!in_array($tipoEcf, ['32', '34'])) {
+        $idDoc['FechaVencimientoSecuencia'] = $secuencia->fecha_vencimiento
+            ? $secuencia->fecha_vencimiento->format('d-m-Y')
+            : now()->addYear()->format('d-m-Y');
+    }
+
+    // Comprador = Seguro/ARS
+    $rncSeguro = preg_replace('/[^0-9]/', '', $invoice->customer_rnc ?? '');
+    $comprador = [
+        'RazonSocialComprador' => $invoice->customer_business_name ?? $invoice->insurance->name,
+    ];
+    if (preg_match('/^\d{9}$|^\d{11}$/', $rncSeguro)) {
+        $comprador['RNCComprador'] = $rncSeguro;
+    }
+
+    // Totales según si aplica impuestos o no
+    if ($invoice->with_tax) {
+        $totales = [
+            'MontoGravadoTotal' => number_format($invoice->subtotal, 2, '.', ''),
+            'MontoGravadoI1'    => number_format($invoice->subtotal, 2, '.', ''),
+            'ITBIS1'            => '18',
+            'TotalITBIS'        => number_format($invoice->tax_amount, 2, '.', ''),
+            'TotalITBIS1'       => number_format($invoice->tax_amount, 2, '.', ''),
+            'MontoTotal'        => number_format($invoice->total, 2, '.', ''),
+        ];
+    } else {
+        // Sin ITBIS = exento
+        $totales = [
+            'MontoGravadoTotal' => '0.00',
+            'MontoGravadoI1'    => '0.00',
+            'MontoExento'       => number_format($invoice->subtotal, 2, '.', ''),
+            'ITBIS1'            => '18',
+            'TotalITBIS'        => '0.00',
+            'TotalITBIS1'       => '0.00',
+            'MontoTotal'        => number_format($invoice->total, 2, '.', ''),
+        ];
+    }
+
+    $indicadorFacturacion = $invoice->with_tax ? '1' : '4';
+
+    $items = [[
+        'NumeroLinea' => '1',
+        'IndicadorFacturacion' => $indicadorFacturacion,
+        'NombreItem' => mb_substr($invoice->concept ?? 'Servicios médicos', 0, 80),
+        'IndicadorBienoServicio' => '2',
+        'CantidadItem' => '1',
+        'UnidadMedida' => '43',
+        'PrecioUnitarioItem' => number_format($invoice->subtotal, 2, '.', ''),
+        'MontoItem' => number_format($invoice->subtotal, 2, '.', ''),
+    ]];
+
+    return [
+        'ECF' => [
+            'Encabezado' => [
+                'Version' => '1.0',
+                'IdDoc' => $idDoc,
+                'Emisor' => $this->construirEmisor(),
+                'Comprador' => $comprador,
+                'Totales' => $totales,
+            ],
+            'DetallesItems' => [
+                'Item' => $items,
+            ],
+        ],
+    ];
+}
 }

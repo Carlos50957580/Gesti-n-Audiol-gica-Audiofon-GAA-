@@ -57,6 +57,7 @@ class InsuranceController extends Controller
     {
         $request->validate([
             'name'                => 'required|string|max:255',
+            'rnc' => 'nullable|string|max:20',
             'phone'               => 'nullable|string|max:20',
             'authorization_phone' => 'nullable|string|max:20',
             'email'               => 'nullable|email|max:255',
@@ -67,6 +68,7 @@ class InsuranceController extends Controller
 
         $insurance = Insurance::create([
             'name'                => $request->name,
+            'rnc' => $request->rnc,
             'email'               => $request->email,
             'phone'               => $request->phone,
             'authorization_phone' => $request->authorization_phone,
@@ -100,6 +102,7 @@ class InsuranceController extends Controller
     {
         $request->validate([
             'name'                => 'required|string|max:255',
+            'rnc' => 'nullable|string|max:20',
             'phone'               => 'nullable|string|max:20',
             'authorization_phone' => 'nullable|string|max:20',
             'email'               => 'nullable|email|max:255',
@@ -112,6 +115,7 @@ class InsuranceController extends Controller
             'name'                => $request->name,
             'email'               => $request->email,
             'phone'               => $request->phone,
+            'rnc' => $request->rnc,
             'authorization_phone' => $request->authorization_phone,
             'address'             => $request->address,
             'coverage_percentage' => $request->coverage_percentage ?? 0,

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-layout="vertical" data-layout-style="default" data-topbar="light" data-sidebar="dark" data-sidebar-size="sm-hover" data-layout-width="fluid">
-    <head>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-layout="vertical" data-layout-style="default" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-layout-width="fluid" data-bs-theme="light">    <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -11,6 +10,44 @@
 
         <!-- Layout config Js -->
         <script src="{{ asset('velzon/assets/js/layout.js') }}"></script>
+
+<script>
+(function () {
+    var html = document.documentElement;
+    var SIZE = 'audiofon:data-sidebar-size';
+    var THEME = 'audiofon:data-bs-theme';
+
+    try {
+        // Tema
+        var t = localStorage.getItem(THEME);
+        if (t === 'light' || t === 'dark') {
+            html.setAttribute('data-bs-theme', t);
+            sessionStorage.setItem('data-bs-theme', t);
+        }
+
+        // Sidebar (solo en pantallas grandes; en móvil Velzon lo maneja solo)
+        var s = localStorage.getItem(SIZE);
+        if (s !== 'lg' && s !== 'sm') { s = 'lg'; localStorage.removeItem(SIZE); } // descarta valores viejos (sm-hover)
+        if (window.innerWidth > 1024) {
+            html.setAttribute('data-sidebar-size', s);
+            sessionStorage.setItem('data-sidebar-size', s);
+        }
+    } catch (e) {}
+
+    // Guardar cambios
+    new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+            try {
+                var v = html.getAttribute(m.attributeName);
+                if (m.attributeName === 'data-bs-theme') localStorage.setItem(THEME, v);
+                if (m.attributeName === 'data-sidebar-size' && (v === 'lg' || v === 'sm') && window.innerWidth > 1024) {
+                    localStorage.setItem(SIZE, v);
+                }
+            } catch (e) {}
+        });
+    }).observe(html, { attributes: true, attributeFilter: ['data-bs-theme', 'data-sidebar-size'] });
+})();
+</script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
         {{-- Velzon CSS --}}
@@ -70,6 +107,41 @@
         <script src="{{ asset('velzon/assets/js/plugins.js') }}"></script>
         <script src="{{ asset('velzon/assets/js/app.js') }}"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script> 
+
+        <script>
+(function () {
+    var html = document.documentElement;
+
+    function syncSidebarHeight() {
+        var main = document.querySelector('.main-content');
+        var nav  = document.getElementById('navbar-nav');
+        if (!main || !nav) return;
+
+        var isSm = html.getAttribute('data-sidebar-size') === 'sm' && window.innerWidth > 767;
+
+        if (!isSm) {
+            main.style.minHeight = '';
+            return;
+        }
+
+        // Altura real que ocupa la lista de iconos (hasta el último), más un margen
+        var bottom = nav.getBoundingClientRect().bottom + window.scrollY + 20;
+        main.style.minHeight = bottom + 'px';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        syncSidebarHeight();
+        setTimeout(syncSidebarHeight, 300); // después de que Velzon/simplebar terminen de iniciar
+    });
+
+    window.addEventListener('load', syncSidebarHeight);
+    window.addEventListener('resize', syncSidebarHeight);
+
+    new MutationObserver(function () {
+        setTimeout(syncSidebarHeight, 50);
+    }).observe(html, { attributes: true, attributeFilter: ['data-sidebar-size'] });
+})();
+</script>
 
 
         @stack('scripts')
