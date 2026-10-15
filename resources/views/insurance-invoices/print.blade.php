@@ -23,6 +23,7 @@
         .client-box .row { display:flex; gap:15px; font-size:11px; }
         .client-box .row > div { flex:1; }
         .client-box .lbl { font-weight:700; color:#555; }
+        .client-box .sub-info { font-size:10px; color:#444; margin-top:2px; }
 
         table.items { width:100%; border-collapse:collapse; margin-bottom:15px; }
         table.items th { background:#333; color:#fff; padding:6px 8px; text-align:left;
@@ -100,19 +101,45 @@
                 <p style="font-size:10px;">
                     <strong>Factura N°:</strong> {{ $insuranceInvoice->number }}
                 </p>
+
+                {{-- ✅ NUEVO: Fecha de vencimiento del e-NCF --}}
+                @if($insuranceInvoice->ecfSequence && $insuranceInvoice->ecfSequence->fecha_vencimiento)
+                    <p style="font-size:10px;">
+                        <strong>Vence:</strong> {{ $insuranceInvoice->ecfSequence->fecha_vencimiento->format('d/m/Y') }}
+                    </p>
+                @endif
             </div>
         </div>
 
-        {{-- CLIENTE --}}
+        {{-- CLIENTE (SEGURO / ARS) --}}
         <div class="client-box">
             <div class="row">
                 <div>
                     <span class="lbl">Seguro / ARS:</span>
                     {{ $insuranceInvoice->customer_business_name ?? $insuranceInvoice->insurance->name }}
+
+                    {{-- ✅ NUEVO: Régimen (nombre de la aseguradora) --}}
+                    <div class="sub-info">
+                        <strong>Régimen:</strong> {{ $insuranceInvoice->insurance->name }}
+                    </div>
                 </div>
                 <div>
                     <span class="lbl">RNC:</span>
                     {{ $insuranceInvoice->customer_rnc ?? '—' }}
+
+                    {{-- ✅ NUEVO: Dirección del seguro --}}
+                    @if(!empty($insuranceInvoice->insurance->address))
+                        <div class="sub-info">
+                            <strong>Dirección:</strong> {{ $insuranceInvoice->insurance->address }}
+                        </div>
+                    @endif
+
+                    {{-- ✅ NUEVO: Teléfono del seguro --}}
+                    @if(!empty($insuranceInvoice->insurance->phone))
+                        <div class="sub-info">
+                            <strong>Teléfono:</strong> {{ $insuranceInvoice->insurance->phone }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
