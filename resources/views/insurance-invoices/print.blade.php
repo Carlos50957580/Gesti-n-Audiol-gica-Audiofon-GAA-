@@ -93,6 +93,12 @@
                 @if($insuranceInvoice->encf)
                     <div class="encf">{{ $insuranceInvoice->encf }}</div>
                 @endif
+                {{-- ✅ NUEVO: Fecha de vencimiento del e-NCF --}}
+                @if($insuranceInvoice->ecfSequence && $insuranceInvoice->ecfSequence->fecha_vencimiento)
+                    <p style="font-size:10px;">
+                        <strong>Vence:</strong> {{ $insuranceInvoice->ecfSequence->fecha_vencimiento->format('d/m/Y') }}
+                    </p>
+                @endif
                 @if($insuranceInvoice->enviada_dgii_at)
                     <p style="font-size:10px; margin-top:3px;">
                         <strong>Fecha Emisión:</strong> {{ $insuranceInvoice->invoice_date->format('d/m/Y') }}
@@ -102,12 +108,7 @@
                     <strong>Factura N°:</strong> {{ $insuranceInvoice->number }}
                 </p>
 
-                {{-- ✅ NUEVO: Fecha de vencimiento del e-NCF --}}
-                @if($insuranceInvoice->ecfSequence && $insuranceInvoice->ecfSequence->fecha_vencimiento)
-                    <p style="font-size:10px;">
-                        <strong>Vence:</strong> {{ $insuranceInvoice->ecfSequence->fecha_vencimiento->format('d/m/Y') }}
-                    </p>
-                @endif
+                
             </div>
         </div>
 
