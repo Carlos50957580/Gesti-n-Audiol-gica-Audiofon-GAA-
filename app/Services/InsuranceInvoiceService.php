@@ -26,7 +26,7 @@ class InsuranceInvoiceService
             $ncfCode = null;
             $ncfSequenceId = null;
 
-            $tipoNcf = $data['ncf_type'] ?? 'credito_fiscal'; // por defecto crédito fiscal para seguros
+            $tipoNcf = $data['ncf_type'] ?? 'credito_fiscal';
 
             $typeCodeMap = [
                 'credito_fiscal'   => 'B01',
@@ -124,6 +124,9 @@ class InsuranceInvoiceService
     {
         $exitoso = !empty($result['success']);
 
+        // ✅ ID de secuencia devuelto por EF2Service
+        $ecfSequenceId = $result['ecf_sequence_id'] ?? $invoice->ecf_sequence_id;
+
         $invoice->ecfDocuments()->create([
             'tipo_ecf'           => $this->mapearTipoEcf($invoice),
             'encf'               => $result['ncf'] ?? null,
@@ -135,7 +138,7 @@ class InsuranceInvoiceService
             'respuesta_completa' => $result,
             'error_code'         => $result['code'] ?? null,
             'error_message'      => $exitoso ? null : ($result['message'] ?? 'Error desconocido'),
-            'ecf_sequence_id'    => $invoice->ecf_sequence_id,
+            'ecf_sequence_id'    => $ecfSequenceId,
             'user_id'            => auth()->id(),
             'intentos'           => 1,
             'enviado_at'         => now(),
@@ -149,6 +152,7 @@ class InsuranceInvoiceService
                 'estado_dgii'      => $result['estado'] ?? 'enviado',
                 'qr_link'          => $result['qr_link'] ?? null,
                 'pdf_cloud_url'    => $result['pdf_cloud_url'] ?? null,
+                'ecf_sequence_id'  => $ecfSequenceId,  // ✅ AHORA SÍ SE GUARDA
                 'enviada_dgii'     => true,
                 'enviada_dgii_at'  => now(),
             ]);

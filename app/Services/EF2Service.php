@@ -586,6 +586,8 @@ public function enviarFacturaSeguro(\App\Models\InsuranceInvoice $invoice): arra
 
         if (!empty($data['success'])) {
             $secuencia->avanzar();
+            // ✅ NUEVO: devolver el ID de la secuencia usada
+            $data['ecf_sequence_id'] = $secuencia->id;
         }
 
         return $data;
