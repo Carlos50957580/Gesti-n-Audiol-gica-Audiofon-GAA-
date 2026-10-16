@@ -93,7 +93,7 @@
                 @if($insuranceInvoice->encf)
                     <div class="encf">{{ $insuranceInvoice->encf }}</div>
                 @endif
-                {{-- ✅ NUEVO: Fecha de vencimiento del e-NCF --}}
+                {{-- ✅ Fecha de vencimiento del e-NCF --}}
                 @if($insuranceInvoice->ecfSequence && $insuranceInvoice->ecfSequence->fecha_vencimiento)
                     <p style="font-size:10px;">
                         <strong>Vence:</strong> {{ $insuranceInvoice->ecfSequence->fecha_vencimiento->format('d/m/Y') }}
@@ -107,8 +107,6 @@
                 <p style="font-size:10px;">
                     <strong>Factura N°:</strong> {{ $insuranceInvoice->number }}
                 </p>
-
-                
             </div>
         </div>
 
@@ -119,7 +117,7 @@
                     <span class="lbl">Seguro / ARS:</span>
                     {{ $insuranceInvoice->customer_business_name ?? $insuranceInvoice->insurance->name }}
 
-                    {{-- ✅ NUEVO: Régimen (nombre de la aseguradora) --}}
+                    {{-- Régimen (nombre de la aseguradora) --}}
                     <div class="sub-info">
                         <strong>Régimen:</strong> {{ $insuranceInvoice->insurance->name }}
                     </div>
@@ -128,14 +126,14 @@
                     <span class="lbl">RNC:</span>
                     {{ $insuranceInvoice->customer_rnc ?? '—' }}
 
-                    {{-- ✅ NUEVO: Dirección del seguro --}}
+                    {{-- Dirección del seguro --}}
                     @if(!empty($insuranceInvoice->insurance->address))
                         <div class="sub-info">
                             <strong>Dirección:</strong> {{ $insuranceInvoice->insurance->address }}
                         </div>
                     @endif
 
-                    {{-- ✅ NUEVO: Teléfono del seguro --}}
+                    {{-- Teléfono del seguro --}}
                     @if(!empty($insuranceInvoice->insurance->phone))
                         <div class="sub-info">
                             <strong>Teléfono:</strong> {{ $insuranceInvoice->insurance->phone }}
@@ -175,11 +173,39 @@
 
         {{-- QR + TOTALES --}}
         <div class="summary-section">
+            {{-- Columna izquierda: QR + Código de Seguridad + Fecha Firma --}}
             <div class="qr-box">
                 @if($insuranceInvoice->qr_link)
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($insuranceInvoice->qr_link) }}"
                          alt="Código QR DGII">
                     <div class="qr-label">Verifique en dgii.gov.do</div>
+
+                    {{-- Extraer código de seguridad y fecha de firma del qr_link --}}
+                    @php
+                        $qrParams = [];
+                        $queryString = parse_url($insuranceInvoice->qr_link, PHP_URL_QUERY);
+                        if ($queryString) {
+                            parse_str($queryString, $qrParams);
+                        }
+                        $codigoSeguridad = $qrParams['CodigoSeguridad'] ?? null;
+                        $fechaFirmaRaw = $qrParams['FechaFirma'] ?? null;
+                        $fechaFirma = $fechaFirmaRaw 
+                            ? \Carbon\Carbon::parse(urldecode($fechaFirmaRaw))->format('d/m/Y H:i:s') 
+                            : null;
+                    @endphp
+
+                    @if($codigoSeguridad)
+                        <div style="font-size:9px; margin-top:4px; text-align:center;">
+                            <strong>Código de Seguridad:</strong> {{ $codigoSeguridad }}
+                        </div>
+                    @endif
+
+                    @if($fechaFirma)
+                        <div style="font-size:9px; text-align:center;">
+                            <strong>Fecha Firma:</strong> {{ $fechaFirma }}
+                        </div>
+                    @endif
+
                 @else
                     <div style="width:120px; height:120px; border:1px dashed #ccc;
                                 display:flex; align-items:center; justify-content:center;
@@ -189,6 +215,7 @@
                 @endif
             </div>
 
+            {{-- Columna derecha: Totalizadores --}}
             <div class="totals-box">
                 <div class="row">
                     <span>Subtotal:</span>
