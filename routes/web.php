@@ -100,6 +100,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/product-invoices/{productInvoice}/enviar-ef2', 
     [ProductInvoiceController::class, 'enviarEf2'])
     ->name('product-invoices.enviar-ef2');
+    Route::get('/product-invoices/{productInvoice}/ticket', [ProductInvoiceController::class, 'ticket'])
+    ->name('product-invoices.ticket');
 
     // ── PAGOS DE PRODUCTOS ─────────────────────────
     Route::get('/product-receipts', [ProductReceiptController::class, 'index']);
@@ -302,6 +304,7 @@ Route::middleware(['auth'])->prefix('doctor')->name('doctor.')->group(function (
 Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
     Route::get('/', [AdminReportController::class, 'index'])->name('index');
     Route::get('/invoices', [AdminReportController::class, 'invoices'])->name('invoices');
+    Route::get('/doctors', [AdminReportController::class, 'doctors'])->name('doctors');   // ← NUEVA
     Route::get('/appointments', [AdminReportController::class, 'appointments'])->name('appointments');
     Route::get('/patients', [AdminReportController::class, 'patients'])->name('patients');
     Route::get('/services', [AdminReportController::class, 'services'])->name('services');

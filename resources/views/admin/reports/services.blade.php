@@ -21,7 +21,7 @@
 <div class="card mb-3">
     <div class="card-body">
         <form method="GET" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Categoría</label>
                 <select name="category_id" class="form-select">
                     <option value="">Todas</option>
@@ -32,7 +32,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <label class="form-label">Estado</label>
                 <select name="is_active" class="form-select">
                     <option value="">Todos</option>
@@ -40,7 +40,15 @@
                     <option value="0" {{ request('is_active') == '0' ? 'selected' : '' }}>Inactivos</option>
                 </select>
             </div>
-            <div class="col-md-4 d-flex align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Desde</label>
+                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Hasta</label>
+                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
                     <i class="ri-search-line"></i> Filtrar
                 </button>
@@ -157,8 +165,63 @@
     </div>
 </div>
 
+<!-- Estudios facturados -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Estudios Facturados</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Estudio</th>
+                        <th>Categoría</th>
+                        <th class="text-center">Cantidad facturada</th>
+                        <th class="text-center">Facturas</th>
+                        <th class="text-end">Ingresos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($billedServices as $b)
+                    <tr>
+                        <td>{{ $b->name }}</td>
+                        <td>{{ $b->category_name ?? 'Sin categoría' }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-primary">{{ number_format($b->total_quantity) }}</span>
+                        </td>
+                        <td class="text-center">{{ number_format($b->invoices_count) }}</td>
+                        <td class="text-end">RD$ {{ number_format($b->total_revenue, 2) }}</td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="ri-file-list-3-line d-block mb-2" style="font-size:48px;"></i>
+                            No hay estudios facturados en este período
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+                @if($billedServices->count())
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="2" class="text-end">Total</td>
+                        <td class="text-center">{{ number_format($billedServices->sum('total_quantity')) }}</td>
+                        <td></td>
+                        <td class="text-end">RD$ {{ number_format($billedServices->sum('total_revenue'), 2) }}</td>
+                    </tr>
+                </tfoot>
+                @endif
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- Tabla de Servicios -->
 <div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Catálogo de Servicios</h5>
+    </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -169,7 +232,7 @@
                         <th>Nombre</th>
                         <th>Categoría</th>
                         <th>Precio</th>
-                        <th>Duración</th>
+                        <th class="text-center">Cant. facturada</th>
                         <th>Historia Clínica</th>
                         <th>Estado</th>
                     </tr>
@@ -182,7 +245,11 @@
                         <td>{{ $service->name }}</td>
                         <td>{{ $service->category->name ?? 'Sin categoría' }}</td>
                         <td>RD$ {{ number_format($service->price, 2) }}</td>
-                        <td>{{ $service->duration_minutes ? $service->duration_minutes . ' min' : 'N/A' }}</td>
+                        <td class="text-center">
+                            <span class="badge {{ $service->billed_quantity > 0 ? 'bg-primary' : 'bg-secondary' }}">
+                                {{ number_format($service->billed_quantity) }}
+                            </span>
+                        </td>
                         <td>
                             <span class="badge {{ $service->requiresClinicalRecord() ? 'bg-success' : 'bg-secondary' }}">
                                 {{ $service->requiresClinicalRecord() ? 'Sí' : 'No' }}
@@ -236,9 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -250,9 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: {
-                        font: { size: 10 }
-                    }
+                    ticks: { font: { size: 10 } }
                 },
                 y: {
                     grid: { color: '#e9ecef' },
@@ -287,10 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             plugins: {
                 legend: {
                     position: 'right',
-                    labels: {
-                        boxWidth: 12,
-                        font: { size: 11 }
-                    }
+                    labels: { boxWidth: 12, font: { size: 11 } }
                 },
                 tooltip: {
                     callbacks: {

@@ -611,282 +611,371 @@
 <iframe id="thermal-frame" style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;"></iframe>
 
 @push('scripts')
+@php
+    // ── Código de seguridad y fecha de firma ─────────────────────────────
+    // Se buscan primero en pdf_cloud_url y, si no están ahí, en qr_link.
+    $codigoSeguridad = null;
+    $fechaFirma      = null;
+
+    foreach ([$invoice->pdf_cloud_url, $invoice->qr_link] as $src) {
+        if (!$src) continue;
+
+        $qs = parse_url($src, PHP_URL_QUERY);
+        if (!$qs) continue;
+
+        parse_str($qs, $p);
+        $p = array_change_key_case($p, CASE_LOWER);
+
+        if (!$codigoSeguridad && !empty($p['codigoseguridad'])) {
+            $codigoSeguridad = $p['codigoseguridad'];
+        }
+
+        if (!$fechaFirma && !empty($p['fechafirma'])) {
+            $raw = urldecode($p['fechafirma']);
+            try {
+                $fechaFirma = \Carbon\Carbon::parse($raw)->format('d/m/Y H:i:s');
+            } catch (\Throwable $e) {
+                $fechaFirma = $raw;
+            }
+        }
+    }
+@endphp
+
 <script>
 function printThermal() {
     const frame = document.getElementById('thermal-frame');
     const doc   = frame.contentDocument || frame.contentWindow.document;
 
-    // Datos de la empresa desde PHP
-    const company = @json($company);
-    const invoice = @json($invoice);
-    const qrLink  = @json($invoice->qr_link);
+    const qrLink = @json($invoice->qr_link);
 
-    // Generar URL del QR usando api.qrserver.com
+    // URL del QR (api.qrserver.com)
     const qrImgUrl = qrLink
         ? 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qrLink)
         : null;
 
     doc.open();
     doc.write(`<!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factura {{ $invoice->invoice_number }}</title>
 <style>
-  * {
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    -webkit-font-smoothing: none;
-    text-rendering: optimizeSpeed;
-  }
+  * { margin:0; padding:0; box-sizing:border-box; }
 
-  body {
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: 700;
+  /* Sin tamaño ni márgenes fijos: el ancho lo define la impresora/papel del driver */
+  @page { size: auto; margin: 0; }
+
+  html, body {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 11px;
     color: #000;
+    line-height: 1.25;
     background: #fff;
-    padding: 6px 8px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  body { padding: 2mm 3mm; }
 
-  .center { text-align: center; }
-  .right  { text-align: right; }
+  .text-center { text-align: center; }
+  .text-right  { text-align: right; }
+  .bold        { font-weight: bold; }
 
-  .bold { font-weight: 900; }
-  .big  { font-size: 17px; font-weight: 900; letter-spacing: 1px; }
-
-  .small { font-size: 12px; font-weight: 700; }
-  .lbl   { font-size: 12px; font-weight: 700; }
-
-  .sep  { border-top: 1px dashed #000; margin: 6px 0; }
-  .sep2 { border-top: 2px solid #000;  margin: 6px 0; }
-
-  table { width: 100%; border-collapse: collapse; }
-  td    { padding: 2px 0; vertical-align: top; }
-  .td-r { text-align: right; white-space: nowrap; }
-
-  .total-row td {
-    font-size: 16px;
-    font-weight: 900;
-    padding-top: 6px;
-    border-top: 2px solid #000;
-  }
-
-  .badge-status {
-    display: inline-block;
-    border: 2px solid #000;
-    padding: 1px 5px;
-    font-size: 12px;
-    font-weight: 900;
-  }
-  .badge-status.pendiente { border-color: #f7b84d; color: #f7b84d; }
-  .badge-status.pagada   { border-color: #0ab39c; color: #0ab39c; }
-  .badge-status.cancelada { border-color: #f06548; color: #f06548; }
-
-  .company-logo {
-    max-height: 40px;
-    margin-bottom: 4px;
-  }
-
-  .ecf-box {
-    border: 2px solid #000;
-    padding: 6px;
-    margin: 6px 0;
+  .header {
+    width: 100%;
     text-align: center;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 3px;
+    margin-bottom: 3px;
+  }
+  .header .logo { max-width: 70%; max-height: 16mm; margin-bottom: 2px; }
+  .header h1 { font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 1px; }
+  .header .info { font-size: 9px; }
+  .header .doc-type { font-size: 10px; font-weight: bold; margin-top: 2px; }
+
+  .separator { width: 100%; border-top: 1px dashed #000; margin: 2px 0; }
+
+  .section-title {
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 2px 0;
+    margin: 4px 0 2px 0;
+    background: transparent;
+    color: #000;
   }
 
-  .qr-img {
-    width: 130px;
-    height: 130px;
-    margin: 4px auto;
-    display: block;
+  .client { width: 100%; font-size: 10px; margin-bottom: 3px; }
+  .client .row { display: flex; justify-content: space-between; gap: 6px; }
+  .client .lbl { font-weight: bold; }
+
+  table.items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+  table.items th {
+    border-bottom: 1px dashed #000;
+    padding: 2px 0;
+    text-align: left;
+    font-size: 9px;
+  }
+  table.items th.text-right { text-align: right; }
+  table.items td { padding: 1px 0; vertical-align: top; }
+  table.items .product-name { font-weight: bold; }
+  table.items .product-code { font-size: 8px; color: #333; }
+
+  .totals { width: 100%; font-size: 10px; margin-top: 2px; }
+  .totals .row { display: flex; justify-content: space-between; padding: 1px 0; }
+  .totals .row.grand {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    margin-top: 2px;
+    padding: 3px 0;
+    font-size: 12px;
+    font-weight: bold;
   }
 
-  @media print {
-    @page { margin: 0; }
-    body  { padding: 4px 6px; }
+  .qr-section { width: 100%; text-align: center; margin: 4px 0; }
+  .qr-section img { width: 110px; max-width: 60%; height: auto; }
+  .qr-section .qr-label { font-size: 8px; margin-top: 2px; }
+  .qr-section .sec-info { font-size: 8px; margin-top: 1px; word-break: break-all; }
+
+  .footer {
+    width: 100%;
+    text-align: center;
+    font-size: 9px;
+    border-top: 1px dashed #000;
+    padding-top: 3px;
+    margin-top: 4px;
   }
+  .footer .dgi-info { font-size: 8px; margin-top: 2px; word-break: break-all; }
+  .footer .thanks   { font-weight: bold; margin-bottom: 2px; }
 </style>
 </head>
 <body>
 
-{{-- Header con datos de la empresa --}}
-<div class="center">
-    @if($company['logo'])
-        <img src="{{ public_path('storage/' . $company['logo']) }}"
-             alt="{{ $company['name'] }}" class="company-logo">
+{{-- HEADER --}}
+<div class="header">
+    @if(!empty($company['logo']))
+        <img src="{{ asset('storage/' . $company['logo']) }}" alt="Logo" class="logo">
     @endif
-    <div class="bold big">{{ strtoupper($company['name']) }}</div>
-    <div class="small">{{ $company['slogan'] }}</div>
-    <div class="small">{{ $company['address'] }}</div>
-    <div class="small">RNC: {{ $company['rnc'] }} | Tel: {{ $company['phone'] }}</div>
-    @if($company['email'])
-        <div class="small">{{ $company['email'] }}</div>
+    <h1>{{ $company['name'] ?? 'Mi Empresa' }}</h1>
+    @if(!empty($company['slogan']))
+        <div class="info">{{ $company['slogan'] }}</div>
     @endif
-</div>
+    @if(!empty($company['rnc']))
+        <div class="info">RNC: {{ $company['rnc'] }}</div>
+    @endif
+    @if(!empty($company['address']))
+        <div class="info">{{ $company['address'] }}</div>
+    @endif
+    @if(!empty($company['phone']))
+        <div class="info">Tel: {{ $company['phone'] }}</div>
+    @endif
 
-<div class="sep2"></div>
-
-{{-- ✅ Bloque e-CF destacado (si existe) --}}
-@if($invoice->encf)
-<div class="ecf-box">
-    <div class="bold" style="font-size:13px;">COMPROBANTE ELECTRÓNICO</div>
-    <div style="font-size:12px;margin-top:2px;">
+    <div class="doc-type">
         @switch($invoice->ncf_type)
-            @case('credito_fiscal') e-CF 31 — Crédito Fiscal @break
-            @case('consumidor_final') e-CF 32 — Consumidor Final @break
-            @case('gubernamental') e-CF 45 — Gubernamental @break
-            @case('regimen_especial') e-CF 44 — Régimen Especial @break
+            @case('consumidor_final') FACTURA DE CONSUMO @break
+            @case('credito_fiscal')   FACTURA DE CRÉDITO FISCAL @break
+            @case('gubernamental')    COMPROBANTE GUBERNAMENTAL @break
+            @case('regimen_especial') RÉGIMEN ESPECIAL @break
+            @default                  COMPROBANTE FISCAL
         @endswitch
     </div>
-    <div class="bold" style="font-size:15px;font-family:monospace;margin-top:3px;">
-        {{ $invoice->encf }}
+    @if($invoice->encf)
+        <div class="info bold">{{ $invoice->encf }}</div>
+    @elseif($invoice->ncf)
+        <div class="info bold">{{ $invoice->ncf }}</div>
+    @endif
+</div>
+
+{{-- DATOS DE LA FACTURA --}}
+<div class="client">
+    <div class="row">
+        <span class="lbl">Factura N°:</span>
+        <span>{{ $invoice->invoice_number }}</span>
     </div>
-    @if($invoice->track_id)
-    <div class="small" style="margin-top:3px;word-break:break-all;">
-        Track ID: {{ $invoice->track_id }}
+    <div class="row">
+        <span class="lbl">Fecha:</span>
+        <span>{{ $invoice->created_at->format('d/m/Y H:i') }}</span>
+    </div>
+    <div class="row">
+        <span class="lbl">Estado:</span>
+        <span>{{ strtoupper($invoice->status) }}</span>
+    </div>
+    @if($invoice->ecfSequence && $invoice->ecfSequence->fecha_vencimiento)
+        <div class="row">
+            <span class="lbl">Vence:</span>
+            <span>{{ $invoice->ecfSequence->fecha_vencimiento->format('d/m/Y') }}</span>
+        </div>
+    @endif
+    <div class="row">
+        <span class="lbl">Sucursal:</span>
+        <span>{{ $invoice->branch->name ?? '—' }}</span>
+    </div>
+    <div class="row">
+        <span class="lbl">Cajero:</span>
+        <span>{{ $invoice->user->name ?? '—' }}</span>
+    </div>
+</div>
+
+<div class="separator"></div>
+
+{{-- PACIENTE --}}
+<div class="client">
+    <div class="row">
+        <span class="lbl">Paciente:</span>
+        <span>{{ $invoice->patient->first_name . ' ' . $invoice->patient->last_name }}</span>
+    </div>
+    <div class="row">
+        <span class="lbl">Cédula:</span>
+        <span>{{ $invoice->patient->cedula ?? '—' }}</span>
+    </div>
+    @if($invoice->patient->phone)
+    <div class="row">
+        <span class="lbl">Tel:</span>
+        <span>{{ $invoice->patient->phone }}</span>
     </div>
     @endif
-   @if($invoice->qr_link)
-<img src="${qrImgUrl}" alt="QR DGII" class="qr-img">
-<div class="small">Escanee el código QR</div>
-@endif
+    <div class="row">
+        <span class="lbl">Médico:</span>
+        <span>{{ $invoice->doctor->name ?? 'N/A' }}</span>
+    </div>
 </div>
-@endif
-
-<table>
-  <tr>
-    <td class="lbl">Factura</td>
-    <td class="td-r bold">{{ $invoice->invoice_number }}</td>
-  </tr>
-  <tr>
-    <td class="lbl">Fecha</td>
-    <td class="td-r">{{ $invoice->created_at->format('d/m/Y H:i') }}</td>
-  </tr>
-  <tr>
-    <td class="lbl">Estado</td>
-    <td class="td-r"><span class="badge-status {{ $invoice->status }}">{{ strtoupper($invoice->status) }}</span></td>
-  </tr>
-  @if(!$invoice->encf && $invoice->ncf)
-  <tr>
-    <td class="lbl">NCF</td>
-    <td class="td-r">{{ $invoice->ncf }}</td>
-  </tr>
-  @endif
-</table>
-
-<div class="sep"></div>
-
-<div class="lbl">PACIENTE</div>
-<div class="bold" style="font-size:15px;margin-top:2px;">
-  {{ strtoupper($invoice->patient->first_name . ' ' . $invoice->patient->last_name) }}
-</div>
-<div class="small">Cédula: {{ $invoice->patient->cedula ?? '—' }}</div>
-@if($invoice->patient->phone)
-<div class="small">Tel: {{ $invoice->patient->phone }}</div>
-@endif
-
-<div class="sep"></div>
-
-<div class="lbl">MÉDICO</div>
-<div class="bold" style="font-size:15px;margin-top:2px;">
-    {{ $invoice->doctor->name ?? 'N/A' }}
-</div>
-<div class="small">{{ $invoice->doctor->branch->name ?? '' }}</div>
 
 @if($invoice->insurance)
-<div class="sep"></div>
-<div class="lbl">SEGURO</div>
-<div class="bold" style="font-size:15px;margin-top:2px;">
-    {{ $invoice->insurance->name }}
+<div class="separator"></div>
+<div class="client">
+    <div class="row">
+        <span class="lbl">Seguro:</span>
+        <span>{{ $invoice->insurance->name }}</span>
+    </div>
+    <div class="row">
+        <span class="lbl">Cobertura:</span>
+        <span>{{ $invoice->insurance->coverage_percentage }}%</span>
+    </div>
+    @if($invoice->authorization_number)
+    <div class="row">
+        <span class="lbl">Autorización:</span>
+        <span>{{ $invoice->authorization_number }}</span>
+    </div>
+    @endif
 </div>
-<div class="small">Cobertura: {{ $invoice->insurance->coverage_percentage }}%</div>
-@if($invoice->authorization_number)
-<div class="small">Autorización: {{ $invoice->authorization_number }}</div>
-@endif
 @endif
 
 @if($invoice->customer_business_name)
-<div class="sep"></div>
-<div class="lbl">CLIENTE</div>
-<div class="bold" style="font-size:14px;margin-top:2px;">
-    {{ strtoupper($invoice->customer_business_name) }}
-</div>
-@if($invoice->customer_rnc)
-<div class="small">RNC: {{ $invoice->customer_rnc }}</div>
-@endif
-@endif
-
-<div class="sep2"></div>
-
-<div class="lbl" style="margin-bottom:4px;">SERVICIOS</div>
-
-@foreach($invoice->items as $item)
-<table style="margin-bottom:6px;">
-  <tr>
-    <td class="bold">{{ strtoupper($item->service->name) }}</td>
-    <td class="td-r bold">{{ $company['currency'] }} {{ number_format($item->subtotal, 2) }}</td>
-  </tr>
-  <tr>
-    <td class="small">
-      {{ $item->quantity }} x {{ $company['currency'] }} {{ number_format($item->price, 2) }}
-      @if($item->insurance_amount > 0)
-      &nbsp; Seg: {{ $company['currency'] }} {{ number_format($item->insurance_amount, 2) }}
-      @endif
-    </td>
-  </tr>
-</table>
-@endforeach
-
-<div class="sep"></div>
-
-<table>
-  <tr>
-    <td class="lbl">Subtotal</td>
-    <td class="td-r">{{ $company['currency'] }} {{ number_format($invoice->subtotal, 2) }}</td>
-  </tr>
-  @if($invoice->tax_amount > 0)
-  <tr>
-    <td class="lbl">Impuestos</td>
-    <td class="td-r">{{ $company['currency'] }} {{ number_format($invoice->tax_amount, 2) }}</td>
-  </tr>
-  @endif
-  @if($invoice->insurance_discount > 0)
-  <tr>
-    <td class="lbl">Desc. seguro</td>
-    <td class="td-r">- {{ $company['currency'] }} {{ number_format($invoice->insurance_discount, 2) }}</td>
-  </tr>
-  @endif
-</table>
-
-<div class="sep"></div>
-
-<div class="sep2"></div>
-
-<table>
-  <tr class="total-row">
-    <td>TOTAL</td>
-    <td class="td-r">{{ $company['currency'] }} {{ number_format($invoice->total, 2) }}</td>
-  </tr>
-</table>
-
-<div class="sep2"></div>
-
-<div class="center small" style="margin-top:6px;">
-    {{ $company['footer_text'] }}
-</div>
-<div class="center small" style="margin-top:2px;font-size:10px;">
-    {{ $company['business_name'] }} · RNC: {{ $company['rnc'] }}
-</div>
-@if($invoice->customer_business_name)
-<div class="center small" style="margin-top:2px;font-size:10px;">
-    Cliente: {{ $invoice->customer_business_name }} (RNC: {{ $invoice->customer_rnc }})
+<div class="separator"></div>
+<div class="client">
+    <div class="row">
+        <span class="lbl">Cliente:</span>
+        <span>{{ $invoice->customer_business_name }}</span>
+    </div>
+    @if($invoice->customer_rnc)
+    <div class="row">
+        <span class="lbl">RNC:</span>
+        <span>{{ $invoice->customer_rnc }}</span>
+    </div>
+    @endif
 </div>
 @endif
 
-<div style="margin-top:20px;"></div>
+{{-- ITEMS --}}
+<div class="section-title">Servicios</div>
+<table class="items">
+    <thead>
+        <tr>
+            <th style="width:10%;">Cant</th>
+            <th style="width:55%;">Descripción</th>
+            <th class="text-right" style="width:35%;">Importe</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($invoice->items as $item)
+        <tr>
+            <td>{{ $item->quantity }}</td>
+            <td>
+                <div class="product-name">{{ $item->service->name ?? 'Servicio' }}</div>
+                <div class="product-code">
+                    {{ $item->quantity }} x RD$ {{ number_format($item->price, 2) }}
+                    @if($item->insurance_amount > 0)
+                        · Seg: RD$ {{ number_format($item->insurance_amount, 2) }}
+                    @endif
+                </div>
+            </td>
+            <td class="text-right">RD$ {{ number_format($item->subtotal, 2) }}</td>
+        </tr>
+        @endforeach
+    </tbody>
+</table>
+
+{{-- TOTALES --}}
+<div class="totals">
+    <div class="row">
+        <span>Subtotal:</span>
+        <span>RD$ {{ number_format($invoice->subtotal, 2) }}</span>
+    </div>
+    @if($invoice->tax_amount > 0)
+    <div class="row">
+        <span>ITBIS:</span>
+        <span>RD$ {{ number_format($invoice->tax_amount, 2) }}</span>
+    </div>
+    @endif
+    @if($invoice->insurance_discount > 0)
+    <div class="row">
+        <span>Desc. seguro:</span>
+        <span>- RD$ {{ number_format($invoice->insurance_discount, 2) }}</span>
+    </div>
+    @endif
+    <div class="row grand">
+        <span>TOTAL:</span>
+        <span>RD$ {{ number_format($invoice->total, 2) }}</span>
+    </div>
+</div>
+
+{{-- QR + CÓDIGO DE SEGURIDAD + FECHA DE FIRMA --}}
+@if($invoice->qr_link || $codigoSeguridad || $fechaFirma)
+<div class="qr-section">
+    @if($invoice->qr_link)
+        <img src="${qrImgUrl}" alt="QR DGII">
+        <div class="qr-label">Verifique en dgii.gov.do</div>
+    @endif
+
+    @if($codigoSeguridad)
+        <div class="sec-info"><strong>Código de Seguridad:</strong> {{ $codigoSeguridad }}</div>
+    @endif
+
+    @if($fechaFirma)
+        <div class="sec-info"><strong>Fecha Firma:</strong> {{ $fechaFirma }}</div>
+    @endif
+</div>
+@endif
+
+{{-- FOOTER --}}
+<div class="footer">
+    <div class="thanks">{{ $company['footer_text'] ?? '¡GRACIAS POR SU PREFERENCIA!' }}</div>
+    <div>{{ $company['business_name'] ?? $company['name'] }}</div>
+
+    @if($invoice->encf)
+        <div class="dgi-info">
+            e-CF: {{ $invoice->encf }}
+            @if($invoice->track_id)
+                <br>Track ID: {{ \Illuminate\Support\Str::limit($invoice->track_id, 20) }}
+            @endif
+        </div>
+    @endif
+</div>
+
+<div style="margin-top:12mm;"></div>
 
 </body>
 </html>`);

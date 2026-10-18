@@ -54,6 +54,12 @@
                     <a href="{{ url('/product-invoices/'.$productInvoice->id.'/print') }}" target="_blank" class="btn btn-primary">
                         <i class="ri-printer-line me-1"></i>Imprimir
                     </a>
+
+                    <a href="{{ url('/product-invoices/'.$productInvoice->id.'/ticket') }}" target="_blank" class="btn btn-primary">
+                        <i class="ri-printer-line me-1"></i>Imprimir Ticket POS
+                    </a>
+
+                    
                     <a href="{{ url('/product-invoices') }}" class="btn btn-secondary">
                         <i class="ri-arrow-left-line me-1"></i>Volver
                     </a>

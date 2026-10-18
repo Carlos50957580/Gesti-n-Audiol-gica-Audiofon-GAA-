@@ -363,4 +363,37 @@ class ProductInvoiceController extends Controller
 
         return response()->json($products);
     }
+    /**
+ * Imprimir ticket (formato punto de venta 80mm)
+ */
+public function ticket(ProductInvoice $productInvoice)
+{
+    $user = auth()->user();
+    if ($user->role->name !== 'admin' && $productInvoice->branch_id != $user->branch_id) {
+        abort(403);
+    }
+
+    $productInvoice->load([
+        'patient',
+        'user',
+        'branch',
+        'items.product',
+        'receipts.user',
+        'ncfSequence',
+        'ecfSequence',
+    ]);
+
+    $company = [
+        'name'  => Setting::get('company_name', 'Mi Clínica'),
+        'rnc'   => Setting::get('company_rnc', ''),
+        'logo'  => Setting::get('company_logo', null),
+        'phone' => Setting::get('company_phone', ''),
+        'address' => Setting::get('company_address', ''),
+        'slogan'  => Setting::get('company_slogan', ''),
+        'footer_text' => Setting::get('company_footer_text', 'Gracias por su preferencia'),
+        'currency' => Setting::get('company_currency', 'DOP'),
+    ];
+
+    return view('product-invoices.ticket', compact('productInvoice', 'company'));
+}
 }

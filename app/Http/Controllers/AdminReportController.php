@@ -168,27 +168,73 @@ class AdminReportController extends Controller
      * Reporte de Servicios
      */
     public function services(Request $request)
-    {
-        $query = Service::with(['category']);
+{
+    $query = Service::with(['category'])->orderBy('name');
 
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-        if ($request->filled('is_active')) {
-            $query->where('is_active', $request->is_active);
-        }
-
-        $services = $query->paginate(50);
-
-        $topServices = $this->getTopServices($request);
-        $revenueByCategory = $this->getRevenueByCategory($request);
-
-        $categories = ServiceCategory::where('is_active', 1)->get();
-
-        return view('admin.reports.services', compact(
-            'services', 'topServices', 'revenueByCategory', 'categories'
-        ));
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
     }
+    if ($request->filled('is_active')) {
+        $query->where('is_active', $request->is_active);
+    }
+
+    // Servicios facturados en el período (una fila por servicio)
+    $billedServices = $this->getBilledServices($request);
+    $billedByService = $billedServices->keyBy('id');
+
+    $services = $query->paginate(50);
+
+    // Cantidad facturada para la tabla principal
+    $services->getCollection()->transform(function ($service) use ($billedByService) {
+        $service->billed_quantity = (int) ($billedByService[$service->id]->total_quantity ?? 0);
+        return $service;
+    });
+
+    $topServices       = $this->getTopServices($request);
+    $revenueByCategory = $this->getRevenueByCategory($request);
+    $categories        = ServiceCategory::where('is_active', 1)->get();
+
+    return view('admin.reports.services', compact(
+        'services', 'billedServices', 'topServices', 'revenueByCategory', 'categories'
+    ));
+}
+
+/**
+ * Estudios/servicios facturados y su cantidad (excluye facturas canceladas)
+ */
+private function getBilledServices($request)
+{
+    $query = DB::table('invoice_items')
+        ->join('services', 'invoice_items.service_id', '=', 'services.id')
+        ->leftJoin('service_categories', 'services.category_id', '=', 'service_categories.id')
+        ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+        ->where('invoices.status', '!=', 'cancelada');
+
+    if ($request->filled('date_from')) {
+        $query->whereDate('invoices.created_at', '>=', $request->date_from);
+    }
+    if ($request->filled('date_to')) {
+        $query->whereDate('invoices.created_at', '<=', $request->date_to);
+    }
+    if ($request->filled('branch_id')) {
+        $query->where('invoices.branch_id', $request->branch_id);
+    }
+    if ($request->filled('category_id')) {
+        $query->where('services.category_id', $request->category_id);
+    }
+
+    return $query->select(
+            'services.id',
+            'services.name',
+            'service_categories.name as category_name',
+            DB::raw('SUM(invoice_items.quantity) as total_quantity'),
+            DB::raw('COUNT(DISTINCT invoices.id) as invoices_count'),
+            DB::raw('SUM(invoice_items.subtotal) as total_revenue')
+        )
+        ->groupBy('services.id', 'services.name', 'service_categories.name')
+        ->orderByDesc('total_quantity')
+        ->get();
+}
 
     /**
      * Reporte de Honorarios
@@ -734,4 +780,150 @@ class AdminReportController extends Controller
     {
         return $this->exportCSV($data, $type);
     }
+
+
+/**
+ * Reporte de Facturación por Médico
+ */
+public function doctors(Request $request)
+{
+    $base = Invoice::query();
+    $this->applyDoctorFilters($base, $request);
+
+    // ── Tabla grande: una fila por factura con TODO el detalle ──
+    $invoices = (clone $base)
+        ->with([
+            'patient',
+            'doctor',
+            'user',
+            'branch',
+            'insurance',
+            'items.service.category',
+            'receipt.user',
+            'doctorFees',
+        ])
+        ->orderByDesc('created_at')
+        ->paginate(100)
+        ->withQueryString();
+
+    // ── Estadísticas (las canceladas no cuentan como facturado) ──
+    $valid = (clone $base)->where('status', '!=', 'cancelada');
+
+    $stats = [
+        'total_invoices'     => (clone $base)->count(),
+        'cancelled'          => (clone $base)->where('status', 'cancelada')->count(),
+        'total_amount'       => (clone $valid)->sum('total'),
+        'total_paid'         => (clone $base)->where('status', 'pagada')->sum('total'),
+        'total_pending'      => (clone $base)->where('status', 'pendiente')->sum('total'),
+        'total_tax'          => (clone $valid)->sum('tax_amount'),
+        'insurance_discount' => (clone $valid)->sum('insurance_discount'),
+        'doctor_fees'        => DoctorFee::whereIn('invoice_id', (clone $valid)->select('invoices.id'))
+                                    ->where('status', '!=', 'cancelled')
+                                    ->sum('fee_amount'),
+    ];
+
+    // ── Datos para los gráficos ──
+    $byDoctorRaw = (clone $valid)
+        ->whereNotNull('doctor_id')
+        ->select(
+            'doctor_id',
+            DB::raw('COUNT(*) as invoices_count'),
+            DB::raw('SUM(total) as total_amount')
+        )
+        ->groupBy('doctor_id')
+        ->orderByDesc('total_amount')
+        ->get();
+
+    $doctorNames = User::whereIn('id', $byDoctorRaw->pluck('doctor_id'))->pluck('name', 'id');
+
+    $byDoctor = $byDoctorRaw->map(fn($r) => [
+        'name'           => $doctorNames[$r->doctor_id] ?? 'N/A',
+        'invoices_count' => (int) $r->invoices_count,
+        'total_amount'   => (float) $r->total_amount,
+    ])->values()->all();
+
+    $byStatus = [
+        'pagada'    => (float) $stats['total_paid'],
+        'pendiente' => (float) $stats['total_pending'],
+    ];
+
+    // ── Listas para los filtros ──
+    $doctors = User::where(function ($q) {
+            $q->where('role_id', 3)->orWhere('is_doctor', 1);
+        })
+        ->orderBy('name')
+        ->get();
+
+    $branches      = Branch::orderBy('name')->get();
+    $servicesList  = Service::orderBy('name')->get();
+    $categories    = ServiceCategory::orderBy('name')->get();
+    $insuranceList = Insurance::where('active', 1)->orderBy('name')->get();
+
+    return view('admin.reports.doctors', compact(
+        'invoices', 'stats', 'byDoctor', 'byStatus',
+        'doctors', 'branches', 'servicesList', 'categories', 'insuranceList'
+    ));
+}
+
+/**
+ * Filtros del reporte por médico
+ */
+private function applyDoctorFilters($query, Request $request)
+{
+    if ($request->filled('date_from')) {
+        $query->whereDate('created_at', '>=', $request->date_from);
+    }
+    if ($request->filled('date_to')) {
+        $query->whereDate('created_at', '<=', $request->date_to);
+    }
+    if ($request->filled('doctor_id')) {
+        $query->where('doctor_id', $request->doctor_id);
+    }
+    if ($request->filled('branch_id')) {
+        $query->where('branch_id', $request->branch_id);
+    }
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+    if ($request->filled('insurance_id')) {
+        if ($request->insurance_id === 'null') {
+            $query->whereNull('insurance_id');
+        } else {
+            $query->where('insurance_id', $request->insurance_id);
+        }
+    }
+    // Servicio y/o categoría (se evalúan sobre el MISMO renglón de la factura)
+    if ($request->filled('service_id') || $request->filled('category_id')) {
+        $serviceId  = $request->service_id;
+        $categoryId = $request->category_id;
+
+        $query->whereHas('items', function ($q) use ($serviceId, $categoryId) {
+            if ($serviceId) {
+                $q->where('service_id', $serviceId);
+            }
+            if ($categoryId) {
+                $q->whereHas('service', fn($sq) => $sq->where('category_id', $categoryId));
+            }
+        });
+    }
+    if ($request->filled('search')) {
+        $search  = trim($request->search);
+        $numeric = ltrim(preg_replace('/\D/', '', $search), '0');
+
+        $query->where(function ($q) use ($search, $numeric) {
+            $q->whereHas('patient', function ($pq) use ($search) {
+                $pq->where('first_name', 'LIKE', "%{$search}%")
+                   ->orWhere('last_name', 'LIKE', "%{$search}%")
+                   ->orWhere('cedula', 'LIKE', "%{$search}%")
+                   ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$search}%"]);
+            })
+            ->orWhere('ncf', 'LIKE', "%{$search}%")
+            ->orWhere('encf', 'LIKE', "%{$search}%");
+
+            if ($numeric !== '') {
+                $q->orWhere('id', $numeric);
+            }
+        });
+    }
+}
 }

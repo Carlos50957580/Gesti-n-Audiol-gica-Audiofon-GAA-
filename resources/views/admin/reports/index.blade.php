@@ -31,6 +31,22 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
+        <a href="{{ route('admin.reports.doctors') }}" class="text-decoration-none">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="avatar-sm mx-auto mb-3">
+                        <span class="avatar-title rounded-circle bg-secondary-subtle text-secondary fs-20">
+                            <i class="ri-user-heart-line"></i>
+                        </span>
+                    </div>
+                    <h5 class="card-title">Facturación por Médico</h5>
+                    <p class="card-text text-muted small">Detalle de cada factura por médico y estudio</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
         <a href="{{ route('admin.reports.appointments') }}" class="text-decoration-none">
             <div class="card">
                 <div class="card-body text-center">

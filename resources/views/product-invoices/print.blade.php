@@ -156,12 +156,39 @@
 
         {{-- QR + TOTALES --}}
         <div class="summary-section">
-            {{-- QR --}}
+            {{-- Columna izquierda: QR + Código seguridad + Fecha firma --}}
             <div class="qr-box">
                 @if($productInvoice->qr_link)
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($productInvoice->qr_link) }}"
                          alt="Código QR DGII">
                     <div class="qr-label">Verifique en dgii.gov.do</div>
+
+                    {{-- Extraer código de seguridad y fecha de firma del qr_link --}}
+                    @php
+                        $qrParams = [];
+                        $queryString = parse_url($productInvoice->qr_link, PHP_URL_QUERY);
+                        if ($queryString) {
+                            parse_str($queryString, $qrParams);
+                        }
+                        $codigoSeguridad = $qrParams['CodigoSeguridad'] ?? null;
+                        $fechaFirmaRaw = $qrParams['FechaFirma'] ?? null;
+                        $fechaFirma = $fechaFirmaRaw 
+                            ? \Carbon\Carbon::parse(urldecode($fechaFirmaRaw))->format('d/m/Y H:i:s') 
+                            : null;
+                    @endphp
+
+                    @if($codigoSeguridad)
+                        <div style="font-size:9px; margin-top:4px; text-align:center;">
+                            <strong>Código de Seguridad:</strong> {{ $codigoSeguridad }}
+                        </div>
+                    @endif
+
+                    @if($fechaFirma)
+                        <div style="font-size:9px; text-align:center;">
+                            <strong>Fecha Firma:</strong> {{ $fechaFirma }}
+                        </div>
+                    @endif
+
                 @else
                     <div style="width:120px; height:120px; border:1px dashed #ccc;
                                 display:flex; align-items:center; justify-content:center;
@@ -171,7 +198,7 @@
                 @endif
             </div>
 
-            {{-- Totales --}}
+            {{-- Columna derecha: Totalizadores --}}
             <div class="totals-box">
                 <div class="row">
                     <span>Subtotal:</span>
