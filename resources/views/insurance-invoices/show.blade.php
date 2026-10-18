@@ -37,15 +37,17 @@
         <div class="row mb-3">
             <div class="col-12">
                 <div class="d-flex gap-2 flex-wrap">
-                    @if($insuranceInvoice->canBeCancelled())
-                        <form action="{{ route('insurance-invoices.cancel', $insuranceInvoice) }}" method="POST"
-                              onsubmit="return confirm('¿Cancelar esta factura?')">
-                            @csrf
-                            <button class="btn btn-danger">
-                                <i class="ri-close-circle-line me-1"></i>Cancelar
-                            </button>
-                        </form>
-                    @endif
+                   @if($insuranceInvoice->canBeCancelled())
+    <form action="{{ route('insurance-invoices.cancel', $insuranceInvoice) }}" method="POST"
+          onsubmit="var r = prompt('Motivo de la anulación:'); if (r === null) { return false; } this.reason.value = r; return confirm('{{ $insuranceInvoice->enviada_dgii ? 'Se emitirá una Nota de Crédito electrónica a la DGII. Esta acción no se puede deshacer. ¿Continuar?' : '¿Cancelar esta factura?' }}');">
+        @csrf
+        <input type="hidden" name="reason" value="">
+        <button class="btn btn-danger">
+            <i class="ri-close-circle-line me-1"></i>
+            {{ $insuranceInvoice->enviada_dgii ? 'Anular con Nota de Crédito' : 'Cancelar' }}
+        </button>
+    </form>
+@endif
 
                     <a href="{{ route('insurance-invoices.print', $insuranceInvoice) }}" target="_blank" class="btn btn-primary">
                         <i class="ri-printer-line me-1"></i>Imprimir

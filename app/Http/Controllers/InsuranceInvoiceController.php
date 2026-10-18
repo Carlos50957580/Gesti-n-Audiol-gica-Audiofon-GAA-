@@ -178,22 +178,35 @@ class InsuranceInvoiceController extends Controller
         return view('insurance-invoices.print', compact('insuranceInvoice', 'company'));
     }
 
-    public function cancel(InsuranceInvoice $insuranceInvoice)
-    {
-        $user = auth()->user();
-        if ($user->role->name !== 'admin' && $insuranceInvoice->branch_id != $user->branch_id) {
-            abort(403);
-        }
-
-        if (!$insuranceInvoice->canBeCancelled()) {
-            return back()->with('error', 'Solo se pueden cancelar facturas pendientes.');
-        }
-
-        $insuranceInvoice->update(['status' => 'cancelada']);
-
-        return redirect()->route('insurance-invoices.show', $insuranceInvoice)
-            ->with('success', 'Factura cancelada.');
+   public function cancel(Request $request, InsuranceInvoice $insuranceInvoice)
+{
+    $user = auth()->user();
+    if ($user->role->name !== 'admin' && $insuranceInvoice->branch_id != $user->branch_id) {
+        abort(403);
     }
+
+    if (!$insuranceInvoice->canBeCancelled()) {
+        return back()->with('error', 'Solo se pueden cancelar facturas pendientes.');
+    }
+
+    $request->validate([
+        'reason' => 'nullable|string|max:500',
+    ]);
+
+    try {
+        $result = $this->service->cancelarFactura($insuranceInvoice, $request->input('reason'));
+    } catch (\Exception $e) {
+        return back()->with('error', 'Error al cancelar: ' . $e->getMessage());
+    }
+
+    if (!$result['ok']) {
+        return back()->with('error', $result['message']);
+    }
+
+    return redirect()
+        ->route('insurance-invoices.show', $insuranceInvoice)
+        ->with('success', $result['message']);
+}
 
     public function destroy(InsuranceInvoice $insuranceInvoice)
     {

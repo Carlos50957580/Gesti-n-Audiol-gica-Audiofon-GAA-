@@ -169,4 +169,93 @@ class InsuranceInvoiceService
             default            => '31',
         };
     }
+
+    public function cancelarFactura(InsuranceInvoice $invoice, ?string $motivo = null): array
+{
+    $motivo = trim((string) $motivo) ?: 'Anulación de comprobante emitido por error';
+
+    // 1) Nunca se envió a la DGII: nada que anular allá
+    if (!$invoice->enviada_dgii || empty($invoice->encf)) {
+        $invoice->update(['status' => 'cancelada']);
+
+        return ['ok' => true, 'message' => 'Factura cancelada. No había comprobante enviado a la DGII.'];
+    }
+
+    $estado = strtolower((string) $invoice->estado_dgii);
+
+    // 2) Rechazado: la DGII ya lo descarta, no requiere nota de crédito
+    if (str_contains($estado, 'rechaz')) {
+        $invoice->update(['status' => 'cancelada']);
+
+        return ['ok' => true, 'message' => 'Factura cancelada. El comprobante fue rechazado por la DGII, no requiere nota de crédito.'];
+    }
+
+    // 3) Solo se puede anular un comprobante ya aceptado
+    if (!str_contains($estado, 'acept')) {
+        return [
+            'ok'      => false,
+            'message' => 'El comprobante aún no figura como aceptado por la DGII (estado: '
+                       . ($invoice->estado_dgii ?: 'desconocido')
+                       . '). Espera a que sea aceptado o rechazado antes de anularlo.',
+        ];
+    }
+
+    // 4) ¿Ya se emitió una nota de crédito válida antes? (evita duplicados)
+    $ncPrevia = $invoice->ecfDocuments()
+        ->where('tipo_ecf', '34')
+        ->whereNotNull('encf')
+        ->whereNull('error_message')
+        ->latest()
+        ->first();
+
+    if ($ncPrevia) {
+        $invoice->update(['status' => 'cancelada']);
+
+        return ['ok' => true, 'message' => 'Factura cancelada. Ya existía la nota de crédito ' . $ncPrevia->encf . '.'];
+    }
+
+    // 5) Emitir la nota de crédito a la DGII
+    $result = $this->ef2Service->enviarNotaCreditoSeguro($invoice, $motivo);
+    $this->guardarRespuestaNotaCredito($invoice, $result);
+
+    if (empty($result['success'])) {
+        return [
+            'ok'      => false,
+            'message' => 'No se pudo emitir la nota de crédito: ' . ($result['message'] ?? 'Error desconocido')
+                       . '. La factura NO fue cancelada.',
+        ];
+    }
+
+    $invoice->update(['status' => 'cancelada']);
+
+    return [
+        'ok'      => true,
+        'message' => 'Factura cancelada. Nota de crédito enviada a la DGII. e-NCF: ' . ($result['ncf'] ?? ''),
+    ];
+}
+
+public function guardarRespuestaNotaCredito(InsuranceInvoice $invoice, array $result): void
+{
+    $exitoso = !empty($result['success']);
+
+    // OJO: no toca encf/track_id/estado de la factura, que siguen
+    // siendo los del comprobante original.
+    $invoice->ecfDocuments()->create([
+        'tipo_ecf'           => '34',
+        'encf'               => $result['ncf'] ?? null,
+        'track_id'           => $result['track_id'] ?? null,
+        'estado'             => $result['estado'] ?? ($exitoso ? 'enviado' : 'error'),
+        'qr_link'            => $result['qr_link'] ?? null,
+        'pdf_cloud_url'      => $result['pdf_cloud_url'] ?? null,
+        'payload_enviado'    => $result['payload'] ?? null,
+        'respuesta_completa' => $result,
+        'error_code'         => $result['code'] ?? null,
+        'error_message'      => $exitoso ? null : ($result['message'] ?? 'Error desconocido'),
+        'ecf_sequence_id'    => $result['ecf_sequence_id'] ?? null,
+        'user_id'            => auth()->id(),
+        'intentos'           => 1,
+        'enviado_at'         => now(),
+        'respondido_at'      => now(),
+    ]);
+}
 }

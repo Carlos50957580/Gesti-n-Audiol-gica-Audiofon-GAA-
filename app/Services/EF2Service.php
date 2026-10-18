@@ -699,4 +699,145 @@ protected function construirPayloadSeguro(\App\Models\InsuranceInvoice $invoice,
         ],
     ];
 }
+
+public function enviarNotaCreditoSeguro(\App\Models\InsuranceInvoice $invoice, string $motivo): array
+{
+    Log::info('═══════════════════════════════════════════');
+    Log::info('EF2::enviarNotaCreditoSeguro - INICIO', [
+        'invoice_id'     => $invoice->id,
+        'invoice_number' => $invoice->number,
+        'encf_original'  => $invoice->encf,
+    ]);
+
+    if (!$this->estaConfigurado()) {
+        return [
+            'success' => false,
+            'message' => 'La facturación electrónica no está configurada o activa.',
+        ];
+    }
+
+    if (empty($invoice->encf)) {
+        return [
+            'success' => false,
+            'message' => 'La factura no tiene e-NCF, no hay nada que anular en la DGII.',
+        ];
+    }
+
+    $secuencia = $this->seleccionarSecuenciaNotaCredito();
+
+    if (!$secuencia) {
+        Log::warning('EF2::enviarNotaCreditoSeguro - Sin secuencia E34 disponible');
+        return [
+            'success' => false,
+            'message' => 'No hay secuencias e-CF tipo 34 (Nota de Crédito) disponibles. '
+                       . 'Solicítalas en la Oficina Virtual de la DGII y regístralas en el sistema.',
+        ];
+    }
+
+    $payload = $this->construirPayloadNotaCreditoSeguro($invoice, $secuencia, $motivo);
+
+    Log::info('EF2::enviarNotaCreditoSeguro - Payload construido', ['payload' => $payload]);
+
+    try {
+        $response = Http::withToken($this->token)
+            ->timeout(30)
+            ->post("{$this->baseUrl}/procesar_factura.php", $payload);
+
+        Log::info('EF2::enviarNotaCreditoSeguro - Respuesta HTTP', [
+            'status_code'  => $response->status(),
+            'body_preview' => substr($response->body(), 0, 500),
+        ]);
+
+        $data = $response->json();
+
+        if (!$data) {
+            return [
+                'success' => false,
+                'message' => 'Respuesta inválida de EF2',
+                'raw'     => $response->body(),
+                'payload' => $payload,
+            ];
+        }
+
+        $data['payload'] = $payload;
+
+        if (!empty($data['success'])) {
+            $secuencia->avanzar();
+            $data['ecf_sequence_id'] = $secuencia->id;
+        }
+
+        return $data;
+
+    } catch (\Exception $e) {
+        Log::error('EF2::enviarNotaCreditoSeguro - EXCEPCIÓN', [
+            'invoice_id' => $invoice->id,
+            'error'      => $e->getMessage(),
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'Error de conexión con EF2: ' . $e->getMessage(),
+        ];
+    }
+}
+
+protected function seleccionarSecuenciaNotaCredito(): ?EcfSequence
+{
+    return EcfSequence::where('tipo_ecf', '34')
+        ->where('estado', true)
+        ->whereColumn('secuencia_actual', '<', 'hasta')
+        ->where(function ($q) {
+            $q->whereNull('fecha_vencimiento')
+              ->orWhere('fecha_vencimiento', '>=', now()->toDateString());
+        })
+        ->orderBy('id')
+        ->first();
+}
+
+protected function construirPayloadNotaCreditoSeguro(
+    \App\Models\InsuranceInvoice $invoice,
+    EcfSequence $secuencia,
+    string $motivo
+): array {
+    // Emisor, comprador, totales e ítems iguales a la factura original
+    // (una anulación total debe reflejar el mismo monto y el mismo ITBIS)
+    $base = $this->construirPayloadSeguro($invoice, $secuencia);
+
+    // Fecha del comprobante que se está anulando
+    $fechaOriginal = \Carbon\Carbon::parse($invoice->enviada_dgii_at ?? $invoice->created_at);
+
+    // 0 = nota emitida dentro de los 30 días, 1 = después de 30 días
+    $dias = abs((int) $fechaOriginal->copy()->startOfDay()->diffInDays(now()->startOfDay()));
+
+    // El orden de las llaves sigue el esquema del e-CF
+    $idDoc = [
+        'TipoeCF'               => '34',
+        'eNCF'                  => $secuencia->siguiente_encf,
+        // Como en tu código actual, el E34 no lleva FechaVencimientoSecuencia.
+        // Si EF2/DGII la exigen, agrégala con $this->fechaVencimiento('34', $secuencia).
+        'IndicadorNotaCredito'  => $dias > 30 ? '1' : '0',
+        'IndicadorMontoGravado' => '0',
+        'TipoIngresos'          => '01',
+        'TipoPago'              => '1',
+    ];
+
+    return [
+        'ECF' => [
+            'Encabezado' => [
+                'Version'   => '1.0',
+                'IdDoc'     => $idDoc,
+                'Emisor'    => $base['ECF']['Encabezado']['Emisor'],
+                'Comprador' => $base['ECF']['Encabezado']['Comprador'],
+                'Totales'   => $base['ECF']['Encabezado']['Totales'],
+            ],
+            'DetallesItems' => $base['ECF']['DetallesItems'],
+            'InformacionReferencia' => [
+                'NCFModificado'      => $invoice->encf,
+                'FechaNCFModificado' => $fechaOriginal->format('d-m-Y'),
+                'CodigoModificacion' => '1', // 1 = Anula el NCF modificado
+                'RazonModificacion'  => mb_substr($motivo, 0, 90),
+            ],
+        ],
+    ];
+}
 }
