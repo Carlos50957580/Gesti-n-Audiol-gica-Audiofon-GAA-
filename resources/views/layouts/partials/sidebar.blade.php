@@ -267,7 +267,7 @@
                             <a class="nav-link menu-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" 
                                href="{{ route('invoices.index') }}">
                                 <i class="ri-bill-line"></i>
-                                <span data-key="t-facturacion">Facturación</span>
+                                <span data-key="t-facturacion">Facturación de servicios</span>
                             </a>
                         </li>
 
