@@ -22,6 +22,7 @@ class InsuranceController extends Controller
         return response()->json([
             'id'                  => $insurance->id,
             'name'                => $insurance->name,
+            'rnc'                 => $insurance->rnc, 
             'email'               => $insurance->email,
             'phone'               => $insurance->phone,
             'authorization_phone' => $insurance->authorization_phone,
@@ -39,6 +40,7 @@ class InsuranceController extends Controller
         return response()->json([
             'id'                  => $insurance->id,
             'name'                => $insurance->name,
+            'rnc'                 => $insurance->rnc,
             'email'               => $insurance->email,
             'phone'               => $insurance->phone,
             'authorization_phone' => $insurance->authorization_phone,

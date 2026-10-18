@@ -28,16 +28,24 @@ class ReceiptController extends Controller
         }
 
         if ($request->filled('q')) {
-            $q = $request->q;
-            $invoicesQuery->where(function ($sq) use ($q) {
-                $sq->whereHas('patient', fn($pq) =>
-                    $pq->where('first_name', 'like', "%{$q}%")
-                       ->orWhere('last_name',  'like', "%{$q}%")
-                       ->orWhere('cedula',     'like', "%{$q}%")
-                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"])
-                );
-            });
+    $q = trim($request->q);
+
+    // "FAC-000025", "fac25", "000025" o "25" -> "25"
+    $numeric = ltrim(preg_replace('/\D/', '', $q), '0');
+
+    $invoicesQuery->where(function ($sq) use ($q, $numeric) {
+        $sq->whereHas('patient', fn($pq) =>
+            $pq->where('first_name', 'like', "%{$q}%")
+               ->orWhere('last_name',  'like', "%{$q}%")
+               ->orWhere('cedula',     'like', "%{$q}%")
+               ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"])
+        );
+
+        if ($numeric !== '') {
+            $sq->orWhere('id', $numeric);
         }
+    });
+}
 
         if ($isAdmin && $request->filled('branch_id')) {
             $invoicesQuery->where('branch_id', $request->branch_id);
@@ -67,16 +75,24 @@ class ReceiptController extends Controller
         }
 
         if ($request->filled('rq')) {
-            $rq = $request->rq;
-            $receiptsQuery->where(function ($sq) use ($rq) {
-                $sq->whereHas('invoice.patient', fn($pq) =>
-                    $pq->where('first_name', 'like', "%{$rq}%")
-                       ->orWhere('last_name',  'like', "%{$rq}%")
-                       ->orWhere('cedula',     'like', "%{$rq}%")
-                       ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$rq}%"])
-                );
-            });
+    $rq = trim($request->rq);
+
+    // "REC-000007", "000007" o "7" -> "7"
+    $numeric = ltrim(preg_replace('/\D/', '', $rq), '0');
+
+    $receiptsQuery->where(function ($sq) use ($rq, $numeric) {
+        $sq->whereHas('invoice.patient', fn($pq) =>
+            $pq->where('first_name', 'like', "%{$rq}%")
+               ->orWhere('last_name',  'like', "%{$rq}%")
+               ->orWhere('cedula',     'like', "%{$rq}%")
+               ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$rq}%"])
+        );
+
+        if ($numeric !== '') {
+            $sq->orWhere('id', $numeric); // solo el ID del recibo
         }
+    });
+}
 
         if ($request->filled('rfrom')) {
             $receiptsQuery->whereDate('created_at', '>=', $request->rfrom);

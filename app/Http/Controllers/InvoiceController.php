@@ -40,16 +40,24 @@ protected InvoiceService $invoiceService;
 
         // Filtros
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('id', 'LIKE', "%{$search}%")
-                  ->orWhereHas('patient', function($q2) use ($search) {
-                      $q2->where('first_name', 'LIKE', "%{$search}%")
-                        ->orWhere('last_name', 'LIKE', "%{$search}%")
-                        ->orWhere('cedula', 'LIKE', "%{$search}%");
-                  });
-            });
-        }
+    $search = trim($request->search);
+    $words  = preg_split('/\s+/', $search);
+
+    $query->where(function ($q) use ($search, $words) {
+        $q->where('id', 'LIKE', "%{$search}%")
+          ->orWhereHas('patient', function ($q2) use ($search, $words) {
+              $q2->where('cedula', 'LIKE', "%{$search}%")
+                 ->orWhere(function ($q3) use ($words) {
+                     foreach ($words as $word) {
+                         $q3->where(function ($q4) use ($word) {
+                             $q4->where('first_name', 'LIKE', "%{$word}%")
+                                ->orWhere('last_name', 'LIKE', "%{$word}%");
+                         });
+                     }
+                 });
+          });
+    });
+}
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);

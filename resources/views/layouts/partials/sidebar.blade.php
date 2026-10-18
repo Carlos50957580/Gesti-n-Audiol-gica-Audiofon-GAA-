@@ -158,7 +158,7 @@
                         <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
                            href="{{ route('admin.reports.index') }}">
                             <i class="ri-bar-chart-line"></i>
-                            <span data-key="t-reportes-admin">Reportes</span>
+                            <span data-key="t-reportes-admin">Reportes de Servicios</span>
                         </a>
                     </li>
 
@@ -409,7 +409,7 @@
         <a class="nav-link menu-link {{ request()->is('product-reports') && !request()->is('product-reports/cashier*') ? 'active' : '' }}" 
            href="{{ url('/product-reports') }}">
             <i class="ri-bar-chart-2-line"></i>
-            <span data-key="t-reportes-productos">Reporte de Ventas</span>
+            <span data-key="t-reportes-productos">Reportes de Productos</span>
         </a>
     </li>
 @endif

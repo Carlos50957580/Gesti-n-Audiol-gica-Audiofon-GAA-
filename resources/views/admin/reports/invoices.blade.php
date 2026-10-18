@@ -244,7 +244,7 @@
     <div class="col-xl-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Facturación por Recepcionista</h5>
+                <h5 class="card-title mb-0">Cobrado por Recepcionista</h5>
             </div>
             <div class="card-body">
                 <div class="chart-h200">
