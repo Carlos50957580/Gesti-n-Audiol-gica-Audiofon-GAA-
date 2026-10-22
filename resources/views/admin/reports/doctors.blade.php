@@ -21,6 +21,10 @@
         <div class="page-title-box d-sm-flex align-items-center justify-content-between">
             <h4 class="mb-0">Facturación por Médico</h4>
             <div class="page-title-right">
+                <a href="{{ route('admin.reports.doctors.export', request()->query()) }}"
+       class="btn btn-success">
+        <i class="ri-file-excel-2-line"></i> Exportar Excel
+    </a>
                 <a href="{{ route('admin.reports.index') }}" class="btn btn-secondary">
                     <i class="ri-arrow-left-line"></i> Volver
                 </a>
@@ -28,6 +32,9 @@
         </div>
     </div>
 </div>
+
+
+
 
 <!-- Filtros -->
 <div class="card mb-3">

@@ -310,8 +310,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/reports')->name('admin.
     Route::get('/services', [AdminReportController::class, 'services'])->name('services');
     Route::get('/fees', [AdminReportController::class, 'fees'])->name('fees');
     Route::get('/export', [AdminReportController::class, 'export'])->name('export');
+    
 });
 
+Route::get('/admin/reports/doctors/export', [AdminReportController::class, 'doctorsExport'])
+    ->name('admin.reports.doctors.export');
 
 
 // ── Reportes de Ventas de Productos ──────────────

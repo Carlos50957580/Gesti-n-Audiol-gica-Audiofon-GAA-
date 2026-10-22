@@ -15,6 +15,8 @@ use App\Models\DoctorFee;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Exports\DoctorsReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AdminReportController extends Controller
 {
@@ -925,5 +927,15 @@ private function applyDoctorFilters($query, Request $request)
             }
         });
     }
+}
+
+/**
+ * Exportar reporte de doctores a Excel
+ */
+public function doctorsExport(Request $request)
+{
+    $filename = 'reporte_facturacion_medicos_' . now()->format('Y-m-d_His') . '.xlsx';
+
+    return Excel::download(new DoctorsReportExport($request), $filename);
 }
 }
