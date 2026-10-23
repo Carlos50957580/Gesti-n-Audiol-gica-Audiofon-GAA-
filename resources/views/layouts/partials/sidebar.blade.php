@@ -153,14 +153,7 @@
                         </li>
                     @endif
 
-                    {{-- Reportes Admin --}}
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
-                           href="{{ route('admin.reports.index') }}">
-                            <i class="ri-bar-chart-line"></i>
-                            <span data-key="t-reportes-admin">Reportes de Servicios</span>
-                        </a>
-                    </li>
+                    
 
                     {{-- Configuración de Empresa (solo admin) --}}
                     <li class="nav-item">
@@ -281,8 +274,33 @@
                         </li>
                     @endif
 
+                    @if($isAdmin)
+                    {{-- Reportes Admin --}}
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" 
+                           href="{{ route('admin.reports.index') }}">
+                            <i class="ri-bar-chart-line"></i>
+                            <span data-key="t-reportes-admin">Reportes de Servicios</span>
+                        </a>
+                    </li>
 
-                       {{-- Reportes Recepcionista --}}
+                    
+                    @endif
+
+
+                    {{-- Cuadre de Caja Facturas (admin y recepcionista) --}}
+@if(in_array(auth()->user()->role->name, ['admin', 'recepcionista']))
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->is('invoice-reports/cashier*') ? 'active' : '' }}" 
+           href="{{ url('/invoice-reports/cashier') }}">
+            <i class="ri-file-list-3-line"></i>
+            <span data-key="t-cuadre-facturas">Cuadre de Caja Servicios</span>
+        </a>
+    </li>
+@endif
+
+
+                       {{-- Reportes Recepcionista 
                     @if($isReceptionist)
                         <li class="nav-item">
                             <a class="nav-link menu-link {{ request()->routeIs('receptionist.reports.*') ? 'active' : '' }}" 
@@ -291,7 +309,7 @@
                                 <span data-key="t-reportes-recep">Reportes</span>
                             </a>
                         </li>
-                    @endif
+                    @endif--}}
 
                     {{-- 📦 INVENTARIO COMPLETO - Solo admin --}}
                     @if(auth()->user()->role->name === 'admin')
@@ -420,7 +438,7 @@
         <a class="nav-link menu-link {{ request()->is('product-reports/cashier*') ? 'active' : '' }}" 
            href="{{ url('/product-reports/cashier') }}">
             <i class="ri-money-dollar-circle-line"></i>
-            <span data-key="t-cuadre-productos">Cuadre de Caja</span>
+            <span data-key="t-cuadre-productos">Cuadre de Caja productos</span>
         </a>
     </li>
 @endif

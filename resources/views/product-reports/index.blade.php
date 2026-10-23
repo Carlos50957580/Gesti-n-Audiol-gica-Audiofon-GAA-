@@ -39,6 +39,16 @@
                 <input type="time" name="time_to" class="form-control" value="{{ request('time_to', '23:59') }}">
             </div>
             <div class="col-md-2">
+    <label class="form-label">Estado</label>
+    <select name="status" class="form-select">
+        <option value="">Todos</option>
+        <option value="pendiente"      {{ request('status') == 'pendiente'      ? 'selected' : '' }}>Pendiente</option>
+        <option value="pagada_parcial" {{ request('status') == 'pagada_parcial' ? 'selected' : '' }}>Pagada Parcial</option>
+        <option value="pagada"         {{ request('status') == 'pagada'         ? 'selected' : '' }}>Pagada</option>
+        <option value="cancelada"      {{ request('status') == 'cancelada'      ? 'selected' : '' }}>Cancelada</option>
+    </select>
+</div>
+            <div class="col-md-2">
                 <label class="form-label">Sucursal</label>
                 <select name="branch_id" class="form-select">
                     <option value="">Todas</option>
@@ -329,6 +339,7 @@
         </div>
 
         {{-- Listado de ventas (DataTable) --}}
+{{-- Listado de ventas (DataTable) --}}
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
@@ -353,6 +364,11 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $sumTotal = 0;
+                        $sumPaid = 0;
+                        $sumPending = 0;
+                    @endphp
                     @foreach($invoices as $inv)
                         @php
                             $statusColors = [
@@ -370,6 +386,11 @@
                             $color = $statusColors[$inv->status] ?? 'secondary';
                             $label = $statusLabels[$inv->status] ?? $inv->status;
                             $pendiente = max(0, $inv->total - $inv->paid_amount);
+
+                            // ✅ Acumuladores para el tfoot
+                            $sumTotal   += $inv->total;
+                            $sumPaid    += $inv->paid_amount;
+                            $sumPending += $pendiente;
                         @endphp
                         <tr>
                             <td><code>{{ $inv->number }}</code></td>
@@ -395,6 +416,15 @@
                         </tr>
                     @endforeach
                 </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="6" class="text-end">TOTALES ({{ $invoices->count() }} facturas)</td>
+                        <td class="text-end">RD$ {{ number_format($sumTotal, 2) }}</td>
+                        <td class="text-end text-success">RD$ {{ number_format($sumPaid, 2) }}</td>
+                        <td class="text-end text-danger">RD$ {{ number_format($sumPending, 2) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>

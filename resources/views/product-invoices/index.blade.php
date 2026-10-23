@@ -31,6 +31,7 @@
                         <select name="status" class="form-select">
                             <option value="">Todos</option>
                             <option value="pendiente" {{ request('status') === 'pendiente' ? 'selected' : '' }}>Pendientes</option>
+                            <option value="pagada_parcial" {{ request('status') === 'pagada_parcial' ? 'selected' : '' }}>Pagadas Parcialmente</option>
                             <option value="pagada" {{ request('status') === 'pagada' ? 'selected' : '' }}>Pagadas</option>
                             <option value="cancelada" {{ request('status') === 'cancelada' ? 'selected' : '' }}>Canceladas</option>
                         </select>

@@ -23,24 +23,18 @@ class ProductReportController extends Controller
         abort(403, 'Solo administradores pueden acceder a este reporte.');
     }
 
-    $range = $this->getRange($request);
+    $range    = $this->getRange($request);
     $branchId = $request->filled('branch_id') ? $request->branch_id : null;
-    $status = $request->filled('status') ? $request->status : null;
-
-    // ✅ Filtro por usuario (quien registró/cobró la venta)
-    $userId = $request->filled('user_id') ? $request->user_id : null;
+    $status   = $request->filled('status')    ? $request->status    : null;
+    $userId   = $request->filled('user_id')   ? $request->user_id   : null;
 
     // ── Base query ───────────────────────────────────────────
     $base = ProductInvoice::query()
         ->whereBetween('created_at', [$range['from'], $range['to']]);
 
-    if ($branchId) {
-        $base->where('branch_id', $branchId);
-    }
-
-    if ($userId) {
-        $base->where('user_id', $userId);
-    }
+    if ($branchId) $base->where('branch_id', $branchId);
+    if ($userId)   $base->where('user_id', $userId);
+    if ($status)   $base->where('status', $status);   // ✅ NUEVO
 
     // ── KPIs ────────────────────────────────────────────────
     $totalInvoices = (clone $base)->count();
@@ -60,8 +54,8 @@ class ProductReportController extends Controller
         ->whereHas('invoice', function ($q) use ($range, $branchId, $status, $userId) {
             $q->whereBetween('created_at', [$range['from'], $range['to']]);
             if ($branchId) $q->where('branch_id', $branchId);
-            if ($status) $q->where('status', $status);
-            if ($userId) $q->where('user_id', $userId);
+            if ($status)   $q->where('status', $status);     // ✅ ya lo tenías
+            if ($userId)   $q->where('user_id', $userId);
         });
 
     $cobros = (clone $receiptsQuery)
@@ -108,7 +102,8 @@ class ProductReportController extends Controller
         ->whereBetween('product_invoices.created_at', [$range['from'], $range['to']])
         ->where('product_invoices.status', '!=', 'cancelada')
         ->when($branchId, fn($q) => $q->where('product_invoices.branch_id', $branchId))
-        ->when($userId, fn($q) => $q->where('product_invoices.user_id', $userId))
+        ->when($userId,   fn($q) => $q->where('product_invoices.user_id', $userId))
+        ->when($status,   fn($q) => $q->where('product_invoices.status', $status))  // ✅ NUEVO
         ->selectRaw('
             products.id,
             products.code,
@@ -131,7 +126,8 @@ class ProductReportController extends Controller
         ->whereBetween('product_invoices.created_at', [$range['from'], $range['to']])
         ->where('product_invoices.status', '!=', 'cancelada')
         ->when($branchId, fn($q) => $q->where('product_invoices.branch_id', $branchId))
-        ->when($userId, fn($q) => $q->where('product_invoices.user_id', $userId))
+        ->when($userId,   fn($q) => $q->where('product_invoices.user_id', $userId))
+        ->when($status,   fn($q) => $q->where('product_invoices.status', $status))  // ✅ NUEVO
         ->selectRaw('
             COALESCE(product_categories.id, 0) as category_id,
             COALESCE(product_categories.name, "Sin categoría") as category_name,
@@ -145,10 +141,9 @@ class ProductReportController extends Controller
 
     $branches = Branch::where('is_active', 1)->orderBy('name')->get();
 
-    // ✅ Usuarios que pueden vender/cobrar (admin y recepcionista)
     $users = \App\Models\User::whereIn('role_id', [1, 2])->orderBy('name')->get();
 
-    // ✅ Listado completo de ventas del período para el DataTable
+    // ✅ Listado completo (ya hereda $status del $base)
     $invoices = (clone $base)
         ->with(['patient', 'branch', 'user'])
         ->latest()

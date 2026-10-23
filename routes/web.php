@@ -28,6 +28,9 @@ use App\Http\Controllers\ProductReceiptController;
 use App\Http\Controllers\ClinicalRecordController;
 use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\AdminReportController;
+use App\Http\Controllers\InvoiceReportController;
+
+
 
 
 // ============================================
@@ -408,6 +411,10 @@ Route::middleware(['auth', 'active', 'role:admin,recepcionista'])->group(functio
         ->name('insurance-invoices.enviar-ef2');
 });
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/invoice-reports/cashier',       [InvoiceReportController::class, 'cashier'])->name('invoice-reports.cashier');
+    Route::get('/invoice-reports/cashier/print', [InvoiceReportController::class, 'cashierPrint'])->name('invoice-reports.cashier.print');
+});
 
 
 
